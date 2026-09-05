@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<rss xmlns:atom="http://www.w3.org/2005/Atom"
+    xmlns:media="http://search.yahoo.com/mrss/"
+    xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"
+    xmlns:content="http://purl.org/rss/1.0/modules/content/"
+    xmlns:podcast="https://podcastindex.org/namespace/1.0"
+    version="2.0">
+  <channel>
+    <title>This Week in Tech (Audio)</title>
+    <itunes:author>TWiT</itunes:author>
+    <link>https://twit.tv/shows/this-week-in-tech</link>
+    <description>Weekly tech news with Leo Laporte and expert guests.</description>
+    <itunes:explicit>no</itunes:explicit>
+    <itunes:summary>Every Sunday, Leo Laporte and a roundtable explore the week's tech news.</itunes:summary>
+    <podcast:funding url="https://twit.tv/clubtwit">Become a Club TWiT member!</podcast:funding>
+    <itunes:image href="https://elroy.twit.tv/images/shows/this-week-in-tech/audio.jpg"/>
+    <atom:link href="https://feeds.twit.tv/twit.xml" type="application/rss+xml" rel="self"/>
+    <item>
+      <title>TWiT 1097: Gina and the Glueballs - Is AI Moving Too Fast?</title>
+      <itunes:episodeType>full</itunes:episodeType>
+      <itunes:author>TWiT</itunes:author>
+      <pubDate>Sun, 16 Aug 2026 22:00:00 PDT</pubDate>
+      <itunes:episode>1097</itunes:episode>
+      <podcast:episode>1097</podcast:episode>
+      <link>https://twit.tv/shows/this-week-in-tech/episodes/1097</link>
+      <itunes:explicit>no</itunes:explicit>
+      <podcast:transcript url="http://twit.tv/posts/transcripts/week-tech-1097-transcript" type="text/html"/>
+      <description><![CDATA[<p>Can you trust Mark Zuckerberg's open AI manifesto?</p>]]></description>
+      <content:encoded><![CDATA[<p>Can you trust Mark Zuckerberg's open AI manifesto?</p>]]></content:encoded>
+      <itunes:image href="https://elroy.twit.tv/images/episodes/1097/hero.jpg"/>
+      <guid isPermaLink="false">https://pdst.fm/e/pscrb.fm/twit_1097.mp3</guid>
+      <itunes:duration>2:55:48</itunes:duration>
+      <enclosure url="https://pdst.fm/e/pscrb.fm/twit_1097.mp3" length="169135867" type="audio/mpeg"/>
+      <media:content url="https://pdst.fm/e/pscrb.fm/twit_1097.mp3" fileSize="169135867" type="audio/mpeg" medium="audio">
+        <media:thumbnail url="https://elroy.twit.tv/images/episodes/1097/thumb.jpg" width="400" height="225"/>
+        <media:credit role="host">Leo Laporte</media:credit>
+      </media:content>
+      <podcast:person role="host" href="https://twit.tv/people/leo-laporte">Leo Laporte</podcast:person>
+    </item>
+  </channel>
+</rss>

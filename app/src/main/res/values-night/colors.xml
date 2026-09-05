@@ -1,0 +1,4 @@
+<resources>
+    <!-- Match the dark adaptive launcher mark and white splash glyph. -->
+    <color name="booth_splash_background">#FF000000</color>
+</resources>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Atom Example Podcast</title>
+  <link rel="alternate" type="text/html" href="https://example.test/show" />
+  <id>https://example.test/show</id>
+  <entry>
+    <title>Atom episode</title>
+    <id>urn:uuid:atom-episode-1</id>
+    <updated>2026-08-01T12:00:00Z</updated>
+    <link rel="alternate" type="text/html" href="episodes/atom-one" />
+    <link rel="enclosure" type="audio/mpeg" href="audio/atom-one.mp3" length="42" />
+    <summary>Atom summary</summary>
+  </entry>
+</feed>

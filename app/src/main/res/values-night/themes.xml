@@ -1,0 +1,14 @@
+<resources>
+
+    <!-- Dark-mode window background so there's no white flash before Compose draws. -->
+    <style name="Theme.Booth" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
+
+    <style name="Theme.Booth.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/booth_splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.Booth</item>
+    </style>
+
+</resources>

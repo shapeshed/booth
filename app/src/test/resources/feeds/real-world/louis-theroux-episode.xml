@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Snapshot captured from https://feeds.megaphone.fm/GLT1948741183 on 2026-08-22. -->
+<rss version="2.0"
+    xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"
+    xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>The Louis Theroux Podcast</title>
+    <atom:link xmlns:atom="http://www.w3.org/2005/Atom" href="https://feeds.megaphone.fm/GLT1948741183" rel="self" type="application/rss+xml"/>
+    <description>In-depth conversations with fascinating figures.</description>
+    <itunes:author>Spotify Studios</itunes:author>
+    <itunes:explicit>yes</itunes:explicit>
+    <item>
+      <title>S8 EP9: Mo Gilligan on being quoted by Drake</title>
+      <description>Louis speaks to comedian and presenter Mo Gilligan.</description>
+      <pubDate>Tue, 04 Aug 2026 06:03:00 -0000</pubDate>
+      <itunes:author>Spotify Studios</itunes:author>
+      <itunes:image href="https://megaphone.imgix.net/podcasts/17615982-8f29-11f1-a8e6-4bb813a6a89e/image/b4b646a860dab05bd388bbfd0fcb1f3b.jpg?ixlib=rails-4.3.1&amp;max-w=3000&amp;max-h=3000&amp;fit=crop&amp;auto=format"/>
+      <itunes:duration>4018</itunes:duration>
+      <guid isPermaLink="false"><![CDATA[17615982-8f29-11f1-a8e6-4bb813a6a89e]]></guid>
+      <enclosure url="https://traffic.megaphone.fm/GLT2841384206.mp3" length="0" type="audio/mpeg"/>
+    </item>
+  </channel>
+</rss>

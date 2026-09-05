@@ -1,0 +1,4 @@
+<resources>
+    <!-- White background for the black-on-white launcher mark. -->
+    <color name="booth_splash_background">#FFFFFFFF</color>
+</resources>

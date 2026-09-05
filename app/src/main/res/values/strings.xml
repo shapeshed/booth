@@ -1,0 +1,292 @@
+<resources>
+    <string name="app_name">Booth</string>
+    <string name="clear_search">Clear search</string>
+    <string name="back">Back</string>
+    <string name="open_in_browser">Open in browser</string>
+    <string name="share">Share</string>
+    <string name="play">Play</string>
+    <string name="pause">Pause</string>
+    <string name="cancel">Cancel</string>
+    <string name="language">Language</string>
+    <string name="language_system_default">System default</string>
+    <string name="sleep_timer">Sleep timer</string>
+    <string name="sleep_add_15">+15 min</string>
+    <string name="sleep_set_new_duration">Set a new duration</string>
+    <plurals name="sleep_preset_seconds">
+        <item quantity="one">%1$d sec</item>
+        <item quantity="other">%1$d sec</item>
+    </plurals>
+    <plurals name="sleep_preset_minutes">
+        <item quantity="one">%1$d min</item>
+        <item quantity="other">%1$d min</item>
+    </plurals>
+    <string name="home">Home</string>
+    <string name="remove">Remove</string>
+    <string name="save">Save</string>
+    <string name="add_tag">Add tag</string>
+    <string name="done">Done</string>
+    <string name="import_opml">Import OPML</string>
+    <string name="export_opml">Export OPML</string>
+    <string name="search_tags">Search tags</string>
+    <string name="clear">Clear</string>
+    <string name="clear_all">Clear all</string>
+    <string name="no_filter_matches">No matches</string>
+    <string name="auto_refresh">Auto refresh</string>
+    <string name="refresh_interval">Refresh interval</string>
+    <string name="notifications">Notifications</string>
+    <string name="on">On</string>
+    <string name="off">Off</string>
+    <string name="feed_sort_az">A–Z</string>
+    <string name="undo">Undo</string>
+    <string name="exit_full_screen">Exit full screen</string>
+    <string name="full_screen">Full screen</string>
+    <string name="podcast_notifications_channel">New podcast episodes</string>
+    <string name="podcast_notifications_channel_description">Notifications for newly available podcast episodes.</string>
+    <string name="notification_action_play">Play</string>
+    <string name="notification_action_add_to_queue">Add to queue</string>
+    <string name="podcast_settings">Settings</string>
+    <string name="downloads">Downloads</string>
+    <string name="all_episodes">All episodes</string>
+    <string name="close_selection">Close selection</string>
+    <string name="discover_podcasts">Discover podcasts</string>
+    <string name="inbox">Inbox</string>
+    <string name="up_next">Up next</string>
+    <string name="podcast_subscriptions">Subscriptions</string>
+    <string name="no_episodes_yet">No episodes yet</string>
+    <string name="newest_first">Newest first</string>
+    <string name="oldest_first">Oldest first</string>
+    <string name="largest_first">Largest first</string>
+    <string name="smallest_first">Smallest first</string>
+    <string name="downloaded_first">Downloaded first</string>
+    <string name="in_progress_first">In progress first</string>
+    <string name="failed_first">Failed first</string>
+    <string name="no_downloads">No downloads</string>
+    <string name="remove_episode">Remove %1$s</string>
+    <string name="add_selected_to_up_next">Add selected to Up next</string>
+    <string name="download_selected">Download selected</string>
+    <string name="remove_selected_from_inbox">Remove selected from Inbox</string>
+    <string name="more_selection_actions">More selection actions</string>
+    <string name="mark_played">Mark played</string>
+    <string name="mark_unplayed">Mark unplayed</string>
+    <string name="reset_playback_position">Reset playback position</string>
+    <string name="more_episode_actions">More episode actions</string>
+    <string name="subscribe">Subscribe</string>
+    <string name="subscribed">Subscribed</string>
+    <string name="searching_podcasts">Searching podcasts…</string>
+    <string name="no_results">No results</string>
+    <string name="all_tags">All tags</string>
+    <string name="search_podcasts">Search podcasts</string>
+    <string name="add_podcast">Add a podcast</string>
+    <string name="rss_feed_url">RSS feed URL</string>
+    <string name="about_this_podcast">About this podcast</string>
+    <string name="unfollow_podcast_title">Unfollow %1$s?</string>
+    <string name="unfollow_podcast_message">New episodes will no longer appear in your Inbox. Downloaded episodes will be kept.</string>
+    <string name="unfollow">Unfollow</string>
+    <string name="no_episodes_available_yet">No episodes available yet.</string>
+    <string name="remove_download">Remove download</string>
+    <string name="reorder">Reorder</string>
+    <string name="close_player">Close player</string>
+    <string name="playback_speed">Playback speed</string>
+    <string name="playback_speed_custom">Playback speed %1$s</string>
+    <string name="inherited_global_playback_speed" translatable="false">Global default (%1$s)</string>
+    <string name="use_global_playback_speed" translatable="false">Use global playback speed</string>
+    <string name="manage_playback_speed_per_podcast" translatable="false">Manage playback speed per podcast</string>
+    <string name="enable_all_podcasts" translatable="false">Enable for all podcasts</string>
+    <plurals name="enabled_for_podcasts" translatable="false">
+        <item quantity="one">Enabled for 1 podcast</item>
+        <item quantity="other">Enabled for %d podcasts</item>
+    </plurals>
+    <string name="manage_auto_refresh_per_podcast" translatable="false">Manage auto-refresh per podcast</string>
+    <string name="import_and_export" translatable="false">Import and export</string>
+    <string name="skip_silence">Skip silence</string>
+    <string name="skip_silence_summary">Automatically skip quiet sections while playing</string>
+    <string name="episode_description">Episode description</string>
+    <string name="audio">Audio</string>
+    <string name="video">Video</string>
+    <string name="retry_playback">Retry</string>
+    <string name="back_10_seconds">Back 10 seconds</string>
+    <string name="forward_30_seconds">Forward 30 seconds</string>
+    <string name="description">Description</string>
+    <string name="nothing_queued">Nothing queued</string>
+    <string name="nothing_queued_summary" translatable="false">Add episodes to Up next from your Inbox or Subscriptions.</string>
+    <string name="now_playing">Now playing</string>
+    <string name="remove_from_up_next">Remove from Up next</string>
+    <string name="add_to_up_next">Add to Up next</string>
+    <string name="episode_actions">Episode actions</string>
+    <string name="play_latest_episode">Play latest episode</string>
+    <string name="podcast_options">Podcast options</string>
+    <string name="podcast_settings_action">Podcast settings</string>
+    <string name="manage_notifications_per_podcast" translatable="false">Manage notifications per podcast</string>
+    <string name="manage_auto_download_per_podcast" translatable="false">Manage auto-download per podcast</string>
+    <string name="add_new_episodes_to_up_next" translatable="false">Add new episodes to Up next</string>
+    <string name="add_new_episodes_to_up_next_summary" translatable="false">Automatically queue new episodes after refresh</string>
+    <string name="manage_add_new_episodes_to_up_next_per_podcast" translatable="false">Manage Up next per podcast</string>
+    <string name="manage_video_downloads_per_podcast" translatable="false">Manage video downloads per podcast</string>
+    <string name="grid_view">Grid view</string>
+    <string name="list_view">List view</string>
+    <string name="search">Search</string>
+    <string name="subscribe_to_rss_feed">Subscribe to RSS feed</string>
+    <string name="search_feeds">Search feeds</string>
+    <string name="get_started_title">Start listening</string>
+    <string name="get_started_summary">Find podcasts you enjoy, add an RSS feed, or import your subscriptions to build your library.</string>
+    <string name="last_updated">Last updated</string>
+    <string name="remove_podcast">Remove %1$s</string>
+    <string name="more_options">More options</string>
+    <string name="remove_all_from_inbox">Remove all from inbox</string>
+    <string name="stop_playback">Stop playback</string>
+    <string name="removed_from_up_next">Removed from Up next</string>
+    <string name="error_add_up_next">Could not add episode to Up Next</string>
+    <string name="available_offline">Available offline</string>
+    <string name="explicit_content">Explicit content</string>
+    <string name="download_episode">Download episode</string>
+    <string name="watch">Watch</string>
+    <string name="remove_download_question">Remove download?</string>
+    <string name="remove_download_message">This episode will no longer be available offline.</string>
+    <string name="remove_favorite">Remove favorite</string>
+    <string name="favorite_episode">Favorite episode</string>
+    <string name="artwork_description">%1$s artwork</string>
+    <string name="long_press_drag_reorder">Long press and drag to reorder %1$s</string>
+    <string name="move_episode">Move %1$s</string>
+    <string name="selected_item">Selected</string>
+    <string name="refresh_settings_group">Refresh</string>
+    <string name="podcast_defaults_settings_group" translatable="false">Podcast defaults</string>
+    <string name="podcast_downloads_settings_group" translatable="false">Podcast downloads</string>
+    <string name="episode_notifications_settings_group" translatable="false">Episode notifications</string>
+    <string name="discovery_settings_group" translatable="false">Podcast discovery</string>
+    <string name="auto_refresh_podcasts_summary">Refresh podcasts in the background</string>
+    <string name="network">Network</string>
+    <string name="download_network" translatable="false">Download network</string>
+    <string name="download_wifi_or_mobile" translatable="false">Wi-Fi or mobile data</string>
+    <string name="download_wifi_only" translatable="false">Wi-Fi only</string>
+    <string name="notifications_podcasts_summary">Notify about new episodes</string>
+    <string name="podcasts">Podcasts</string>
+    <string name="auto_download">Auto download</string>
+    <string name="auto_download_podcasts_summary">Download new episodes from selected podcasts</string>
+    <string name="download_video">Download video</string>
+    <string name="when_available">When available</string>
+    <string name="podcast_search">Podcast search</string>
+    <string name="default_value">Default</string>
+    <string name="podcast_index_access">Podcast Index access</string>
+    <string name="optional_read_only_credentials">Optional read-only credentials</string>
+    <string name="credentials_configured">Credentials configured</string>
+    <string name="import_opml_podcasts_summary">Add subscriptions from another podcast app</string>
+    <string name="export_opml_podcasts_summary">Save your subscriptions as a portable file</string>
+    <string name="refresh_on">Refresh on</string>
+    <string name="podcast_search_provider">Podcast search provider</string>
+    <string name="credentials_saved_summary">Credentials are saved securely. Leave both fields blank to keep them unchanged.</string>
+    <string name="credentials_optional_summary">Optional read-only credentials enable trending podcasts. Public search works without them.</string>
+    <string name="api_key">API key</string>
+    <string name="api_secret">API secret</string>
+    <string name="enter_both_credentials">Enter both values, or leave both blank.</string>
+    <string name="playback">Playback</string>
+    <string name="skip_intro_outro">Skip intro and outro</string>
+    <string name="organization">Organization</string>
+    <string name="tags">Tags</string>
+    <string name="no_tags">No tags</string>
+    <string name="remove_tag">Remove %1$s</string>
+    <string name="skip_intro_outro_summary">Automatically skip these parts when an episode starts or is nearly finished.</string>
+    <string name="skip_at_start_seconds">Skip at start (seconds)</string>
+    <string name="skip_at_end_seconds">Skip at end (seconds)</string>
+    <string name="refresh_every_hour_short">Every hour</string>
+    <string name="refresh_every_6_hours">Every 6 hours</string>
+    <string name="refresh_once_a_day">Once a day</string>
+    <string name="refresh_wifi_or_mobile">Wi-Fi or mobile data</string>
+    <string name="refresh_wifi_only">Wi-Fi only</string>
+    <string name="podcast_fallback">podcast</string>
+    <string name="could_not_add_podcast">Couldn’t add %1$s</string>
+    <string name="search_episodes">Search episodes</string>
+    <string name="your_listening_home_coming_soon">Your listening home is coming soon.</string>
+    <string name="follow">Follow</string>
+    <string name="filter_tags">Filter tags</string>
+    <string name="episodes_from_subscriptions">Episodes from your subscriptions will appear here.</string>
+    <string name="episode_singular">episode</string>
+    <string name="episode_plural">episodes</string>
+    <string name="up_next_all">All</string>
+    <string name="up_next_unplayed">Unplayed</string>
+    <string name="up_next_in_progress">In progress</string>
+    <string name="up_next_completed">Completed</string>
+    <string name="up_next_empty">Up next is empty</string>
+    <string name="no_matching_episodes">No matching episodes</string>
+    <string name="swipe_to_add_to_up_next">Swipe right on an Inbox episode to add it here.</string>
+    <string name="try_another_up_next_filter">Try another filter to see more of Up next.</string>
+    <string name="add_to_up_next_accessibility">Add to Up next</string>
+    <string name="dismiss_episode">Dismiss episode</string>
+    <string name="dismiss">Dismiss</string>
+    <string name="select_an_episode">Select an episode</string>
+    <string name="selected_episodes_removed_from_inbox">%1$d %2$s removed from Inbox</string>
+    <string name="podcast_settings_title">Podcast settings</string>
+    <string name="discover">Discover</string>
+    <string name="podcast_inbox">Inbox</string>
+    <string name="podcast_up_next">Up next</string>
+    <string name="podcast_subscriptions_tab">Subscriptions</string>
+    <string name="inbox_clear">Inbox is clear</string>
+    <string name="popular_podcasts">Popular podcasts</string>
+    <string name="discover_podcasts_results">Discover podcasts</string>
+    <string name="search_unplayed">Unplayed</string>
+    <string name="search_in_progress">In progress</string>
+    <string name="relevance">Relevance</string>
+    <string name="newest">Newest</string>
+    <string name="oldest">Oldest</string>
+    <string name="title">Title</string>
+    <string name="played_all">Played: All</string>
+    <string name="played">Played</string>
+    <string name="new_episodes_from_subscriptions">New episodes from your subscriptions will appear here.</string>
+    <string name="failed">Failed</string>
+    <string name="downloaded">Downloaded</string>
+    <string name="downloaded_size">%1$s downloaded</string>
+    <string name="downloaded_episodes_offline">Downloaded episodes will appear here for offline listening.</string>
+    <string name="smallest">Smallest</string>
+    <string name="largest">Largest</string>
+    <string name="select_all">Select all</string>
+    <string name="clear_selection">Clear selection</string>
+    <string name="rss_feed_follow_prompt">Paste the RSS feed URL for the podcast you want to follow.</string>
+    <string name="replay_episode">Replay episode</string>
+    <string name="play_episode">Play episode</string>
+    <string name="mark_played_action">Mark played</string>
+    <string name="mark_unplayed_action">Mark unplayed</string>
+    <string name="download">Download</string>
+    <string name="download_with_size">Download · %1$s</string>
+    <string name="download_progress_percent">%1$d%%</string>
+    <string name="downloading">Downloading</string>
+    <string name="estimating_time">estimating time</string>
+    <string name="almost_done">almost done</string>
+    <string name="time_minutes_left">%1$dm %2$ds left</string>
+    <string name="time_seconds_left">%1$ds left</string>
+    <string name="your_subscriptions">Your subscriptions</string>
+    <string name="queue_episode_description">%1$s by %2$s.</string>
+    <string name="queue_swipe_hint">Swipe right to add to Up next, swipe left to dismiss.</string>
+    <string name="skip_start_summary">Start %1$ds</string>
+    <string name="skip_end_summary">End %1$ds</string>
+    <string name="skip_off">Off</string>
+    <string name="download_failed">Download failed</string>
+    <string name="retrying">Retrying</string>
+    <string name="cancelled">Cancelled</string>
+    <string name="error_search_failed">Podcast search failed</string>
+    <string name="error_discovery_load_failed">Could not load discovery</string>
+    <string name="error_category_load_failed">Could not load category</string>
+    <string name="error_subscribe_failed">Could not subscribe</string>
+    <string name="error_podcast_load_failed">Could not load podcast</string>
+    <string name="error_episode_load_failed">Could not prepare episode</string>
+    <string name="error_opml_read_failed">Could not read OPML</string>
+    <string name="error_no_podcast_feeds">No podcast feeds found in this OPML file</string>
+    <plurals name="imported_podcasts">
+        <item quantity="one">Imported %1$d podcast</item>
+        <item quantity="other">Imported %1$d podcasts</item>
+    </plurals>
+    <plurals name="imported_podcasts_partial">
+        <item quantity="one">Imported %1$d of %2$d podcasts</item>
+        <item quantity="other">Imported %1$d of %2$d podcasts</item>
+    </plurals>
+    <string name="error_opml_export_failed">Could not export OPML</string>
+    <string name="error_refresh_failed">Could not refresh podcast</string>
+    <string name="error_partial_refresh_failed">Some podcasts could not be refreshed</string>
+    <string name="error_remove_podcast_failed">Could not remove podcast</string>
+    <string name="error_remove_up_next">Could not remove episode from Up Next</string>
+    <string name="error_playback_connection">Couldn’t connect to this episode. Check your connection and try again.</string>
+    <string name="error_playback_server">This episode could not be loaded by the server.</string>
+    <string name="error_playback_failed">Playback couldn’t continue. Try again.</string>
+    <plurals name="new_podcast_episodes">
+        <item quantity="one">1 new podcast episode</item>
+        <item quantity="other">%d new podcast episodes</item>
+    </plurals>
+</resources>

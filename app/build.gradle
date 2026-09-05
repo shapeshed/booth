@@ -1,0 +1,252 @@
+plugins {
+    id 'com.android.application'
+    id 'com.android.compose.screenshot'
+    id 'jacoco'
+    id 'com.google.devtools.ksp'
+    id 'com.google.dagger.hilt.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
+    id 'org.jetbrains.kotlin.plugin.serialization'
+}
+
+android {
+    experimentalProperties["android.experimental.enableScreenshotTest"] = true
+    namespace = 'com.shapeshed.booth'
+    compileSdk 37
+
+    def releaseKeystoreFile = System.getenv("BOOTH_KEYSTORE_FILE")
+    def releaseKeystorePassword = System.getenv("BOOTH_KEYSTORE_PASSWORD")
+    def releaseKeyAlias = System.getenv("BOOTH_KEY_ALIAS")
+    def releaseKeyPassword = System.getenv("BOOTH_KEY_PASSWORD")
+    def hasReleaseSigning = releaseKeystoreFile &&
+        releaseKeystorePassword &&
+        releaseKeyAlias &&
+        releaseKeyPassword
+
+    defaultConfig {
+        applicationId "com.shapeshed.booth"
+        minSdk 26
+        targetSdk 37
+        versionCode 1
+        versionName "0.1.0"
+        testInstrumentationRunner "com.shapeshed.booth.testing.BoothTestRunner"
+    }
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            release {
+                storeFile file(releaseKeystoreFile)
+                storePassword releaseKeystorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
+
+    buildTypes {
+        deviceTest {
+            initWith debug
+            applicationIdSuffix ".deviceTest"
+            matchingFallbacks = ['debug']
+        }
+        release {
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
+            minifyEnabled true
+            shrinkResources = true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        productionDebugKey {
+            initWith release
+            matchingFallbacks = ['release']
+            signingConfig signingConfigs.debug
+        }
+    }
+
+    testBuildType = "deviceTest"
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlin {
+        compilerOptions {
+            jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+        }
+    }
+
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
+
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
+    }
+
+    lint {
+        fatal 'UnusedResources'
+    }
+
+    testOptions {
+        unitTests {
+            returnDefaultValues = true
+        }
+    }
+
+    ksp {
+        arg("room.schemaLocation", "$projectDir/schemas")
+    }
+}
+
+dependencies {
+    def composeBom = platform('androidx.compose:compose-bom:2026.08.00')
+    implementation composeBom
+
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.material3:material3:1.5.0-alpha26'
+    implementation 'androidx.compose.material:material-icons-extended'
+    implementation 'androidx.compose.ui:ui-tooling-preview'
+    debugImplementation 'androidx.compose.ui:ui-tooling'
+
+    implementation 'androidx.appcompat:appcompat:1.8.0'
+    implementation 'androidx.core:core-ktx:1.19.0'
+    implementation 'androidx.core:core-splashscreen:1.2.0'
+    implementation 'androidx.activity:activity-compose:1.13.0'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0'
+    implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.11.0'
+    implementation 'androidx.hilt:hilt-navigation-compose:1.4.0'
+    implementation 'androidx.work:work-runtime-ktx:2.11.2'
+
+    def media3Version = '1.11.0'
+    implementation "androidx.media3:media3-exoplayer:$media3Version"
+    implementation "androidx.media3:media3-exoplayer-hls:$media3Version"
+    implementation "androidx.media3:media3-session:$media3Version"
+    implementation "androidx.media3:media3-datasource:$media3Version"
+    implementation "androidx.media3:media3-ui:$media3Version"
+
+    // Adaptive list-detail layout (not part of the Compose BOM — versioned separately).
+    def adaptiveVersion = '1.3.0'
+    implementation "androidx.compose.material3.adaptive:adaptive:$adaptiveVersion"
+    implementation "androidx.compose.material3.adaptive:adaptive-layout:$adaptiveVersion"
+    implementation "androidx.compose.material3.adaptive:adaptive-navigation:$adaptiveVersion"
+    implementation "androidx.compose.material3.adaptive:adaptive-navigation3:$adaptiveVersion"
+
+    // Navigation 3 owns the Compose back stack and enables adaptive scene layouts.
+    def navigation3Version = '1.1.6'
+    implementation "androidx.navigation3:navigation3-runtime:$navigation3Version"
+    implementation "androidx.navigation3:navigation3-ui:$navigation3Version"
+    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-core:1.11.0'
+
+    implementation 'com.squareup.okhttp3:okhttp:5.5.0'
+    implementation 'androidx.datastore:datastore-preferences:1.2.1'
+    implementation 'io.coil-kt.coil3:coil-compose:3.5.0'
+    implementation 'io.coil-kt.coil3:coil-network-okhttp:3.5.0'
+    implementation 'io.coil-kt.coil3:coil-svg:3.5.0'
+    implementation 'me.saket.telephoto:zoomable-image-coil3:0.19.0'
+    implementation 'androidx.concurrent:concurrent-futures-ktx:1.3.0'
+    implementation 'com.google.dagger:hilt-android:2.60.1'
+    ksp 'com.google.dagger:hilt-android-compiler:2.60.1'
+    implementation 'org.jsoup:jsoup:1.23.1'
+    implementation 'com.prof18.rssparser:rssparser:6.1.8'
+    def roomVersion = '2.8.4'
+    implementation "androidx.room:room-runtime:$roomVersion"
+    implementation "androidx.room:room-ktx:$roomVersion"
+    implementation "androidx.room:room-paging:$roomVersion"
+    implementation 'androidx.paging:paging-compose:3.5.1'
+    ksp "androidx.room:room-compiler:$roomVersion"
+
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0'
+    androidTestImplementation 'androidx.test.ext:junit:1.3.0'
+    androidTestImplementation 'androidx.test:runner:1.7.0'
+    androidTestImplementation 'androidx.test:core-ktx:1.7.0'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.7.0'
+    androidTestImplementation composeBom
+    androidTestImplementation 'androidx.compose.ui:ui-test-junit4'
+    debugImplementation 'androidx.compose.ui:ui-test-manifest'
+    deviceTestImplementation 'androidx.compose.ui:ui-test-manifest'
+    androidTestImplementation "androidx.room:room-testing:$roomVersion"
+    androidTestImplementation 'com.google.dagger:hilt-android-testing:2.60.1'
+    screenshotTestImplementation 'com.android.tools.screenshot:screenshot-validation-api:0.0.1-alpha16'
+    screenshotTestImplementation 'androidx.compose.ui:ui-tooling'
+}
+
+tasks.register("jacocoDeviceTestUnitTestReport", JacocoReport) {
+    dependsOn("testDeviceTestUnitTest")
+    group = "verification"
+    description = "Generates JaCoCo coverage for local deviceTest unit tests."
+    executionData.from(fileTree(layout.buildDirectory).include(
+        "jacoco/testDeviceTestUnitTest.exec",
+        "outputs/unit_test_code_coverage/deviceTestUnitTest/testDeviceTestUnitTest.exec",
+    ))
+    sourceDirectories.from(files("src/main/java", "src/main/kotlin"))
+    classDirectories.from(fileTree(layout.buildDirectory) {
+        include("intermediates/built_in_kotlinc/deviceTest/compileDeviceTestKotlin/classes/**/*.class")
+        include("intermediates/javac/deviceTest/compileDeviceTestJavaWithJavac/classes/**/*.class")
+        include("tmp/kotlin-classes/deviceTest/**/*.class")
+        exclude('**/R.class', '**/R$*.class', '**/BuildConfig.*', '**/Manifest*.*')
+    })
+    reports {
+        html.required = true
+        xml.required = true
+        csv.required = false
+    }
+}
+
+tasks.register("jacocoDeviceTestUnitTestCoverageVerification", JacocoCoverageVerification) {
+    dependsOn("testDeviceTestUnitTest")
+    group = "verification"
+    description = "Verifies local deviceTest unit-test line coverage."
+    executionData.from(fileTree(layout.buildDirectory).include(
+        "jacoco/testDeviceTestUnitTest.exec",
+        "outputs/unit_test_code_coverage/deviceTestUnitTest/testDeviceTestUnitTest.exec",
+    ))
+    classDirectories.from(fileTree(layout.buildDirectory) {
+        include("intermediates/built_in_kotlinc/deviceTest/compileDeviceTestKotlin/classes/**/*.class")
+        include("intermediates/javac/deviceTest/compileDeviceTestJavaWithJavac/classes/**/*.class")
+        include("tmp/kotlin-classes/deviceTest/**/*.class")
+        exclude('**/R.class', '**/R$*.class', '**/BuildConfig.*', '**/Manifest*.*')
+    })
+    violationRules {
+        rule {
+            element = 'BUNDLE'
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                // Baseline measured on 2026-09-05: 1,198 / 16,983 lines (7.05%).
+                // Raise this floor with each coverage batch; never let the report pass empty.
+                minimum = 0.07
+            }
+        }
+    }
+}
+
+// The standard connected test task may uninstall the target package as part of its
+// device cleanup. Use this task for a personal device when its app data must remain.
+tasks.register("preservingDebugAndroidTest") {
+    dependsOn("assembleDeviceTest", "assembleDeviceTestAndroidTest")
+    def appApkPath = layout.buildDirectory.file("outputs/apk/deviceTest/app-deviceTest.apk").get().asFile.absolutePath
+    def testApkPath = layout.buildDirectory.file("outputs/apk/androidTest/deviceTest/app-deviceTest-androidTest.apk").get().asFile.absolutePath
+
+    doLast {
+        def adb = System.getenv("ADB") ?: "adb"
+        def runAdb = { List<String> arguments ->
+            def process = new ProcessBuilder(([adb] + arguments).collect { it.toString() })
+                .inheritIO()
+                .start()
+            if (process.waitFor() != 0) {
+                throw new GradleException("ADB command failed: ${arguments.join(' ')}")
+            }
+        }
+
+        runAdb(["install", "-r", appApkPath])
+        runAdb(["install", "-r", testApkPath])
+        runAdb(["shell", "am", "instrument", "-w",
+                "-e", "clearPackageData", "false",
+                "-e", "disableAnalytics", "true",
+                "com.shapeshed.booth.deviceTest.test/com.shapeshed.booth.testing.BoothTestRunner"])
+    }
+}

@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<rss version="2.0"><channel><title>Malformed Items</title>
+ <item><title>No usable URL</title></item>
+ <item><guid>usable</guid><title>Usable after malformed item</title>
+  <enclosure url="https://example.test/usable.mp3" type="audio/mpeg"/>
+ </item>
+ <item><guid>duplicate</guid><title>Duplicate one</title><link>https://example.test/a</link></item>
+ <item><guid>duplicate</guid><title>Duplicate two</title><link>https://example.test/b</link></item>
+</channel></rss>
