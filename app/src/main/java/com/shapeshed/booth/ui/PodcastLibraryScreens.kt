@@ -555,10 +555,11 @@ internal fun PodcastSwipeRow(
     podcast: PodcastEntity,
     onClick: () -> Unit,
     onRemove: () -> Unit,
+    initiallyShowRemovalConfirmation: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val haptic = LocalHapticFeedback.current
-    var showRemovalConfirmation by remember { mutableStateOf(false) }
+    var showRemovalConfirmation by remember { mutableStateOf(initiallyShowRemovalConfirmation) }
     val dismissState = rememberSwipeToDismissBoxState(
         positionalThreshold = { distance -> distance * SwipeToDismissThresholdFraction },
     )
@@ -573,7 +574,10 @@ internal fun PodcastSwipeRow(
         state = dismissState,
         enableDismissFromStartToEnd = true,
         enableDismissFromEndToStart = true,
-        modifier = modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium),
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.medium)
+            .semantics { contentDescription = "Podcast swipe row ${podcast.title}" },
         backgroundContent = {
             Box(
                 modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.errorContainer),

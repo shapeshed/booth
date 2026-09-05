@@ -378,7 +378,7 @@ internal val PodcastEpisodeAction.hasPlaybackPosition: Boolean
 internal val PodcastListItemSpacing = 8.dp
 internal val PodcastEpisodeArtworkSize = 80.dp
 // Require an intentional horizontal gesture so vertical list scrolling does not dismiss rows.
-internal const val SwipeToDismissThresholdFraction = 0.85f
+internal const val SwipeToDismissThresholdFraction = 0.5f
 internal val LocalPodcastMiniPlayerInset = compositionLocalOf { 0.dp }
 
 @Composable

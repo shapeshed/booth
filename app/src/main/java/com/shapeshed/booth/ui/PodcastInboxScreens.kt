@@ -288,7 +288,7 @@ internal fun PodcastInbox(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 16.dp + LocalPodcastMiniPlayerInset.current),
             verticalArrangement = Arrangement.spacedBy(PodcastListItemSpacing),
         ) {
-            if (visibleEpisodes.itemCount == 0 && visibleEpisodes.loadState.refresh is androidx.paging.LoadState.NotLoading) {
+            if (visibleEpisodes.itemCount == 0) {
                 item(key = "empty-inbox") {
                     Column(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 80.dp, horizontal = 24.dp),

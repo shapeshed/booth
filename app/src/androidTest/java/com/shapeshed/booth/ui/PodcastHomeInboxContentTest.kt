@@ -20,7 +20,7 @@ class PodcastHomeInboxContentTest {
     fun emptyInboxExplainsWhereNewEpisodesAppear() {
         composeRule.setContent {
             BoothAppTheme {
-                val inbox = flowOf(PagingData.empty<EpisodeEntity>()).collectAsLazyPagingItems()
+                val inbox = flowOf(PagingData.from(emptyList<EpisodeEntity>())).collectAsLazyPagingItems()
                 PodcastHomeInboxContent(
                     inbox = inbox,
                     podcastsById = emptyMap(),
