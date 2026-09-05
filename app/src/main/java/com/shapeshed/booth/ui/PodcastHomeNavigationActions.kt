@@ -19,6 +19,15 @@ internal fun selectPodcastTab(
     routeState.selectedInboxIds.value = emptySet()
 }
 
+internal fun showSubscriptionsAfterImport(
+    routeState: PodcastHomeRouteState,
+) {
+    routeState.selectedTab.value = PodcastTab.SUBSCRIPTIONS
+    routeState.selectedPodcastId.value = null
+    routeState.selectedEpisodeId.value = null
+    routeState.showDiscoverySearch.value = false
+}
+
 internal fun createSubscribedEpisodeAction(
     episode: EpisodeEntity,
     podcastsById: Map<Long, PodcastEntity>,

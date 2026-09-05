@@ -763,6 +763,12 @@ fun PodcastHomeScreen(
     var notifiedSubscriptionFailures by remember { mutableStateOf<Set<String>>(emptySet()) }
     LaunchedEffect(state.error) {
         val result = state.error as? PodcastUiError.ImportCompleted ?: return@LaunchedEffect
+        if (result.imported > 0) {
+            showSubscriptionsAfterImport(routeState)
+            subscriptionsBackStack.clear()
+            subscriptionsBackStack.add(PodcastNavigationKey.Subscriptions)
+            viewModel.setPodcastSelectedTab(PodcastTab.SUBSCRIPTIONS.name)
+        }
         val message = if (result.imported == result.total) {
             context.resources.getQuantityString(
                 R.plurals.imported_podcasts,
