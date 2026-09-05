@@ -32,6 +32,7 @@ import com.shapeshed.booth.data.SKIP_SILENCE_ENABLED
 import com.shapeshed.booth.data.SLEEP_TIMER_DURATION_MS
 import com.shapeshed.booth.data.SleepTimerState
 import com.shapeshed.booth.data.SleepTimerStore
+import com.shapeshed.booth.di.boothPlaybackEntryPoint
 import androidx.media3.common.util.UnstableApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -69,7 +70,7 @@ class PodcastPlaybackService : MediaLibraryService() {
                 it.setSmallIcon(R.drawable.ic_notification)
             },
         )
-        repository = (application as BoothApp).podcastRepository
+        repository = boothPlaybackEntryPoint(application).podcastRepository
         player = ExoPlayer.Builder(this)
             .setSeekBackIncrementMs(10_000L)
             .setSeekForwardIncrementMs(30_000L)
@@ -366,7 +367,7 @@ class PodcastPlaybackService : MediaLibraryService() {
             CallbackToFutureAdapter.getFuture { completer ->
                 service.serviceScope.launch(Dispatchers.IO) {
                     runCatching {
-                        val episodeId = (service.application as BoothApp)
+                        val episodeId = boothPlaybackEntryPoint(service.application)
                             .settings.podcastLastEpisodeId.first()
                         val episode = episodeId?.let { service.repository.episode(it) }
                         if (episode == null) {

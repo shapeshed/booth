@@ -15,7 +15,7 @@ import org.junit.runner.RunWith
 class PodcastPlaybackServiceTest {
     @Test
     fun mediaSessionServiceCanConnectAndRelease() {
-        val context = ApplicationProvider.getApplicationContext<BoothApp>()
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val future = MediaController.Builder(
             context,
             SessionToken(context, ComponentName(context, PodcastPlaybackService::class.java)),

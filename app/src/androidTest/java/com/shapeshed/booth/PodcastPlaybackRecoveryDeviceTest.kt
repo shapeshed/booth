@@ -10,6 +10,11 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.shapeshed.booth.data.Episode
+import com.shapeshed.booth.data.PodcastRepository
+import com.shapeshed.booth.data.SettingsStore
+import dagger.hilt.android.testing.HiltAndroidRule
+import dagger.hilt.android.testing.HiltAndroidTest
+import javax.inject.Inject
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.net.Inet4Address
@@ -25,24 +30,36 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
+@HiltAndroidTest
 class PodcastPlaybackRecoveryDeviceTest {
-    private lateinit var app: BoothApp
+    @get:Rule
+    val hiltRule = HiltAndroidRule(this)
+
+    @Inject
+    lateinit var repository: PodcastRepository
+
+    @Inject
+    lateinit var settings: SettingsStore
+
+    private lateinit var context: Context
     private lateinit var server: WavServer
     private var episodeId = 0L
 
     @Before
     fun setUp() {
-        app = ApplicationProvider.getApplicationContext()
+        hiltRule.inject()
+        context = ApplicationProvider.getApplicationContext()
         val address = deviceAddress()
         assumeTrue("No routable device address available", address != null)
         server = WavServer()
         episodeId = 8_000_000_000L + System.currentTimeMillis() / 1_000L
         runBlocking {
-            app.podcastRepository.savePreviewEpisode(
+            repository.savePreviewEpisode(
                 Episode(
                     id = episodeId,
                     podcastId = episodeId,
@@ -56,7 +73,7 @@ class PodcastPlaybackRecoveryDeviceTest {
                     durationMs = 10_000L,
                 ),
             )
-            app.settings.setPodcastLastEpisodeId(episodeId)
+            settings.setPodcastLastEpisodeId(episodeId)
         }
     }
 
@@ -64,8 +81,8 @@ class PodcastPlaybackRecoveryDeviceTest {
     fun tearDown() {
         runCatching {
             runBlocking {
-                app.podcastRepository.removeEpisode(episodeId)
-                app.settings.clearPodcastLastEpisodeId()
+                repository.removeEpisode(episodeId)
+                settings.clearPodcastLastEpisodeId()
             }
         }
         runCatching { server.close() }
