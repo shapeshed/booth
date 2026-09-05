@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Snapshot captured from https://feeds.megaphone.fm/GLT9190936013 on 2026-08-22. -->
+<rss version="2.0"
+    xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"
+    xmlns:atom="http://www.w3.org/2005/Atom"
+    xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <atom:link href="https://feeds.megaphone.fm/GLT9190936013" rel="self" type="application/rss+xml"/>
+    <title>The Rest Is Politics</title>
+    <link>http://therestispolitics.com/</link>
+    <description>Alastair Campbell and Rory Stewart break down current affairs in the UK and abroad.</description>
+    <image>
+      <url>https://megaphone.imgix.net/podcasts/ebd5041a/image/e65e7d3f7665fc8da759a53ed8b182b5.jpg</url>
+      <title>The Rest Is Politics</title>
+    </image>
+    <itunes:explicit>no</itunes:explicit>
+    <itunes:type>episodic</itunes:type>
+    <itunes:author>Goalhanger</itunes:author>
+    <itunes:image href="https://megaphone.imgix.net/podcasts/ebd5041a-2425-11ee-9505-bbe771b4af3b/image/e65e7d3f7665fc8da759a53ed8b182b5.jpg?ixlib=rails-4.3.1&amp;max-w=3000&amp;max-h=3000&amp;fit=crop&amp;auto=format,compress"/>
+    <itunes:category text="News"/>
+    <itunes:category text="Government"/>
+    <item>
+      <title>Becoming Burnham: Thatcher, Hillsborough, and the Anger that Shaped Him | Part 1</title>
+      <description>To hear the full episode and the series as it drops, sign up at therestispolitics.com</description>
+      <pubDate>Thu, 20 Aug 2026 22:55:00 -0000</pubDate>
+      <itunes:episodeType>full</itunes:episodeType>
+      <itunes:author>Goalhanger</itunes:author>
+      <itunes:image href="https://megaphone.imgix.net/podcasts/5c7ac01e-9c92-11f1-a03f-9b8fd9afc02d/image/e72e29aac09e8a552112ce135b502b15.jpeg?ixlib=rails-4.3.1&amp;max-w=3000&amp;max-h=3000&amp;fit=crop&amp;auto=format,compress"/>
+      <content:encoded><![CDATA[<p>Alastair is joined by Andy Burnham’s closest confidant, friend and former colleague, Steve Rotheram.</p>]]></content:encoded>
+      <itunes:duration>1282</itunes:duration>
+      <guid isPermaLink="false"><![CDATA[5c7ac01e-9c92-11f1-a03f-9b8fd9afc02d]]></guid>
+      <enclosure url="https://pdst.fm/e/traffic.megaphone.fm/GLT6202238073.mp3" length="0" type="audio/mpeg"/>
+    </item>
+  </channel>
+</rss>

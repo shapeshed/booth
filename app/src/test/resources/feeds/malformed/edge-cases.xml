@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:odd="urn:unrecognised-extension">
+  <channel>
+    <title>Malformed but recoverable</title>
+    <item>
+      <guid>missing-media</guid>
+      <title>Missing enclosure</title>
+      <pubDate>not a date</pubDate>
+    </item>
+    <item>
+      <guid>duplicate-enclosures</guid>
+      <title>Two media candidates</title>
+      <odd:description>Do not use this as the episode summary.</odd:description>
+      <enclosure url="https://example.com/empty.mp3" length="0" type="audio/mpeg"/>
+      <enclosure url="https://example.com/real.mp3" length="1024" type="audio/mpeg"/>
+    </item>
+    <item>
+      <guid>nested-extension</guid>
+      <title><![CDATA[Text & entities]]></title>
+      <description><![CDATA[Summary with entities and markup.]]></description>
+      <odd:deep><odd:a><odd:b><odd:c>ignored</odd:c></odd:b></odd:a></odd:deep>
+      <enclosure url="https://example.com/third.mp3" type="audio/mpeg"/>
+    </item>
+  </channel>
+</rss>

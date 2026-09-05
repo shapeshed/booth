@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"
+    xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"
+    xmlns:atom="http://www.w3.org/2005/Atom"
+    xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <atom:link href="https://feeds.megaphone.fm/GLT9190936013" rel="self" type="application/rss+xml"/>
+    <title>The Rest Is Politics</title>
+    <link>http://therestispolitics.com/</link>
+    <itunes:author>Goalhanger</itunes:author>
+    <itunes:explicit>no</itunes:explicit>
+    <itunes:image href="https://megaphone.imgix.net/podcasts/show/image/show.jpg"/>
+    <item>
+      <title>Becoming Burnham: Thatcher, Hillsborough, and the Anger that Shaped Him | Part 1</title>
+      <description>To hear the full episode and the series as it drops, sign up at therestispolitics.com</description>
+      <pubDate>Thu, 20 Aug 2026 22:55:00 -0000</pubDate>
+      <itunes:author>Goalhanger</itunes:author>
+      <content:encoded><![CDATA[<p>Alastair is joined by Steve Rotheram.</p>]]></content:encoded>
+      <itunes:image href="https://megaphone.imgix.net/podcasts/episode/image/episode.jpg"/>
+      <itunes:duration>1282</itunes:duration>
+      <guid isPermaLink="false"><![CDATA[5c7ac01e-episode-1]]></guid>
+      <enclosure url="https://pdst.fm/e/traffic.megaphone.fm/GLT6202238073.mp3" length="0" type="audio/mpeg"/>
+    </item>
+  </channel>
+</rss>

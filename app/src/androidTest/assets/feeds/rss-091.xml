@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<rss version="0.91"><channel>
+  <title>RSS 0.91 Example</title><link>https://example.test/</link>
+  <description>Old but valid RSS.</description>
+  <item><title>First</title><link>/first</link><description>First body</description></item>
+</channel></rss>

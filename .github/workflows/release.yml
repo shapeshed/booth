@@ -1,0 +1,82 @@
+name: GitHub Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build release artifacts
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: Decode release keystore
+        env:
+          BOOTH_KEYSTORE_BASE64: ${{ secrets.BOOTH_KEYSTORE_BASE64 }}
+          BOOTH_KEYSTORE_PASSWORD: ${{ secrets.BOOTH_KEYSTORE_PASSWORD }}
+          BOOTH_KEY_ALIAS: ${{ secrets.BOOTH_KEY_ALIAS }}
+          BOOTH_KEY_PASSWORD: ${{ secrets.BOOTH_KEY_PASSWORD }}
+        run: |
+          set -eu
+          if [ -z "$BOOTH_KEYSTORE_BASE64" ] ||
+             [ -z "$BOOTH_KEYSTORE_PASSWORD" ] ||
+             [ -z "$BOOTH_KEY_ALIAS" ] ||
+             [ -z "$BOOTH_KEY_PASSWORD" ]; then
+            echo "All Booth signing secrets are required for releases." >&2
+            exit 1
+          fi
+          printf '%s' "$BOOTH_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/booth-release.jks"
+
+      - name: Run release checks and build artifacts
+        env:
+          BOOTH_KEYSTORE_FILE: ${{ runner.temp }}/booth-release.jks
+          BOOTH_KEYSTORE_PASSWORD: ${{ secrets.BOOTH_KEYSTORE_PASSWORD }}
+          BOOTH_KEY_ALIAS: ${{ secrets.BOOTH_KEY_ALIAS }}
+          BOOTH_KEY_PASSWORD: ${{ secrets.BOOTH_KEY_PASSWORD }}
+        run: ./gradlew test lint assembleRelease
+
+      - name: Prepare release assets
+        run: |
+          set -eu
+          tag="${GITHUB_REF_NAME:-manual}"
+          apk="app/build/outputs/apk/release/app-release.apk"
+          test -f "$apk"
+          mkdir -p app/build/release-assets
+          cp "$apk" "app/build/release-assets/booth-${tag}.apk"
+          sha256sum app/build/release-assets/* > app/build/release-assets/SHA256SUMS
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: booth-release-assets
+          path: app/build/release-assets/*
+          if-no-files-found: error
+
+      - name: Create draft GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v3
+        with:
+          files: app/build/release-assets/*
+          draft: true
+          generate_release_notes: true

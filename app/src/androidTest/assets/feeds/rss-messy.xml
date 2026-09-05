@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
+  <channel>
+    <title>Messy Example Podcast</title>
+    <link>https://feeds.example.test/show/</link>
+    <description>A deliberately untidy but parseable fixture.</description>
+    <image><url>../images/show.png</url></image>
+    <item>
+      <guid isPermaLink="false">episode-one</guid>
+      <title>  First episode  </title>
+      <link>episodes/one</link>
+      <pubDate>not-a-date</pubDate>
+      <itunes:duration>01:02:03</itunes:duration>
+      <enclosure url="../audio/one.mp3" type="audio/mpeg" length="1234" />
+      <description><![CDATA[<p>Summary with <img src="../images/one.jpg" /></p>]]></description>
+    </item>
+    <item>
+      <guid isPermaLink="false">episode-one</guid>
+      <title>Duplicate identity with a different title</title>
+      <enclosure url="https://cdn.example.test/two.mp3" type="audio/mpeg" />
+    </item>
+    <item>
+      <title>Missing guid but usable enclosure</title>
+      <enclosure url="https://cdn.example.test/three.mp3" type="audio/mpeg" />
+    </item>
+  </channel>
+</rss>
