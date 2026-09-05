@@ -5,6 +5,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import androidx.compose.runtime.mutableStateOf
 
 class PodcastNavigationKeyTest {
     private val json = Json { encodeDefaults = true }
@@ -107,5 +108,40 @@ class PodcastNavigationKeyTest {
             stack.removeAt(stack.lastIndex),
         )
         assertEquals(listOf(PodcastNavigationKey.Inbox), stack)
+    }
+
+    @Test
+    fun successfulImportShowsSubscriptionsRoot() {
+        val routeState = PodcastHomeRouteState(
+            showSearch = mutableStateOf(false),
+            selectedPodcastId = mutableStateOf(42L),
+            podcastDetailFromSubscriptions = mutableStateOf(false),
+            podcastDetailPageId = mutableStateOf(42L),
+            selectedEpisodeId = mutableStateOf(7L),
+            episodeOrigin = mutableStateOf(EpisodeOrigin.INBOX),
+            showNowPlaying = mutableStateOf(false),
+            podcastSortOrder = mutableStateOf(PodcastSortOrder.LAST_UPDATED),
+            showPodcastDescription = mutableStateOf(false),
+            showUnsubscribeConfirmation = mutableStateOf(false),
+            podcastMenuExpanded = mutableStateOf(false),
+            selectedTab = mutableStateOf(PodcastTab.HOME),
+            showDiscoverySearch = mutableStateOf(true),
+            showDiscoveryPodcastDescription = mutableStateOf(false),
+            rootMenuExpanded = mutableStateOf(false),
+            allEpisodeTags = mutableStateOf(emptySet()),
+            inboxSelectionMenuExpanded = mutableStateOf(false),
+            selectedInboxIds = mutableStateOf(emptySet()),
+            queueFilter = mutableStateOf(QueueFilter.ALL),
+            pendingEpisodeAction = mutableStateOf(null),
+            queueReorderMode = mutableStateOf(false),
+            directFeedUrl = mutableStateOf(""),
+            showAddPodcast = mutableStateOf(false),
+        )
+        showSubscriptionsAfterImport(routeState)
+
+        assertEquals(PodcastTab.SUBSCRIPTIONS, routeState.selectedTab.value)
+        assertEquals(null, routeState.selectedPodcastId.value)
+        assertEquals(null, routeState.selectedEpisodeId.value)
+        assertEquals(false, routeState.showDiscoverySearch.value)
     }
 }
