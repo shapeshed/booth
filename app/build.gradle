@@ -148,7 +148,7 @@ dependencies {
     implementation "androidx.compose.material3.adaptive:adaptive-navigation3:$adaptiveVersion"
 
     // Navigation 3 owns the Compose back stack and enables adaptive scene layouts.
-    def navigation3Version = '1.1.6'
+    def navigation3Version = '1.1.7'
     implementation "androidx.navigation3:navigation3-runtime:$navigation3Version"
     implementation "androidx.navigation3:navigation3-ui:$navigation3Version"
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-core:1.11.0'
