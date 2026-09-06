@@ -47,7 +47,6 @@ class PodcastRefreshWorker(
 ) : CoroutineWorker(context, workerParams) {
     override suspend fun doWork(): Result {
         val app = applicationContext as com.shapeshed.booth.BoothApp
-        if (!app.settings.podcastAutoRefreshEnabled.first()) return Result.success()
         var retryableFailure = false
         val notificationsEnabled = app.settings.podcastNotificationsEnabled.first()
         val autoDownloadEnabled = app.settings.podcastAutoDownloadEnabled.first()
@@ -127,21 +126,17 @@ class PodcastRefreshWorker(
 
         fun schedule(
             context: Context,
-            enabled: Boolean,
-            interval: PodcastRefreshInterval,
-            network: PodcastRefreshNetwork,
         ) {
             val workManager = WorkManager.getInstance(context.applicationContext)
-            if (!enabled) {
-                workManager.cancelUniqueWork(WorkName)
-                return
-            }
-            val networkType = when (network) {
-                PodcastRefreshNetwork.ANY_CONNECTION -> NetworkType.CONNECTED
-                PodcastRefreshNetwork.WIFI_ONLY -> NetworkType.UNMETERED
-            }
-            val request = PeriodicWorkRequestBuilder<PodcastRefreshWorker>(interval.minutes, TimeUnit.MINUTES)
-                .setConstraints(Constraints.Builder().setRequiredNetworkType(networkType).build())
+            val request = PeriodicWorkRequestBuilder<PodcastRefreshWorker>(
+                PodcastRefreshInterval.HOURLY.minutes,
+                TimeUnit.MINUTES,
+            )
+                .setConstraints(
+                    Constraints.Builder()
+                        .setRequiredNetworkType(NetworkType.CONNECTED)
+                        .build(),
+                )
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
                 .build()
             workManager.enqueueUniquePeriodicWork(

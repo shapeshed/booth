@@ -25,11 +25,12 @@ class PodcastDownloadReceiver : BroadcastReceiver() {
         if (intent.action != DownloadManager.ACTION_DOWNLOAD_COMPLETE) return
         val downloadId = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L)
         if (downloadId < 0L) return
+        val app = context.applicationContext as? BoothApp ?: return
         val pendingResult = goAsync()
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         scope.launch {
             try {
-                reconcile(context.applicationContext as BoothApp, downloadId)
+                reconcile(app, downloadId)
             } finally {
                 pendingResult.finish()
                 scope.cancel()

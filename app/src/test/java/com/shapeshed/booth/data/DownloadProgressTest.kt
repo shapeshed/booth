@@ -1,9 +1,38 @@
 package com.shapeshed.booth.data
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DownloadProgressTest {
+    @Test
+    fun pendingRequestStartsSyncBeforeDurableAssetExists() {
+        assertTrue(
+            shouldSyncDownloads(
+                assets = emptyList(),
+                progress = mapOf(7L to DownloadProgress(0L, 0L, 1L)),
+            ),
+        )
+    }
+
+    @Test
+    fun completedOrDurableTerminalProgressDoesNotKeepSyncRunning() {
+        val completedProgress = mapOf(7L to DownloadProgress(100L, 100L, 1L, completed = true))
+        assertFalse(shouldSyncDownloads(emptyList(), completedProgress))
+
+        val failedAsset = asset(status = DownloadAssetStatus.FAILED)
+        val staleProgress = mapOf(7L to DownloadProgress(50L, 100L, 1L))
+        assertFalse(shouldSyncDownloads(listOf(failedAsset), staleProgress))
+    }
+
+    @Test
+    fun activeDurableAssetKeepsSyncRunning() {
+        assertTrue(shouldSyncDownloads(listOf(asset(DownloadAssetStatus.QUEUED)), emptyMap()))
+        assertTrue(shouldSyncDownloads(listOf(asset(DownloadAssetStatus.DOWNLOADING)), emptyMap()))
+        assertTrue(shouldSyncDownloads(listOf(asset(DownloadAssetStatus.RETRYING)), emptyMap()))
+    }
+
     @Test
     fun liveProgressWinsWhenItIsAheadOfDurableState() {
         val asset = DownloadAssetEntity(
@@ -57,4 +86,15 @@ class DownloadProgressTest {
         assertEquals(100L, result.getValue(9L).bytesDownloaded)
         assertEquals(true, result.getValue(9L).completed)
     }
+
+    private fun asset(status: DownloadAssetStatus) = DownloadAssetEntity(
+        episodeId = 7L,
+        assetType = DownloadAssetType.AUDIO,
+        downloadId = 1L,
+        sourceUrl = "https://example.com/episode.mp3",
+        destinationUri = "file:///tmp/episode.mp3",
+        status = status,
+        createdAtMillis = 1L,
+        updatedAtMillis = 2L,
+    )
 }

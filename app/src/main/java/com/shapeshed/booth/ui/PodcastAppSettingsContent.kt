@@ -9,6 +9,7 @@ import com.shapeshed.booth.data.PodcastSearchProvider
 import com.shapeshed.booth.data.PodcastIndexCredentials
 
 internal data class PodcastManagementCounts(
+    val total: Int,
     val playbackSpeed: Int,
     val autoRefresh: Int,
     val autoDownload: Int,

@@ -128,7 +128,6 @@ class PodcastNavigationKeyTest {
             showDiscoverySearch = mutableStateOf(true),
             showDiscoveryPodcastDescription = mutableStateOf(false),
             rootMenuExpanded = mutableStateOf(false),
-            allEpisodeTags = mutableStateOf(emptySet()),
             inboxSelectionMenuExpanded = mutableStateOf(false),
             selectedInboxIds = mutableStateOf(emptySet()),
             queueFilter = mutableStateOf(QueueFilter.ALL),

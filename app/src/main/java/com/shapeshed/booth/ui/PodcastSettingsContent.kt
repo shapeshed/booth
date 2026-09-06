@@ -8,7 +8,9 @@ import com.shapeshed.booth.data.PodcastEntity
 internal fun PodcastSettingsContent(
     podcast: PodcastEntity,
     globalPlaybackSpeed: Float,
+    globalSkipSilence: Boolean,
     onPlaybackSpeedChange: (Float?) -> Unit,
+    onSkipSilenceChange: (Boolean?) -> Unit,
     videoDownloadsEnabled: Boolean,
     onVideoDownloadsEnabledChange: (Boolean) -> Unit,
     globalAutoRefreshEnabled: Boolean,
@@ -22,7 +24,9 @@ internal fun PodcastSettingsContent(
     PodcastSettingsScreen(
         podcast = podcast,
         globalPlaybackSpeed = globalPlaybackSpeed,
+        globalSkipSilence = globalSkipSilence,
         onPlaybackSpeedChange = onPlaybackSpeedChange,
+        onSkipSilenceChange = onSkipSilenceChange,
         videoDownloadsEnabled = videoDownloadsEnabled,
         onVideoDownloadsEnabledChange = onVideoDownloadsEnabledChange,
         globalAutoRefreshEnabled = globalAutoRefreshEnabled,

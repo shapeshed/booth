@@ -244,9 +244,17 @@ class PodcastPlaybackViewModel @Inject constructor(
         viewModelScope.launch {
             val persistedPosition = repository?.episode(selectedEpisode.id)?.positionMs
                 ?: selectedEpisode.positionMs
-            val effectiveSpeed = repository?.podcast(selectedEpisode.podcastId)?.playbackSpeed ?: preferredSpeed
+            val podcast = repository?.podcast(selectedEpisode.podcastId)
+            val effectiveSpeed = podcast?.playbackSpeed ?: preferredSpeed
+            val effectiveSkipSilence = podcast?.skipSilence
+                ?: settings?.podcastSkipSilence?.first()
+                ?: false
             displayedPositionMs = persistedPosition
-            _state.value = _state.value.copy(positionMs = persistedPosition, speed = effectiveSpeed)
+            _state.value = _state.value.copy(
+                positionMs = persistedPosition,
+                speed = effectiveSpeed,
+                skipSilence = effectiveSkipSilence,
+            )
             val mediaItems = episodes.map { episode ->
                 val persistedEpisode = repository?.episode(episode.id) ?: episode
                 buildMediaItem(persistedEpisode, useVideo, podcastTitles)
@@ -254,6 +262,7 @@ class PodcastPlaybackViewModel @Inject constructor(
             controller?.apply {
                 setMediaItems(mediaItems, selectedIndex, persistedPosition)
                 setPlaybackSpeed(effectiveSpeed)
+                sendSkipSilenceCommand(effectiveSkipSilence)
                 prepare()
                 play()
             }
@@ -279,10 +288,16 @@ class PodcastPlaybackViewModel @Inject constructor(
         )
         viewModelScope.launch {
             val item = buildMediaItem(episode, useVideo = false, playlistPodcastTitles)
-            val effectiveSpeed = repository?.podcast(episode.podcastId)?.playbackSpeed ?: preferredSpeed
+            val podcast = repository?.podcast(episode.podcastId)
+            val effectiveSpeed = podcast?.playbackSpeed ?: preferredSpeed
+            val effectiveSkipSilence = podcast?.skipSilence
+                ?: settings?.podcastSkipSilence?.first()
+                ?: false
+            _state.value = _state.value.copy(skipSilence = effectiveSkipSilence)
             controller?.apply {
                 setMediaItem(item, episode.positionMs)
                 setPlaybackSpeed(effectiveSpeed)
+                sendSkipSilenceCommand(effectiveSkipSilence)
                 prepare()
             }
         }
@@ -292,7 +307,11 @@ class PodcastPlaybackViewModel @Inject constructor(
         val mediaController = controller ?: return
         val episodeId = mediaController.currentMediaItem?.mediaId?.toLongOrNull() ?: return
         val episode = repository?.episode(episodeId) ?: return
-        val effectiveSpeed = repository?.podcast(episode.podcastId)?.playbackSpeed ?: preferredSpeed
+        val podcast = repository?.podcast(episode.podcastId)
+        val effectiveSpeed = podcast?.playbackSpeed ?: preferredSpeed
+        val effectiveSkipSilence = podcast?.skipSilence
+            ?: settings?.podcastSkipSilence?.first()
+            ?: false
         playlistEpisodes = playlistEpisodes + (episode.id to episode)
         displayedPositionMs = mediaController.currentPosition.coerceAtLeast(0L)
         displayedDurationMs = mediaController.duration.takeIf { it > 0L } ?: episode.durationMs ?: 0L
@@ -302,10 +321,12 @@ class PodcastPlaybackViewModel @Inject constructor(
             positionMs = displayedPositionMs,
             durationMs = displayedDurationMs,
             speed = effectiveSpeed,
+            skipSilence = effectiveSkipSilence,
             isBuffering = mediaController.playbackState == Player.STATE_BUFFERING &&
                 mediaController.playWhenReady,
         )
         mediaController.setPlaybackSpeed(effectiveSpeed)
+        sendSkipSilenceCommand(effectiveSkipSilence)
     }
 
     fun setVideoMode(enabled: Boolean) {
@@ -475,6 +496,17 @@ class PodcastPlaybackViewModel @Inject constructor(
         _state.value = _state.value.copy(skipSilence = enabled)
         viewModelScope.launch {
             settings?.setPodcastSkipSilence(enabled)
+        }
+    }
+
+    fun setPodcastSkipSilence(podcastId: Long, enabled: Boolean?) {
+        viewModelScope.launch {
+            repository?.setPodcastSkipSilence(podcastId, enabled)
+            if (_state.value.episode?.podcastId == podcastId) {
+                val effective = enabled ?: settings?.podcastSkipSilence?.first() ?: false
+                sendSkipSilenceCommand(effective)
+                _state.value = _state.value.copy(skipSilence = effective)
+            }
         }
     }
 

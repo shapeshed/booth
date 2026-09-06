@@ -10,13 +10,16 @@ internal fun PodcastHomeManagementDestination(
     destination: PodcastNavigationKey.PodcastManagement,
     podcasts: List<PodcastEntity>,
     globalPlaybackSpeed: Float,
+    globalSkipSilence: Boolean,
     viewModel: PodcastViewModel,
+    playbackViewModel: PodcastPlaybackViewModel,
     modifier: Modifier = Modifier,
 ) {
     PodcastManagementScreen(
         category = destination.category,
         podcasts = podcasts,
         globalPlaybackSpeed = globalPlaybackSpeed,
+        globalSkipSilence = globalSkipSilence,
         onPodcastFlagsChange = { podcast, refresh, download, notifications ->
             viewModel.updatePodcastSettings(
                 podcast.id,
@@ -31,6 +34,9 @@ internal fun PodcastHomeManagementDestination(
         },
         onPodcastSpeedChange = { podcast, speed ->
             viewModel.setPodcastPlaybackSpeed(podcast.id, speed)
+        },
+        onPodcastSkipSilenceChange = { podcast, enabled ->
+            playbackViewModel.setPodcastSkipSilence(podcast.id, enabled)
         },
         onPodcastVideoDownloadChange = { podcast, enabled ->
             viewModel.setPodcastVideoDownload(podcast.id, enabled)

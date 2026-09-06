@@ -5,8 +5,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import com.shapeshed.booth.data.PodcastRefreshInterval
-import com.shapeshed.booth.data.PodcastRefreshNetwork
 import com.shapeshed.booth.PodcastNotificationActionAddToQueue
 import com.shapeshed.booth.PodcastNotificationActionPlay
 
@@ -18,9 +16,6 @@ internal fun PodcastHomeEffects(
     initialEpisodeId: Long?,
     initialNotificationAction: String?,
     playbackViewModel: PodcastPlaybackViewModel,
-    autoRefreshEnabled: Boolean,
-    refreshInterval: PodcastRefreshInterval,
-    refreshNetwork: PodcastRefreshNetwork,
     savedPodcastTab: String?,
     showNowPlaying: Boolean,
     playbackEpisodeId: Long?,
@@ -30,12 +25,9 @@ internal fun PodcastHomeEffects(
     onOpenInitialEpisode: (com.shapeshed.booth.data.EpisodeEntity) -> Unit,
     onSelectSavedTab: (PodcastTab) -> Unit,
 ) {
-    LaunchedEffect(autoRefreshEnabled, refreshInterval, refreshNetwork) {
+    LaunchedEffect(Unit) {
         com.shapeshed.booth.data.PodcastRefreshWorker.schedule(
             context = context,
-            enabled = autoRefreshEnabled,
-            interval = refreshInterval,
-            network = refreshNetwork,
         )
     }
     LaunchedEffect(Unit) { playbackViewModel.connect(context) }

@@ -11,7 +11,7 @@ import com.shapeshed.booth.data.EpisodeEntity
 import com.shapeshed.booth.data.PodcastEntity
 
 @Composable
-internal fun PodcastHomeSpecialRootDestination(
+internal fun PodcastHomeSecondaryDestination(
     destination: PodcastNavigationKey,
     podcasts: List<PodcastEntity>,
     allPodcastsById: Map<Long, PodcastEntity>,
@@ -19,9 +19,6 @@ internal fun PodcastHomeSpecialRootDestination(
     downloadedEpisodes: Map<Long, EpisodeEntity>,
     playback: PlaybackUiState,
     downloadProgress: Map<Long, DownloadProgress>,
-    availableTags: List<String>,
-    selectedTags: Set<String>,
-    onSelectedTagsChange: (Set<String>) -> Unit,
     viewModel: PodcastViewModel,
     playbackViewModel: PodcastPlaybackViewModel,
     context: Context,
@@ -47,19 +44,13 @@ internal fun PodcastHomeSpecialRootDestination(
             modifier = modifier,
         )
         PodcastNavigationKey.AllEpisodes -> {
-            val allEpisodePodcastIds = remember(podcasts, selectedTags) {
-                podcastIdsForEpisodeTags(podcasts, selectedTags)
-            }
-            val allEpisodes = remember(allEpisodePodcastIds) {
-                viewModel.allEpisodes(allEpisodePodcastIds)
+            val allEpisodes = remember {
+                viewModel.allEpisodes(null)
             }.collectAsLazyPagingItems()
             PodcastAllEpisodesContent(
                 episodes = allEpisodes,
                 podcastsById = allPodcastsById,
                 playback = playback,
-                availableTags = availableTags,
-                selectedTags = selectedTags,
-                onSelectedTagsChange = onSelectedTagsChange,
                 onOpen = { onOpen(it, EpisodeNavigationOrigin.AllEpisodes) },
                 onAddToQueue = { viewModel.addToQueueFromInbox(it.id) },
                 onActions = onAction,

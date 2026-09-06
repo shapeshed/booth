@@ -320,7 +320,7 @@ internal fun PodcastLibrary(
             modifier = Modifier
                 .fillMaxSize(),
             state = listState,
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 16.dp + LocalPodcastMiniPlayerInset.current),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp + LocalPodcastMiniPlayerInset.current),
             verticalArrangement = Arrangement.spacedBy(PodcastListItemSpacing),
         ) {
         if (importProgress != null) {
@@ -517,11 +517,11 @@ internal fun PodcastGridLibrary(
     modifier: Modifier = Modifier,
 ) {
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 160.dp),
+        columns = GridCells.Adaptive(minSize = 128.dp),
         modifier = modifier,
         contentPadding = PaddingValues(
             start = 16.dp,
-            top = 16.dp,
+            top = 8.dp,
             end = 16.dp,
             bottom = 16.dp + LocalPodcastMiniPlayerInset.current,
         ),
