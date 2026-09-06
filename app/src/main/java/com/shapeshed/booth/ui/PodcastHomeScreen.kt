@@ -32,7 +32,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
@@ -99,7 +98,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AppBarWithSearch
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Checkbox
@@ -270,6 +268,7 @@ import com.shapeshed.booth.data.PodcastSubscriptionStage
 import com.shapeshed.booth.data.canonicalFeedUrl
 import com.shapeshed.booth.data.relativeTime
 import com.shapeshed.booth.data.PodcastRefreshWorker
+import com.shapeshed.booth.data.shouldSyncDownloads
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -411,8 +410,9 @@ fun PodcastHomeScreen(
     val downloadAssets = homeUiState.downloadAssets
     val downloadedEpisodes = homeUiState.downloadedEpisodes
     val previewEpisodeEntities = homeUiState.previewEpisodeEntities
-    val hasActiveDownloads = remember(downloadAssets) {
-        downloadAssets.any { it.status in com.shapeshed.booth.data.PodcastDownloadManager.ACTIVE_STATUSES }
+    val downloadProgress = homeUiState.downloadProgress
+    val hasActiveDownloads = remember(downloadAssets, downloadProgress) {
+        shouldSyncDownloads(downloadAssets, downloadProgress)
     }
     val state = homeUiState.homeState
     val localDiscoveryCategory = state.categoryDiscovery?.title?.let { title ->
@@ -431,15 +431,11 @@ fun PodcastHomeScreen(
         it.id == settingsState.searchProviderId
     }
     val podcastDownloadVideos = settingsState.downloadVideos
-    val podcastAutoRefreshEnabled = settingsState.autoRefreshEnabled
-    val podcastRefreshInterval = settingsState.refreshInterval
-    val podcastRefreshNetwork = settingsState.refreshNetwork
     val podcastNotificationsEnabled = settingsState.notificationsEnabled
     val podcastAutoDownloadEnabled = settingsState.autoDownloadEnabled
     val podcastAutoQueueEnabled = settingsState.autoQueueEnabled
     val podcastDownloadNetwork = settingsState.downloadNetwork
     val savedPodcastTab = settingsState.savedPodcastTab
-    val downloadProgress = homeUiState.downloadProgress
     val routeState = rememberPodcastHomeRouteState()
     // Each primary destination owns its own stack so switching tabs preserves nested routes and
     // destination state. NavDisplay receives only the currently selected stack.
@@ -480,6 +476,8 @@ fun PodcastHomeScreen(
         currentDestination is PodcastNavigationKey.DiscoveryPodcast ||
         currentDestination is PodcastNavigationKey.DiscoveryCategory ||
         currentDestination is PodcastNavigationKey.DiscoveryEpisode
+    val showScrollableDetail = currentDestination is PodcastNavigationKey.EpisodeDetail ||
+        currentDestination is PodcastNavigationKey.PodcastDetail
     val listDetailStrategy = rememberListDetailSceneStrategy<NavKey>()
     val composeView = LocalView.current
     val inputMethodManager = remember(composeView) {
@@ -490,8 +488,8 @@ fun PodcastHomeScreen(
     var retainedPodcastAfterUnsubscribe by remember { mutableStateOf<PodcastEntity?>(null) }
     val globalSearchTextFieldState = rememberTextFieldState()
     val globalSearchBarState = androidx.compose.material3.rememberContainedSearchBarState()
-    val globalSearchScrollBehavior = key(currentDestination) {
-        SearchBarDefaults.enterAlwaysSearchBarScrollBehavior()
+    val topAppBarScrollBehavior = key(currentDestination) {
+        TopAppBarDefaults.enterAlwaysScrollBehavior()
     }
     val globalSearchFocusRequester = remember { FocusRequester() }
     val globalSearchExpanded by remember {
@@ -521,7 +519,6 @@ fun PodcastHomeScreen(
     val showPodcastSettings = topLevelBackStack.lastOrNull() is PodcastNavigationKey.PodcastSettings
     val showDownloads = topLevelBackStack.lastOrNull() == PodcastNavigationKey.Downloads
     val showAllEpisodes = topLevelBackStack.lastOrNull() == PodcastNavigationKey.AllEpisodes
-    var allEpisodeTags by routeState.allEpisodeTags
     var inboxSelectionMenuExpanded by routeState.inboxSelectionMenuExpanded
     var selectedInboxIds by routeState.selectedInboxIds
     var queueFilter by routeState.queueFilter
@@ -707,6 +704,8 @@ fun PodcastHomeScreen(
         scope.launch { globalSearchBarState.animateToCollapsed() }
     }
     fun openSpecialRoot(destination: PodcastNavigationKey) {
+        viewModel.clearGlobalSearch()
+        scope.launch { globalSearchBarState.animateToCollapsed() }
         selectedPodcastId = null
         selectedEpisodeId = null
         topLevelBackStack.clear()
@@ -872,9 +871,6 @@ fun PodcastHomeScreen(
         initialEpisodeId = initialEpisodeId,
         initialNotificationAction = initialNotificationAction,
         playbackViewModel = playbackViewModel,
-        autoRefreshEnabled = podcastAutoRefreshEnabled,
-        refreshInterval = podcastRefreshInterval,
-        refreshNetwork = podcastRefreshNetwork,
         savedPodcastTab = savedPodcastTab,
         showNowPlaying = showNowPlaying,
         playbackEpisodeId = playback.episode?.id,
@@ -913,7 +909,7 @@ fun PodcastHomeScreen(
     }
     val globalSearchResults: @Composable () -> Unit = {
         PodcastHomeGlobalSearchDestination(
-            selectedTab = selectedTab,
+            selectedTab = if (showAllEpisodes) PodcastTab.HOME else selectedTab,
             query = globalSearchQuery,
             episodes = globalSearchEpisodes,
             subscriptions = podcasts,
@@ -1023,10 +1019,12 @@ fun PodcastHomeScreen(
     val toolbarMotionScheme = MaterialTheme.motionScheme
     Box(modifier = modifier.fillMaxSize()) {
         PodcastHomeAppContent(
-            modifier = if (atRoot) {
-                Modifier.nestedScroll(globalSearchScrollBehavior.nestedScrollConnection)
-            } else {
-                Modifier
+            modifier = when {
+                (atRoot && selectedTab == PodcastTab.SUBSCRIPTIONS) || showAllEpisodes ->
+                    Modifier.nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
+                atRoot || showAllEpisodes || showScrollableDetail ->
+                    Modifier.nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
+                else -> Modifier
             },
             navigationRailStartPadding = navigationRailStartPadding,
         snackbarHost = {
@@ -1048,50 +1046,54 @@ fun PodcastHomeScreen(
                 label = "inbox selection toolbar",
             ) { selectionMode ->
             Column {
-            if (atRoot && useNavigationRail && !selectionMode) {
+            if (atRoot && selectedTab == PodcastTab.SUBSCRIPTIONS && !selectionMode) {
                 TopAppBar(
                     title = {
-                        SearchBarDefaults.InputField(
+                        Surface(
                             modifier = Modifier.fillMaxWidth(),
-                            textFieldState = globalSearchTextFieldState,
-                            searchBarState = globalSearchBarState,
-                            onSearch = { scope.launch { globalSearchBarState.animateToCollapsed() } },
-                            keyboardOptions = KeyboardOptions(
-                                imeAction = ImeAction.Search,
-                                showKeyboardOnFocus = true,
-                            ),
-                            placeholder = {
-                                Text(
-                                    if (selectedTab == PodcastTab.SUBSCRIPTIONS) {
-                                        stringResource(R.string.search_podcasts)
-                                    } else {
-                                        stringResource(R.string.search_episodes)
-                                    },
-                                )
-                            },
-                            leadingIcon = {
-                                if (globalSearchExpanded) {
-                                    IconButton(onClick = {
-                                        scope.launch { globalSearchBarState.animateToCollapsed() }
-                                    }) {
-                                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back))
+                            shape = SearchBarDefaults.inputFieldShape,
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        ) {
+                            SearchBarDefaults.InputField(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .focusRequester(globalSearchFocusRequester),
+                                textFieldState = globalSearchTextFieldState,
+                                searchBarState = globalSearchBarState,
+                                onSearch = { scope.launch { globalSearchBarState.animateToCollapsed() } },
+                                keyboardOptions = KeyboardOptions(
+                                    imeAction = ImeAction.Search,
+                                    showKeyboardOnFocus = true,
+                                ),
+                                placeholder = {
+                                    Text(
+                                        if (selectedTab == PodcastTab.SUBSCRIPTIONS) {
+                                            stringResource(R.string.search_podcasts)
+                                        } else {
+                                            stringResource(R.string.search_episodes)
+                                        },
+                                    )
+                                },
+                                trailingIcon = {
+                                    if (globalSearchText.isNotEmpty()) {
+                                        IconButton(onClick = { viewModel.clearGlobalSearch() }) {
+                                            Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.clear_search))
+                                        }
                                     }
-                                } else {
-                                    Icon(Icons.Rounded.Search, contentDescription = null)
-                                }
-                            },
-                            trailingIcon = {
-                                if (globalSearchText.isNotEmpty()) {
-                                    IconButton(onClick = { viewModel.clearGlobalSearch() }) {
-                                        Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.clear_search))
-                                    }
-                                }
-                            },
-                        )
+                                },
+                            )
+                        }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                    ),
+                    navigationIcon = {
+                        if (globalSearchExpanded) {
+                            IconButton(onClick = {
+                                scope.launch { globalSearchBarState.animateToCollapsed() }
+                            }) {
+                                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back))
+                            }
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(),
                     actions = {
                         PodcastHomeRootActions(
                             selectedTab = selectedTab,
@@ -1108,77 +1110,51 @@ fun PodcastHomeScreen(
                             onOpenSettings = ::openSettings,
                         )
                     },
+                    scrollBehavior = topAppBarScrollBehavior,
                 )
-            } else if (atRoot && !selectionMode) {
-                AppBarWithSearch(
-                    state = globalSearchBarState,
-                    inputField = {
-                        SearchBarDefaults.InputField(
-                            modifier = Modifier.focusRequester(globalSearchFocusRequester),
-                            textFieldState = globalSearchTextFieldState,
-                            searchBarState = globalSearchBarState,
-                            onSearch = { scope.launch { globalSearchBarState.animateToCollapsed() } },
-                            keyboardOptions = KeyboardOptions(
-                                imeAction = ImeAction.Search,
-                                showKeyboardOnFocus = true,
-                            ),
-                            placeholder = {
-                                Text(
-                                    if (selectedTab == PodcastTab.SUBSCRIPTIONS) {
-                                        stringResource(R.string.search_podcasts)
-                                    } else {
-                                        stringResource(R.string.search_episodes)
-                                    },
-                                )
-                            },
-                            leadingIcon = {
-                                if (globalSearchExpanded) {
-                                    IconButton(onClick = {
-                                        scope.launch { globalSearchBarState.animateToCollapsed() }
-                                    }) {
-                                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back))
+            } else if (showAllEpisodes && !selectionMode) {
+                TopAppBar(
+                    title = {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = SearchBarDefaults.inputFieldShape,
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        ) {
+                            SearchBarDefaults.InputField(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .focusRequester(globalSearchFocusRequester),
+                                textFieldState = globalSearchTextFieldState,
+                                searchBarState = globalSearchBarState,
+                                onSearch = { scope.launch { globalSearchBarState.animateToCollapsed() } },
+                                keyboardOptions = KeyboardOptions(
+                                    imeAction = ImeAction.Search,
+                                    showKeyboardOnFocus = true,
+                                ),
+                                placeholder = { Text(stringResource(R.string.search_episodes)) },
+                                trailingIcon = {
+                                    if (globalSearchText.isNotEmpty()) {
+                                        IconButton(onClick = { viewModel.clearGlobalSearch() }) {
+                                            Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.clear_search))
+                                        }
                                     }
-                                } else {
-                                    Icon(Icons.Rounded.Search, contentDescription = null)
-                                }
-                            },
-                            trailingIcon = {
-                                if (globalSearchText.isNotEmpty()) {
-                                    IconButton(onClick = { viewModel.clearGlobalSearch() }) {
-                                        Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.clear_search))
-                                    }
-                                }
-                            },
-                        )
+                                },
+                            )
+                        }
                     },
-                    colors = SearchBarDefaults.appBarWithSearchColors(
-                        searchBarColors = SearchBarDefaults.colors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        ),
-                        scrolledSearchBarContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        appBarContainerColor = MaterialTheme.colorScheme.surface,
-                        scrolledAppBarContainerColor = MaterialTheme.colorScheme.surface,
-                        appBarNavigationIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        appBarActionIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    ),
-                    scrollBehavior = globalSearchScrollBehavior,
-                    actions = {
-                        PodcastHomeRootActions(
-                            selectedTab = selectedTab,
-                            queueReorderMode = queueReorderMode,
-                            menuExpanded = rootMenuExpanded,
-                            viewModel = viewModel,
-                            showSearchAction = false,
-                            onQueueReorderDone = { queueReorderMode = false },
-                            onOpenDiscoverySearch = ::openGlobalSearch,
-                            onOpenAddPodcast = { routeState.showAddPodcast.value = true },
-                            onMenuExpandedChange = { rootMenuExpanded = it },
-                            onOpenDownloads = { openSpecialRoot(PodcastNavigationKey.Downloads) },
-                            onOpenAllEpisodes = { openSpecialRoot(PodcastNavigationKey.AllEpisodes) },
-                            onOpenSettings = ::openSettings,
-                        )
+                    navigationIcon = {
+                        IconButton(onClick = {
+                            if (globalSearchExpanded) {
+                                scope.launch { globalSearchBarState.animateToCollapsed() }
+                            } else {
+                                popTopLevelRoute()
+                            }
+                        }) {
+                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back))
+                        }
                     },
-                    modifier = Modifier.fillMaxWidth(),
+                    colors = TopAppBarDefaults.topAppBarColors(),
+                    scrollBehavior = topAppBarScrollBehavior,
                 )
             } else TopAppBar(
                 title = {
@@ -1198,12 +1174,11 @@ fun PodcastHomeScreen(
                         selectedTab = selectedTab,
                     )
                 },
-                colors = if (selectionMode) {
-                    TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    )
+                colors = TopAppBarDefaults.topAppBarColors(),
+                scrollBehavior = if (atRoot || showAllEpisodes || showScrollableDetail) {
+                    topAppBarScrollBehavior
                 } else {
-                    TopAppBarDefaults.topAppBarColors()
+                    null
                 },
                 navigationIcon = {
                     PodcastHomeTopBarNavigationIcon(
@@ -1254,6 +1229,7 @@ fun PodcastHomeScreen(
                             queueReorderMode = queueReorderMode,
                             menuExpanded = rootMenuExpanded,
                             viewModel = viewModel,
+                            showSearchAction = false,
                             onQueueReorderDone = { queueReorderMode = false },
                             onOpenDiscoverySearch = ::openGlobalSearch,
                             onOpenAddPodcast = { routeState.showAddPodcast.value = true },
@@ -1423,9 +1399,9 @@ fun PodcastHomeScreen(
         androidx.compose.runtime.CompositionLocalProvider(
             LocalPodcastMiniPlayerInset provides miniPlayerBottomInset,
         ) {
-        if (atRoot && globalSearchExpanded) {
+        if ((atRoot || showAllEpisodes) && globalSearchExpanded) {
             globalSearchResults()
-        } else if (useNavigationDetails) {
+        } else if (useNavigationDetails || showAllEpisodes) {
             @Composable
             fun RootTabContent(tab: PodcastTab) {
                 if (tab == PodcastTab.HOME) {
@@ -1798,7 +1774,7 @@ fun PodcastHomeScreen(
             }
             @Composable
             fun SpecialRootContent(destination: PodcastNavigationKey) {
-                PodcastHomeSpecialRootDestination(
+                PodcastHomeSecondaryDestination(
                     destination = destination,
                     podcasts = podcasts,
                     allPodcastsById = allPodcastsById,
@@ -1806,9 +1782,6 @@ fun PodcastHomeScreen(
                     downloadedEpisodes = downloadedEpisodes,
                     playback = playback,
                     downloadProgress = downloadProgress,
-                    availableTags = (availablePodcastTags + derived.availableAppleCategories).distinct().sorted(),
-                    selectedTags = allEpisodeTags,
-                    onSelectedTagsChange = { allEpisodeTags = it },
                     viewModel = viewModel,
                     playbackViewModel = playbackViewModel,
                     context = context,
@@ -1852,7 +1825,9 @@ fun PodcastHomeScreen(
                             destination = destination,
                             podcasts = allPodcasts,
                             globalPlaybackSpeed = globalPlaybackSpeed,
+                            globalSkipSilence = homeUiState.playback.skipSilence,
                             viewModel = viewModel,
+                            playbackViewModel = playbackViewModel,
                             modifier = Modifier.fillMaxSize(),
                         )
                     }
@@ -1899,12 +1874,16 @@ fun PodcastHomeScreen(
                             PodcastSettingsContent(
                                 podcast = podcast,
                                 globalPlaybackSpeed = globalPlaybackSpeed,
+                                globalSkipSilence = homeUiState.playback.skipSilence,
                                 onPlaybackSpeedChange = { speed ->
                                     viewModel.setPodcastPlaybackSpeed(podcast.id, speed)
                                 },
+                                onSkipSilenceChange = { enabled ->
+                                    playbackViewModel.setPodcastSkipSilence(podcast.id, enabled)
+                                },
                                 videoDownloadsEnabled = podcastDownloadVideos,
                                 onVideoDownloadsEnabledChange = viewModel::setPodcastDownloadVideos,
-                                globalAutoRefreshEnabled = podcastAutoRefreshEnabled,
+                                globalAutoRefreshEnabled = true,
                                 globalAutoDownloadEnabled = podcastAutoDownloadEnabled,
                                 globalAutoQueueEnabled = podcastAutoQueueEnabled,
                                 globalNotificationsEnabled = podcastNotificationsEnabled &&

@@ -104,7 +104,7 @@ private fun PodcastHomeNavigationItems(
         {
             BadgedBox(
                 badge = {
-                    if (inboxCount > 0) Badge { Text(if (inboxCount > 99) "99+" else inboxCount.toString()) }
+                    if (inboxCount > 0) Badge()
                 },
             ) {
                 Icon(Icons.Rounded.Inbox, contentDescription = null)

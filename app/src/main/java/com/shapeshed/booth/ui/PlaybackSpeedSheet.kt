@@ -99,6 +99,9 @@ internal fun PlaybackSpeedSheet(
     onSpeedChange: (Float) -> Unit,
     onSkipSilenceChange: (Boolean) -> Unit,
     onDismiss: () -> Unit,
+    inherited: Boolean = false,
+    globalSpeed: Float = speed,
+    onUseGlobal: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     var sliderSpeed by remember(speed) { mutableFloatStateOf(speed) }
@@ -122,6 +125,19 @@ internal fun PlaybackSpeedSheet(
                     color = MaterialTheme.colorScheme.primary,
                 )
             }
+            if (inherited && onUseGlobal != null) {
+                Text(
+                    stringResource(R.string.inherited_global_playback_speed, formatPlaybackSpeed(globalSpeed)),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                PlaybackPresetButton(
+                    label = stringResource(R.string.use_global_playback_speed),
+                    selected = true,
+                    onClick = onUseGlobal,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
             FlowRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -130,7 +146,7 @@ internal fun PlaybackSpeedSheet(
                 PlaybackSpeedPresets.forEach { preset ->
                     PlaybackPresetButton(
                         label = formatPlaybackSpeed(preset),
-                        selected = speed == preset,
+                    selected = !inherited && speed == preset,
                         onClick = {
                             sliderSpeed = preset
                             onSpeedChange(preset)
@@ -165,72 +181,6 @@ internal fun PlaybackSpeedSheet(
                     onCheckedChange = onSkipSilenceChange,
                 )
             }
-        }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
-@Composable
-internal fun PodcastPlaybackSpeedSheet(
-    speed: Float,
-    inherited: Boolean,
-    globalSpeed: Float,
-    onSpeedChange: (Float) -> Unit,
-    onUseGlobal: () -> Unit,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var sliderSpeed by remember(speed) { mutableFloatStateOf(speed) }
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(
-            modifier = modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            Text(stringResource(R.string.playback_speed), style = MaterialTheme.typography.titleLarge)
-            Text(
-                text = if (inherited) {
-                    stringResource(R.string.inherited_global_playback_speed, formatPlaybackSpeed(globalSpeed))
-                } else {
-                    formatPlaybackSpeed(sliderSpeed)
-                },
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            PlaybackPresetButton(
-                label = stringResource(R.string.use_global_playback_speed),
-                selected = inherited,
-                onClick = onUseGlobal,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                PlaybackSpeedPresets.forEach { preset ->
-                    PlaybackPresetButton(
-                        label = formatPlaybackSpeed(preset),
-                        selected = !inherited && sliderSpeed == preset,
-                        onClick = {
-                            sliderSpeed = preset
-                            onSpeedChange(preset)
-                        },
-                    )
-                }
-            }
-            Slider(
-                value = sliderSpeed,
-                onValueChange = {
-                    sliderSpeed = it
-                    onSpeedChange(it)
-                },
-                valueRange = MIN_PLAYBACK_SPEED..MAX_PLAYBACK_SPEED,
-                steps = 24,
-                modifier = Modifier.fillMaxWidth(),
-            )
         }
     }
 }

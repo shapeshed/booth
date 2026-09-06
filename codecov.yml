@@ -1,0 +1,6 @@
+# The uploaded JaCoCo report covers JVM tests only. Compose UI coverage is exercised by
+# instrumentation and screenshot tests, so Codecov's JVM-only patch percentage is not a
+# meaningful gate for UI changes.
+coverage:
+  status:
+    patch: off

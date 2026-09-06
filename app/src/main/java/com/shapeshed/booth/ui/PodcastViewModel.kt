@@ -400,7 +400,6 @@ class PodcastViewModel @Inject constructor(
     fun setPodcastAutoQueueEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settings.setPodcastAutoQueueEnabled(enabled)
-            repository.setAllPodcastAutoQueue(enabled)
         }
     }
 

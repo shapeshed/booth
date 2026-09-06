@@ -349,6 +349,10 @@ class PodcastRepository(
     suspend fun setPodcastPlaybackSpeed(podcastId: Long, speed: Float?) =
         dao.setPlaybackSpeed(podcastId, speed?.coerceIn(0.5f, 3f))
 
+    suspend fun setPodcastSkipSilence(podcastId: Long, enabled: Boolean?) {
+        dao.podcast(podcastId)?.let { dao.upsertPodcast(it.copy(skipSilence = enabled)) }
+    }
+
     suspend fun setPodcastVideoDownload(podcastId: Long, enabled: Boolean) {
         dao.podcast(podcastId)?.let { dao.upsertPodcast(it.copy(includeInVideoDownload = enabled)) }
     }

@@ -43,6 +43,17 @@ object DownloadProgressStore {
     }
 }
 
+internal fun shouldSyncDownloads(
+    assets: List<DownloadAssetEntity>,
+    progress: Map<Long, DownloadProgress>,
+): Boolean {
+    if (assets.any { it.status in PodcastDownloadManager.ACTIVE_STATUSES }) return true
+    val durableEpisodeIds = assets.mapTo(mutableSetOf(), DownloadAssetEntity::episodeId)
+    return progress.any { (episodeId, value) ->
+        episodeId !in durableEpisodeIds && !value.completed
+    }
+}
+
 /** Combines durable DownloadManager state with the in-process byte counter. */
 internal fun mergeDownloadProgress(
     assets: List<DownloadAssetEntity>,

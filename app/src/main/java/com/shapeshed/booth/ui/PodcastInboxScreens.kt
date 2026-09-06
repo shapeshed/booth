@@ -285,7 +285,7 @@ internal fun PodcastInbox(
             modifier = Modifier
                 .fillMaxSize(),
             state = listState,
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 16.dp + LocalPodcastMiniPlayerInset.current),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp + LocalPodcastMiniPlayerInset.current),
             verticalArrangement = Arrangement.spacedBy(PodcastListItemSpacing),
         ) {
             if (visibleEpisodes.itemCount == 0) {
@@ -402,7 +402,7 @@ internal fun PodcastDownloadsScreen(
         contentPadding = PaddingValues(
             start = 8.dp,
             end = 8.dp,
-            top = 12.dp,
+            top = 8.dp,
             bottom = 16.dp + LocalPodcastMiniPlayerInset.current,
         ),
         verticalArrangement = Arrangement.spacedBy(PodcastListItemSpacing),

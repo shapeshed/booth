@@ -28,10 +28,12 @@ internal fun PodcastManagementScreen(
     category: PodcastManagementCategory,
     podcasts: List<PodcastEntity>,
     globalPlaybackSpeed: Float,
+    globalSkipSilence: Boolean,
     onPodcastFlagsChange: (PodcastEntity, Boolean, Boolean, Boolean) -> Unit,
     onPodcastVideoDownloadChange: (PodcastEntity, Boolean) -> Unit,
     onPodcastAutoQueueChange: (PodcastEntity, Boolean) -> Unit,
     onPodcastSpeedChange: (PodcastEntity, Float?) -> Unit,
+    onPodcastSkipSilenceChange: (PodcastEntity, Boolean?) -> Unit,
     onSetAllEnabled: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -105,13 +107,15 @@ internal fun PodcastManagementScreen(
         }
     }
     editingPodcast?.let { podcast ->
-        PodcastPlaybackSpeedSheet(
+        PlaybackSpeedSheet(
             speed = podcast.playbackSpeed ?: globalPlaybackSpeed,
-            inherited = podcast.playbackSpeed == null,
-            globalSpeed = globalPlaybackSpeed,
+            skipSilence = podcast.skipSilence ?: globalSkipSilence,
             onSpeedChange = { onPodcastSpeedChange(podcast, it); editingPodcastId = null },
+            onSkipSilenceChange = { onPodcastSkipSilenceChange(podcast, it) },
             onUseGlobal = { onPodcastSpeedChange(podcast, null); editingPodcastId = null },
             onDismiss = { editingPodcastId = null },
+            inherited = podcast.playbackSpeed == null,
+            globalSpeed = globalPlaybackSpeed,
         )
     }
 }

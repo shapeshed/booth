@@ -17,6 +17,18 @@ android {
     def releaseKeystorePassword = System.getenv("BOOTH_KEYSTORE_PASSWORD")
     def releaseKeyAlias = System.getenv("BOOTH_KEY_ALIAS")
     def releaseKeyPassword = System.getenv("BOOTH_KEY_PASSWORD")
+    def gitOutput = { List args ->
+        providers.exec {
+            commandLine "git", *args
+        }.standardOutput.asText.get().trim()
+    }
+    def gitShortSha = gitOutput(["rev-parse", "--short=7", "HEAD"])
+    def workingTreeDirty = gitOutput(["status", "--porcelain"])
+    def exactTag = gitOutput(["tag", "--points-at", "HEAD"])
+    def buildHash = (System.getenv("GITHUB_SHA") ?: gitShortSha).take(7)
+    def buildLabel = System.getenv("BOOTH_BUILD_CHANNEL") == "nightly"
+        ? "nightly-${buildHash}"
+        : (workingTreeDirty && !exactTag ? "dirty-${buildHash}" : "")
     def hasReleaseSigning = releaseKeystoreFile &&
         releaseKeystorePassword &&
         releaseKeyAlias &&
@@ -28,6 +40,7 @@ android {
         targetSdk 37
         versionCode 1
         versionName "0.1.0"
+        buildConfigField "String", "BUILD_LABEL", "\"${buildLabel}\""
         testInstrumentationRunner "com.shapeshed.booth.testing.BoothTestRunner"
     }
 

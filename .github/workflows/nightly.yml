@@ -69,6 +69,7 @@ jobs:
       - name: Build signed release APK
         if: steps.check.outputs.skip != 'true'
         env:
+          BOOTH_BUILD_CHANNEL: nightly
           BOOTH_KEYSTORE_FILE: ${{ runner.temp }}/booth-release.jks
           BOOTH_KEYSTORE_PASSWORD: ${{ secrets.BOOTH_KEYSTORE_PASSWORD }}
           BOOTH_KEY_ALIAS: ${{ secrets.BOOTH_KEY_ALIAS }}

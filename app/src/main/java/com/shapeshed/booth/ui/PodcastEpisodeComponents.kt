@@ -87,7 +87,6 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.VideoLibrary
@@ -1193,7 +1192,7 @@ internal fun PodcastEpisodeDetailContent(
             modifier = modifier,
             contentPadding = PaddingValues(
                 start = 16.dp,
-                top = 16.dp,
+                top = 0.dp,
                 end = 16.dp,
                 bottom = 16.dp + LocalPodcastMiniPlayerInset.current,
             ),

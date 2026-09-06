@@ -1,5 +1,8 @@
 package com.shapeshed.booth.ui
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.shapeshed.booth.R
@@ -18,7 +21,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Label
@@ -27,7 +29,6 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.FastForward
 import androidx.compose.material.icons.rounded.Notifications
-import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Key
 import androidx.compose.material.icons.rounded.Sync
@@ -56,9 +57,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import android.os.Build
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.widthIn
@@ -67,6 +68,10 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
+import com.shapeshed.booth.BuildConfig
 import com.shapeshed.booth.data.PodcastEntity
 import com.shapeshed.booth.data.PodcastRefreshInterval
 import com.shapeshed.booth.data.PodcastRefreshNetwork
@@ -111,31 +116,51 @@ internal fun PodcastAppSettingsScreen(
     onManagePodcasts: (PodcastManagementCategory) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var showRefreshIntervalChooser by rememberSaveable { mutableStateOf(false) }
-    var showRefreshNetworkChooser by rememberSaveable { mutableStateOf(false) }
     var showDownloadNetworkChooser by rememberSaveable { mutableStateOf(false) }
     var showSearchProviderChooser by rememberSaveable { mutableStateOf(false) }
     var showPodcastIndexCredentials by rememberSaveable { mutableStateOf(false) }
     var showGlobalPlaybackSpeedEditor by rememberSaveable { mutableStateOf(false) }
-    val refreshIntervalLabel = when (refreshInterval) {
-        PodcastRefreshInterval.HOURLY -> stringResource(R.string.refresh_every_hour_short)
-        PodcastRefreshInterval.SIX_HOURS -> stringResource(R.string.refresh_every_6_hours)
-        PodcastRefreshInterval.DAILY -> stringResource(R.string.refresh_once_a_day)
-    }
-    val refreshNetworkLabel = when (refreshNetwork) {
-        PodcastRefreshNetwork.ANY_CONNECTION -> stringResource(R.string.refresh_wifi_or_mobile)
-        PodcastRefreshNetwork.WIFI_ONLY -> stringResource(R.string.refresh_wifi_only)
-    }
     val downloadNetworkLabel = when (downloadNetwork) {
         PodcastDownloadNetwork.ANY_CONNECTION -> stringResource(R.string.download_wifi_or_mobile)
         PodcastDownloadNetwork.WIFI_ONLY -> stringResource(R.string.download_wifi_only)
     }
+    val autoQueueCountLabel = if (
+        podcastManagementCounts.total > 0 &&
+        podcastManagementCounts.autoQueue == podcastManagementCounts.total
+    ) {
+        stringResource(R.string.all_podcasts)
+    } else {
+        pluralStringResource(
+            R.plurals.podcast_count,
+            podcastManagementCounts.autoQueue,
+            podcastManagementCounts.autoQueue,
+        )
+    }
+    val notificationCountLabel = if (
+        podcastManagementCounts.total > 0 &&
+        podcastManagementCounts.notifications == podcastManagementCounts.total
+    ) {
+        stringResource(R.string.all_podcasts)
+    } else {
+        pluralStringResource(
+            R.plurals.podcast_count,
+            podcastManagementCounts.notifications,
+            podcastManagementCounts.notifications,
+        )
+    }
+    val versionLabel = BuildConfig.BUILD_LABEL.takeIf { it.isNotBlank() }?.let { label ->
+        stringResource(R.string.build_label_format, label)
+    } ?: stringResource(R.string.version_format, BuildConfig.VERSION_NAME)
+    val context = LocalContext.current
     Box(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.TopCenter,
     ) {
     LazyColumn(
-        modifier = Modifier.fillMaxWidth().widthIn(max = 720.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .widthIn(max = 720.dp)
+            .testTag("podcast_app_settings_list"),
         contentPadding = PaddingValues(
             start = 16.dp,
             top = 12.dp,
@@ -144,13 +169,8 @@ internal fun PodcastAppSettingsScreen(
         ),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-            item {
-                LanguageSettingRow()
-            }
-        }
         item {
-            SettingsGroupLabel(text = stringResource(R.string.podcast_defaults_settings_group))
+            SettingsGroupLabel(text = stringResource(R.string.playback))
         }
         item {
             PodcastActionListItem(
@@ -161,91 +181,23 @@ internal fun PodcastAppSettingsScreen(
             )
         }
         item {
+            SettingsGroupLabel(text = stringResource(R.string.up_next))
+        }
+        item {
             PodcastActionListItem(
-                headlineContent = { Text(stringResource(R.string.manage_playback_speed_per_podcast)) },
-                supportingContent = {
-                    Text(pluralStringResource(R.plurals.enabled_for_podcasts, podcastManagementCounts.playbackSpeed, podcastManagementCounts.playbackSpeed))
-                },
-                leadingContent = { Icon(Icons.Rounded.Settings, contentDescription = null) },
+                headlineContent = { Text(stringResource(R.string.automatically_add_to_up_next)) },
+                supportingContent = { Text(autoQueueCountLabel) },
+                leadingContent = { Icon(Icons.AutoMirrored.Rounded.PlaylistAdd, contentDescription = null) },
                 modifier = Modifier.clickable {
-                    onManagePodcasts(PodcastManagementCategory.PLAYBACK_SPEED)
+                    if (!autoQueueEnabled) onAutoQueueEnabledChange(true)
+                    onManagePodcasts(PodcastManagementCategory.AUTO_QUEUE)
                 },
             )
         }
         item {
             PodcastActionListItem(
-                headlineContent = { Text(stringResource(R.string.auto_refresh)) },
-                supportingContent = { Text(stringResource(R.string.auto_refresh_podcasts_summary)) },
-                leadingContent = { Icon(Icons.Rounded.Sync, contentDescription = null) },
-                trailingContent = {
-                    Switch(
-                        checked = autoRefreshEnabled,
-                        onCheckedChange = onAutoRefreshEnabledChange,
-                    )
-                },
-                modifier = Modifier.clickable { onAutoRefreshEnabledChange(!autoRefreshEnabled) },
-            )
-        }
-        if (autoRefreshEnabled) {
-            item {
-                PodcastActionListItem(
-                    headlineContent = { Text(stringResource(R.string.manage_auto_refresh_per_podcast)) },
-                    supportingContent = {
-                        Text(pluralStringResource(R.plurals.enabled_for_podcasts, podcastManagementCounts.autoRefresh, podcastManagementCounts.autoRefresh))
-                    },
-                    leadingContent = { Icon(Icons.Rounded.Settings, contentDescription = null) },
-                    modifier = Modifier.clickable { onManagePodcasts(PodcastManagementCategory.AUTO_REFRESH) },
-                )
-            }
-            item {
-                PodcastActionListItem(
-                    headlineContent = { Text(stringResource(R.string.refresh_interval)) },
-                    supportingContent = { Text(refreshIntervalLabel) },
-                    leadingContent = { Icon(Icons.Rounded.Schedule, contentDescription = null) },
-                    modifier = Modifier.clickable { showRefreshIntervalChooser = true },
-                )
-            }
-            item {
-                PodcastActionListItem(
-                    headlineContent = { Text(stringResource(R.string.network)) },
-                    supportingContent = { Text(refreshNetworkLabel) },
-                    leadingContent = { Icon(Icons.Rounded.Wifi, contentDescription = null) },
-                    modifier = Modifier.clickable { showRefreshNetworkChooser = true },
-                )
-            }
-        }
-        item { SettingsGroupLabel(text = stringResource(R.string.episode_notifications_settings_group)) }
-        item {
-            PodcastActionListItem(
-                headlineContent = { Text(stringResource(R.string.notifications)) },
-                supportingContent = { Text(stringResource(R.string.notifications_podcasts_summary)) },
-                leadingContent = { Icon(Icons.Rounded.Notifications, contentDescription = null) },
-                trailingContent = {
-                    Switch(
-                        checked = notificationsEnabled,
-                        onCheckedChange = onNotificationsEnabledChange,
-                    )
-                },
-                modifier = Modifier.clickable { onNotificationsEnabledChange(!notificationsEnabled) },
-            )
-        }
-        if (notificationsEnabled) {
-            item {
-                PodcastActionListItem(
-                    headlineContent = { Text(stringResource(R.string.manage_notifications_per_podcast)) },
-                    supportingContent = {
-                        Text(pluralStringResource(R.plurals.enabled_for_podcasts, podcastManagementCounts.notifications, podcastManagementCounts.notifications))
-                    },
-                    leadingContent = { Icon(Icons.Rounded.Settings, contentDescription = null) },
-                    modifier = Modifier.clickable { onManagePodcasts(PodcastManagementCategory.NOTIFICATIONS) },
-                )
-            }
-        }
-        item { SettingsGroupLabel(text = stringResource(R.string.podcast_downloads_settings_group)) }
-        item {
-            PodcastActionListItem(
-                headlineContent = { Text(stringResource(R.string.auto_download)) },
-                supportingContent = { Text(stringResource(R.string.auto_download_podcasts_summary)) },
+                headlineContent = { Text(stringResource(R.string.download_up_next)) },
+                supportingContent = { Text(stringResource(if (autoDownloadEnabled) R.string.on else R.string.off)) },
                 leadingContent = { Icon(Icons.Rounded.FileDownload, contentDescription = null) },
                 trailingContent = {
                     Switch(
@@ -256,79 +208,38 @@ internal fun PodcastAppSettingsScreen(
                 modifier = Modifier.clickable { onAutoDownloadEnabledChange(!autoDownloadEnabled) },
             )
         }
-        if (autoDownloadEnabled) {
-            item {
-                PodcastActionListItem(
-                    headlineContent = { Text(stringResource(R.string.manage_auto_download_per_podcast)) },
-                    supportingContent = {
-                        Text(pluralStringResource(R.plurals.enabled_for_podcasts, podcastManagementCounts.autoDownload, podcastManagementCounts.autoDownload))
-                    },
-                    leadingContent = { Icon(Icons.Rounded.Settings, contentDescription = null) },
-                    modifier = Modifier.clickable { onManagePodcasts(PodcastManagementCategory.AUTO_DOWNLOAD) },
-                )
-            }
-            item {
-                PodcastActionListItem(
-                    headlineContent = { Text(stringResource(R.string.download_network)) },
-                    supportingContent = { Text(downloadNetworkLabel) },
-                    leadingContent = { Icon(Icons.Rounded.Wifi, contentDescription = null) },
-                    modifier = Modifier.clickable { showDownloadNetworkChooser = true },
-                )
-            }
+        item {
+            PodcastActionListItem(
+                headlineContent = { Text(stringResource(R.string.download_network)) },
+                supportingContent = { Text(downloadNetworkLabel) },
+                leadingContent = { Icon(Icons.Rounded.Wifi, contentDescription = null) },
+                modifier = Modifier.clickable { showDownloadNetworkChooser = true },
+            )
+        }
+        item {
+            SettingsGroupLabel(text = stringResource(R.string.notifications))
         }
         item {
             PodcastActionListItem(
-                headlineContent = { Text(stringResource(R.string.add_new_episodes_to_up_next)) },
-                supportingContent = { Text(stringResource(R.string.add_new_episodes_to_up_next_summary)) },
-                leadingContent = { Icon(Icons.AutoMirrored.Rounded.PlaylistAdd, contentDescription = null) },
+                headlineContent = { Text(stringResource(R.string.notifications)) },
+                supportingContent = { Text(stringResource(if (notificationsEnabled) R.string.on else R.string.off)) },
+                leadingContent = { Icon(Icons.Rounded.Notifications, contentDescription = null) },
                 trailingContent = {
                     Switch(
-                        checked = autoQueueEnabled,
-                        onCheckedChange = onAutoQueueEnabledChange,
+                        checked = notificationsEnabled,
+                        onCheckedChange = onNotificationsEnabledChange,
                     )
                 },
-                modifier = Modifier.clickable { onAutoQueueEnabledChange(!autoQueueEnabled) },
+                modifier = Modifier.clickable { onNotificationsEnabledChange(!notificationsEnabled) },
             )
-        }
-        if (autoQueueEnabled) {
-            item {
-                PodcastActionListItem(
-                    headlineContent = { Text(stringResource(R.string.manage_add_new_episodes_to_up_next_per_podcast)) },
-                    supportingContent = {
-                        Text(pluralStringResource(R.plurals.enabled_for_podcasts, podcastManagementCounts.autoQueue, podcastManagementCounts.autoQueue))
-                    },
-                    leadingContent = { Icon(Icons.Rounded.Settings, contentDescription = null) },
-                    modifier = Modifier.clickable { onManagePodcasts(PodcastManagementCategory.AUTO_QUEUE) },
-                )
-            }
         }
         item {
             PodcastActionListItem(
-                headlineContent = { Text(stringResource(R.string.download_video)) },
-                supportingContent = { Text(stringResource(R.string.when_available)) },
-                leadingContent = { Icon(Icons.Rounded.VideoLibrary, contentDescription = null) },
-                trailingContent = {
-                    Switch(
-                        checked = videoDownloadsEnabled,
-                        onCheckedChange = onVideoDownloadsEnabledChange,
-                    )
-                },
-                modifier = Modifier.clickable {
-                    onVideoDownloadsEnabledChange(!videoDownloadsEnabled)
-                },
+                headlineContent = { Text(stringResource(R.string.podcast_notifications)) },
+                supportingContent = { Text(notificationCountLabel) },
+                leadingContent = { Icon(Icons.Rounded.Settings, contentDescription = null) },
+                modifier = Modifier.clickable { onManagePodcasts(PodcastManagementCategory.NOTIFICATIONS) },
             )
-        }
-        if (videoDownloadsEnabled) {
-            item {
-                PodcastActionListItem(
-                    headlineContent = { Text(stringResource(R.string.manage_video_downloads_per_podcast)) },
-                    supportingContent = {
-                        Text(pluralStringResource(R.plurals.enabled_for_podcasts, podcastManagementCounts.videoDownload, podcastManagementCounts.videoDownload))
-                    },
-                    leadingContent = { Icon(Icons.Rounded.Settings, contentDescription = null) },
-                    modifier = Modifier.clickable { onManagePodcasts(PodcastManagementCategory.VIDEO_DOWNLOAD) },
-                )
-            }
         }
         item {
             SettingsGroupLabel(text = stringResource(R.string.discovery_settings_group))
@@ -384,84 +295,23 @@ internal fun PodcastAppSettingsScreen(
                 )
             }
         }
-    }
-    }
-    if (showRefreshIntervalChooser) {
-        AlertDialog(
-            onDismissRequest = { showRefreshIntervalChooser = false },
-            title = { Text(stringResource(R.string.refresh_interval)) },
-            text = {
-                Column {
-                    PodcastRefreshInterval.entries.forEach { option ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    onRefreshIntervalChange(option)
-                                    showRefreshIntervalChooser = false
-                                }
-                                .padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RadioButton(
-                                selected = refreshInterval == option,
-                                onClick = {
-                                    onRefreshIntervalChange(option)
-                                    showRefreshIntervalChooser = false
-                                },
-                            )
-                            Text(
-                                when (option) {
-                                    PodcastRefreshInterval.HOURLY -> stringResource(R.string.refresh_every_hour_short)
-                                    PodcastRefreshInterval.SIX_HOURS -> stringResource(R.string.refresh_every_6_hours)
-                                    PodcastRefreshInterval.DAILY -> stringResource(R.string.refresh_once_a_day)
-                                },
-                                modifier = Modifier.padding(start = 8.dp),
-                            )
-                        }
+        item {
+            Text(
+                text = versionLabel,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("settings-version")
+                    .clickable {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        clipboard.setPrimaryClip(ClipData.newPlainText("version", versionLabel))
                     }
-                }
-            },
-            confirmButton = { TextButton(onClick = { showRefreshIntervalChooser = false }) { Text(stringResource(R.string.cancel)) } },
-        )
+                    .padding(vertical = 16.dp),
+            )
+        }
     }
-    if (showRefreshNetworkChooser) {
-        AlertDialog(
-            onDismissRequest = { showRefreshNetworkChooser = false },
-            title = { Text(stringResource(R.string.refresh_on)) },
-            text = {
-                Column {
-                    PodcastRefreshNetwork.entries.forEach { option ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    onRefreshNetworkChange(option)
-                                    showRefreshNetworkChooser = false
-                                }
-                                .padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RadioButton(
-                                selected = refreshNetwork == option,
-                                onClick = {
-                                    onRefreshNetworkChange(option)
-                                    showRefreshNetworkChooser = false
-                                },
-                            )
-                            Text(
-                                when (option) {
-                                    PodcastRefreshNetwork.ANY_CONNECTION -> stringResource(R.string.refresh_wifi_or_mobile)
-                                    PodcastRefreshNetwork.WIFI_ONLY -> stringResource(R.string.refresh_wifi_only)
-                                },
-                                modifier = Modifier.padding(start = 8.dp),
-                            )
-                        }
-                    }
-                }
-            },
-            confirmButton = { TextButton(onClick = { showRefreshNetworkChooser = false }) { Text(stringResource(R.string.cancel)) } },
-        )
     }
     if (showDownloadNetworkChooser) {
         AlertDialog(
@@ -625,7 +475,9 @@ private fun PodcastIndexCredentialsDialog(
 internal fun PodcastSettingsScreen(
     podcast: PodcastEntity,
     globalPlaybackSpeed: Float,
+    globalSkipSilence: Boolean,
     onPlaybackSpeedChange: (Float?) -> Unit,
+    onSkipSilenceChange: (Boolean?) -> Unit,
     videoDownloadsEnabled: Boolean,
     onVideoDownloadsEnabledChange: (Boolean) -> Unit,
     globalAutoRefreshEnabled: Boolean,
@@ -736,55 +588,7 @@ internal fun PodcastSettingsScreen(
             )
         }
         item {
-            SettingsGroupLabel(text = stringResource(R.string.refresh_settings_group))
-        }
-        item {
-            PodcastActionListItem(
-                headlineContent = { Text(stringResource(R.string.auto_refresh)) },
-                supportingContent = {
-                    Text(stringResource(if (globalAutoRefreshEnabled) R.string.on else R.string.off))
-                },
-                leadingContent = { Icon(Icons.Rounded.Sync, contentDescription = null) },
-                trailingContent = {
-                    Switch(
-                        checked = includeInAutoRefresh,
-                        onCheckedChange = {
-                            includeInAutoRefresh = it
-                            persistSettings(nextAutoRefresh = it)
-                        },
-                    )
-                },
-                modifier = Modifier.clickable {
-                    val next = !includeInAutoRefresh
-                    includeInAutoRefresh = next
-                    persistSettings(nextAutoRefresh = next)
-                },
-            )
-        }
-        item {
-            SettingsGroupLabel(text = stringResource(R.string.podcasts))
-        }
-        item {
-            PodcastActionListItem(
-                headlineContent = { Text(stringResource(R.string.auto_download)) },
-                supportingContent = { Text(stringResource(if (globalAutoDownloadEnabled) R.string.on else R.string.off)) },
-                leadingContent = { Icon(Icons.Rounded.FileDownload, contentDescription = null) },
-                trailingContent = {
-                    Switch(
-                        checked = includeInAutoDownload,
-                        onCheckedChange = {
-                            includeInAutoDownload = it
-                            persistSettings(nextAutoDownload = it)
-                        },
-                        enabled = globalAutoDownloadEnabled,
-                    )
-                },
-                modifier = Modifier.clickable(enabled = globalAutoDownloadEnabled) {
-                    val next = !includeInAutoDownload
-                    includeInAutoDownload = next
-                    persistSettings(nextAutoDownload = next)
-                },
-            )
+            SettingsGroupLabel(text = stringResource(R.string.up_next))
         }
         item {
             PodcastActionListItem(
@@ -812,20 +616,28 @@ internal fun PodcastSettingsScreen(
         }
         item {
             PodcastActionListItem(
-                headlineContent = { Text(stringResource(R.string.download_video)) },
-                supportingContent = { Text(stringResource(if (videoDownloadsEnabled) R.string.on else R.string.off)) },
-                leadingContent = { Icon(Icons.Rounded.VideoLibrary, contentDescription = null) },
+                headlineContent = { Text(stringResource(R.string.download_up_next)) },
+                supportingContent = { Text(stringResource(if (globalAutoDownloadEnabled) R.string.on else R.string.off)) },
+                leadingContent = { Icon(Icons.Rounded.FileDownload, contentDescription = null) },
                 trailingContent = {
                     Switch(
-                        checked = videoDownloadsEnabled,
-                        onCheckedChange = onVideoDownloadsEnabledChange,
+                        checked = includeInAutoDownload,
+                        onCheckedChange = {
+                            includeInAutoDownload = it
+                            persistSettings(nextAutoDownload = it)
+                        },
+                        enabled = globalAutoDownloadEnabled,
                     )
                 },
-                modifier = Modifier.clickable { onVideoDownloadsEnabledChange(!videoDownloadsEnabled) },
+                modifier = Modifier.clickable(enabled = globalAutoDownloadEnabled) {
+                    val next = !includeInAutoDownload
+                    includeInAutoDownload = next
+                    persistSettings(nextAutoDownload = next)
+                },
             )
         }
         item {
-                SettingsGroupLabel(text = stringResource(R.string.notifications))
+            SettingsGroupLabel(text = stringResource(R.string.notifications))
         }
         item {
             PodcastActionListItem(
@@ -989,13 +801,15 @@ internal fun PodcastSettingsScreen(
         )
     }
     if (showPlaybackSpeedEditor) {
-        PodcastPlaybackSpeedSheet(
+        PlaybackSpeedSheet(
             speed = podcast.playbackSpeed ?: globalPlaybackSpeed,
+            skipSilence = podcast.skipSilence ?: globalSkipSilence,
+            onSpeedChange = { onPlaybackSpeedChange(it); showPlaybackSpeedEditor = false },
+            onSkipSilenceChange = { enabled -> onSkipSilenceChange(enabled) },
+            onDismiss = { showPlaybackSpeedEditor = false },
             inherited = podcast.playbackSpeed == null,
             globalSpeed = globalPlaybackSpeed,
-            onSpeedChange = { onPlaybackSpeedChange(it); showPlaybackSpeedEditor = false },
             onUseGlobal = { onPlaybackSpeedChange(null); showPlaybackSpeedEditor = false },
-            onDismiss = { showPlaybackSpeedEditor = false },
         )
     }
 }

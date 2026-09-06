@@ -272,12 +272,12 @@ internal fun PodcastCategoryListScreen(
             }
     }
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 160.dp),
+        columns = GridCells.Adaptive(minSize = 128.dp),
         modifier = modifier,
         state = gridState,
         contentPadding = PaddingValues(
             start = 16.dp,
-            top = 16.dp,
+            top = 8.dp,
             end = 16.dp,
             bottom = 16.dp + LocalPodcastMiniPlayerInset.current,
         ),
