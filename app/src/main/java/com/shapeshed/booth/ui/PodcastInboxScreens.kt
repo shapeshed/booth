@@ -276,6 +276,17 @@ internal fun PodcastInbox(
 ) {
     val visibleEpisodes = episodes
     val listState = rememberLazyListState()
+    var refreshWasActive by remember { mutableStateOf(false) }
+    LaunchedEffect(refreshing, visibleEpisodes.itemCount) {
+        if (refreshing) {
+            refreshWasActive = true
+        } else if (refreshWasActive) {
+            // A refresh prepends newly discovered episodes. Reset the viewport after the
+            // refresh completes so the user immediately sees those episodes.
+            refreshWasActive = false
+            listState.animateScrollToItem(0)
+        }
+    }
     PullToRefreshBox(
         isRefreshing = refreshing,
         onRefresh = onRefresh,

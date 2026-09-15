@@ -12,6 +12,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import com.shapeshed.booth.BuildConfig
 import com.shapeshed.booth.data.PodcastDownloadNetwork
+import com.shapeshed.booth.data.PodcastDownloadLimit
+import com.shapeshed.booth.data.PodcastDeleteBeforeAutoDownload
 import com.shapeshed.booth.data.PodcastRefreshInterval
 import com.shapeshed.booth.data.PodcastRefreshNetwork
 import com.shapeshed.booth.data.PodcastSearchProvider
@@ -27,19 +29,35 @@ class PodcastAppSettingsScreenTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun showsSimplifiedSettingsAndKeepsPodcastDiscovery() {
+    fun showsSettingsAndKeepsPodcastDiscovery() {
         setSettingsContent()
 
         composeRule.onNodeWithText("Playback speed").assertIsDisplayed()
         composeRule.onNodeWithText("1×").assertIsDisplayed()
         scrollTo("Add new episodes to Up Next")
         composeRule.onNodeWithText("Add new episodes to Up Next").assertIsDisplayed()
+        scrollTo("Podcasts added to Up Next")
+        composeRule.onNodeWithText("Podcasts added to Up Next").assertIsDisplayed()
         composeRule.onNodeWithText("3 podcasts").assertIsDisplayed()
-        scrollTo("Download Up Next episodes")
-        composeRule.onNodeWithText("Download Up Next episodes").assertIsDisplayed()
+        scrollTo("Download new episodes")
+        composeRule.onNodeWithText("Download new episodes").assertIsDisplayed()
+        scrollTo("Download videos when available")
+        composeRule.onNodeWithText("Download videos when available").assertIsDisplayed()
+        scrollTo("Podcast video downloads")
+        composeRule.onNodeWithText("Podcast video downloads").assertIsDisplayed()
         scrollTo("Download network")
         composeRule.onNodeWithText("Download network").assertIsDisplayed()
         composeRule.onNodeWithText("Wi-Fi only").assertIsDisplayed()
+        scrollTo("Auto refresh")
+        composeRule.onNodeWithText("Auto refresh").assertIsDisplayed()
+        scrollTo("Refresh podcasts automatically")
+        composeRule.onNodeWithText("Refresh podcasts automatically").assertIsDisplayed()
+        composeRule.onNodeWithText("0 podcasts").assertIsDisplayed()
+        scrollTo("Refresh interval")
+        composeRule.onNodeWithText("Refresh interval").assertIsDisplayed()
+        composeRule.onNodeWithText("Every 6 hours").assertIsDisplayed()
+        scrollTo("Refresh network")
+        composeRule.onNodeWithText("Refresh network").assertIsDisplayed()
         scrollTo("Podcast notifications")
         composeRule.onNodeWithText("Podcast notifications").assertIsDisplayed()
         composeRule.onNodeWithText("All podcasts").assertIsDisplayed()
@@ -54,8 +72,6 @@ class PodcastAppSettingsScreenTest {
         composeRule.onNodeWithText(buildLabel).assertIsDisplayed()
 
         composeRule.onNodeWithText("Manage playback speed per podcast").assertDoesNotExist()
-        composeRule.onNodeWithText("Auto refresh").assertDoesNotExist()
-        composeRule.onNodeWithText("Download video").assertDoesNotExist()
     }
 
     @Test
@@ -84,12 +100,12 @@ class PodcastAppSettingsScreenTest {
     @Test
     fun countAndDataRowsOpenTheirManagementActions() {
         var managedCategory: PodcastManagementCategory? = null
-        var autoQueueEnabled = false
+        var autoQueueEnabled: Boolean? = null
         var importCalls = 0
         var exportCalls = 0
         setSettingsContent(
             onManagePodcasts = { managedCategory = it },
-            autoQueueEnabled = false,
+            autoQueueEnabled = true,
             onAutoQueueEnabledChange = { autoQueueEnabled = it },
             onImportOpml = { importCalls++ },
             onExportOpml = { exportCalls++ },
@@ -98,8 +114,26 @@ class PodcastAppSettingsScreenTest {
         scrollTo("Add new episodes to Up Next")
         composeRule.onNodeWithText("Add new episodes to Up Next").performClick()
         composeRule.runOnIdle {
+            assertEquals(false, autoQueueEnabled)
+            assertEquals(null, managedCategory)
+        }
+
+        scrollTo("Podcasts added to Up Next")
+        composeRule.onNodeWithText("Podcasts added to Up Next").performClick()
+        composeRule.runOnIdle {
             assertEquals(PodcastManagementCategory.AUTO_QUEUE, managedCategory)
-            assertEquals(true, autoQueueEnabled)
+        }
+
+        scrollTo("Refresh podcasts automatically")
+        composeRule.onNodeWithText("Refresh podcasts automatically").performClick()
+        composeRule.runOnIdle {
+            assertEquals(PodcastManagementCategory.AUTO_REFRESH, managedCategory)
+        }
+
+        scrollTo("Download new episodes")
+        composeRule.onNodeWithText("Download new episodes").performClick()
+        composeRule.runOnIdle {
+            assertEquals(PodcastManagementCategory.AUTO_DOWNLOAD, managedCategory)
         }
 
         scrollTo("Import OPML")
@@ -111,12 +145,107 @@ class PodcastAppSettingsScreenTest {
         composeRule.runOnIdle { assertEquals(1, exportCalls) }
     }
 
+    @Test
+    fun videoMasterAndPodcastManagementHaveSeparateActions() {
+        var videoEnabled: Boolean? = null
+        var managedCategory: PodcastManagementCategory? = null
+        setSettingsContent(
+            videoDownloadsEnabled = true,
+            onVideoDownloadsEnabledChange = { videoEnabled = it },
+            onManagePodcasts = { managedCategory = it },
+        )
+
+        scrollTo("Download videos when available")
+        composeRule.onNodeWithText("Download videos when available").performClick()
+        composeRule.runOnIdle { assertEquals(false, videoEnabled) }
+
+        scrollTo("Podcast video downloads")
+        composeRule.onNodeWithText("Podcast video downloads").performClick()
+        composeRule.runOnIdle {
+            assertEquals(PodcastManagementCategory.VIDEO_DOWNLOAD, managedCategory)
+        }
+    }
+
+    @Test
+    fun refreshRowsChangeTheirSelectedValues() {
+        var interval: PodcastRefreshInterval? = null
+        var network: PodcastRefreshNetwork? = null
+        setSettingsContent(
+            onRefreshIntervalChange = { interval = it },
+            onRefreshNetworkChange = { network = it },
+        )
+
+        scrollTo("Refresh interval")
+        composeRule.onNodeWithText("Refresh interval").performClick()
+        composeRule.onNodeWithText("Daily").performClick()
+        composeRule.runOnIdle { assertEquals(PodcastRefreshInterval.DAILY, interval) }
+
+        scrollTo("Refresh network")
+        composeRule.onNodeWithText("Refresh network").performClick()
+        composeRule.onNodeWithText("Wi-Fi or mobile data").performClick()
+        composeRule.runOnIdle { assertEquals(PodcastRefreshNetwork.ANY_CONNECTION, network) }
+    }
+
+    @Test
+    fun downloadRetentionRowsChangeTheirSelectedValues() {
+        var limit: PodcastDownloadLimit? = null
+        var cleanup: PodcastDeleteBeforeAutoDownload? = null
+        setSettingsContent(
+            onDownloadLimitChange = { limit = it },
+            onDeleteBeforeAutoDownloadChange = { cleanup = it },
+        )
+
+        scrollTo("Download limit")
+        composeRule.onNodeWithText("Download limit").performClick()
+        composeRule.onNodeWithText("100 episodes").performClick()
+        composeRule.runOnIdle { assertEquals(PodcastDownloadLimit.ONE_HUNDRED, limit) }
+
+        scrollTo("Delete before auto-download")
+        composeRule.onNodeWithText("Delete before auto-download").performClick()
+        composeRule.onNodeWithText("All eligible episodes").performClick()
+        composeRule.runOnIdle { assertEquals(PodcastDeleteBeforeAutoDownload.ALL_ELIGIBLE, cleanup) }
+    }
+
+    @Test
+    fun backupRowsInvokeImportAndJsonAndZipExportCallbacks() {
+        var importCalls = 0
+        var jsonExportCalls = 0
+        var zipExportCalls = 0
+        setSettingsContent(
+            onImportBackup = { importCalls++ },
+            onExportBackup = { jsonExportCalls++ },
+            onExportBackupZip = { zipExportCalls++ },
+        )
+
+        scrollTo("Import Booth backup")
+        composeRule.onNodeWithText("Import Booth backup").performClick()
+        scrollTo("Export Booth backup")
+        composeRule.onNodeWithText("Export Booth backup").performClick()
+        scrollTo("Export Booth backup ZIP")
+        composeRule.onNodeWithText("Export Booth backup ZIP").performClick()
+
+        composeRule.runOnIdle {
+            assertEquals(1, importCalls)
+            assertEquals(1, jsonExportCalls)
+            assertEquals(1, zipExportCalls)
+        }
+    }
+
     private fun setSettingsContent(
         onManagePodcasts: (PodcastManagementCategory) -> Unit = {},
         autoQueueEnabled: Boolean = true,
         onAutoQueueEnabledChange: (Boolean) -> Unit = {},
+        videoDownloadsEnabled: Boolean = false,
+        onVideoDownloadsEnabledChange: (Boolean) -> Unit = {},
+        onRefreshIntervalChange: (PodcastRefreshInterval) -> Unit = {},
+        onRefreshNetworkChange: (PodcastRefreshNetwork) -> Unit = {},
+        onDownloadLimitChange: (PodcastDownloadLimit) -> Unit = {},
+        onDeleteBeforeAutoDownloadChange: (PodcastDeleteBeforeAutoDownload) -> Unit = {},
         onImportOpml: () -> Unit = {},
         onExportOpml: () -> Unit = {},
+        onImportBackup: () -> Unit = {},
+        onExportBackup: () -> Unit = {},
+        onExportBackupZip: () -> Unit = {},
     ) {
         composeRule.setContent {
             BoothAppTheme {
@@ -125,7 +254,7 @@ class PodcastAppSettingsScreenTest {
                     podcastManagementCounts = PodcastManagementCounts(
                         total = 4,
                         playbackSpeed = 2,
-                        autoRefresh = 4,
+                        autoRefresh = 0,
                         autoDownload = 4,
                         autoQueue = 3,
                         videoDownload = 0,
@@ -136,20 +265,18 @@ class PodcastAppSettingsScreenTest {
                     skipSilence = false,
                     onGlobalPlaybackSpeedChange = {},
                     onSkipSilenceChange = {},
-                    videoDownloadsEnabled = false,
-                    onVideoDownloadsEnabledChange = {},
-                    autoRefreshEnabled = true,
-                    onAutoRefreshEnabledChange = {},
+                    videoDownloadsEnabled = videoDownloadsEnabled,
+                    onVideoDownloadsEnabledChange = onVideoDownloadsEnabledChange,
                     refreshInterval = PodcastRefreshInterval.SIX_HOURS,
-                    onRefreshIntervalChange = {},
+                    onRefreshIntervalChange = onRefreshIntervalChange,
                     refreshNetwork = PodcastRefreshNetwork.WIFI_ONLY,
-                    onRefreshNetworkChange = {},
+                    onRefreshNetworkChange = onRefreshNetworkChange,
                     downloadNetwork = PodcastDownloadNetwork.WIFI_ONLY,
                     onDownloadNetworkChange = {},
+                    onDownloadLimitChange = onDownloadLimitChange,
+                    onDeleteBeforeAutoDownloadChange = onDeleteBeforeAutoDownloadChange,
                     notificationsEnabled = true,
                     onNotificationsEnabledChange = {},
-                    autoDownloadEnabled = true,
-                    onAutoDownloadEnabledChange = {},
                     searchProviders = listOf(testSearchProvider),
                     selectedSearchProviderId = testSearchProvider.id,
                     onSearchProviderChange = {},
@@ -160,6 +287,9 @@ class PodcastAppSettingsScreenTest {
                     statusMessage = null,
                     onImportOpml = onImportOpml,
                     onExportOpml = onExportOpml,
+                    onImportBackup = onImportBackup,
+                    onExportBackup = onExportBackup,
+                    onExportBackupZip = onExportBackupZip,
                     onManagePodcasts = onManagePodcasts,
                 )
             }

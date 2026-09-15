@@ -211,6 +211,7 @@ import androidx.media3.ui.PlayerView
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
@@ -374,7 +375,6 @@ internal fun PodcastMiniPlayer(
 internal fun PodcastNowPlayingOverlay(
     episode: EpisodeEntity,
     podcastTitle: String?,
-    podcastArtworkUrl: String?,
     onOpenPodcast: (() -> Unit)?,
     isPlaying: Boolean,
     positionMs: Long,
@@ -588,22 +588,15 @@ internal fun PodcastNowPlayingOverlay(
                                                 ?: Modifier,
                                         ),
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                                 ) {
-                                    if (onOpenPodcast != null) {
-                                        PodcastArtwork(
-                                            imageUrl = podcastArtworkUrl,
-                                            title = title,
-                                            modifier = Modifier
-                                                .size(40.dp)
-                                                .clip(RoundedCornerShape(8.dp)),
-                                            contentScale = ContentScale.Crop,
-                                        )
-                                    }
                                     Text(
                                         text = title,
                                         style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        color = if (onOpenPodcast != null) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        },
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                         modifier = Modifier.weight(1f),

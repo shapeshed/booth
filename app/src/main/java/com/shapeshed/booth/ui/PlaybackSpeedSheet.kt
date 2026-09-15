@@ -102,6 +102,9 @@ internal fun PlaybackSpeedSheet(
     inherited: Boolean = false,
     globalSpeed: Float = speed,
     onUseGlobal: (() -> Unit)? = null,
+    inheritedSkipSilence: Boolean = false,
+    globalSkipSilence: Boolean = skipSilence,
+    onUseGlobalSkipSilence: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     var sliderSpeed by remember(speed) { mutableFloatStateOf(speed) }
@@ -125,15 +128,17 @@ internal fun PlaybackSpeedSheet(
                     color = MaterialTheme.colorScheme.primary,
                 )
             }
-            if (inherited && onUseGlobal != null) {
-                Text(
-                    stringResource(R.string.inherited_global_playback_speed, formatPlaybackSpeed(globalSpeed)),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            if (onUseGlobal != null) {
+                if (inherited) {
+                    Text(
+                        stringResource(R.string.inherited_global_playback_speed, formatPlaybackSpeed(globalSpeed)),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 PlaybackPresetButton(
                     label = stringResource(R.string.use_global_playback_speed),
-                    selected = true,
+                    selected = inherited,
                     onClick = onUseGlobal,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -146,7 +151,7 @@ internal fun PlaybackSpeedSheet(
                 PlaybackSpeedPresets.forEach { preset ->
                     PlaybackPresetButton(
                         label = formatPlaybackSpeed(preset),
-                    selected = !inherited && speed == preset,
+                        selected = !inherited && speed == preset,
                         onClick = {
                             sliderSpeed = preset
                             onSpeedChange(preset)
@@ -179,6 +184,21 @@ internal fun PlaybackSpeedSheet(
                 Checkbox(
                     checked = skipSilence,
                     onCheckedChange = onSkipSilenceChange,
+                )
+            }
+            if (onUseGlobalSkipSilence != null) {
+                PlaybackPresetButton(
+                    label = if (inheritedSkipSilence) {
+                        stringResource(
+                            R.string.global_setting_value,
+                            stringResource(if (globalSkipSilence) R.string.on else R.string.off),
+                        )
+                    } else {
+                        stringResource(R.string.use_global_skip_silence)
+                    },
+                    selected = inheritedSkipSilence,
+                    onClick = onUseGlobalSkipSilence,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }

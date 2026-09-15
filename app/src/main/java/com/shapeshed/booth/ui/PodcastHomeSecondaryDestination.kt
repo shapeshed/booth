@@ -56,7 +56,7 @@ internal fun PodcastHomeSecondaryDestination(
                 onActions = onAction,
                 onPlay = { episode -> playbackViewModel.play(episode, allPodcastsById[episode.podcastId]?.title.orEmpty()) },
                 onDownload = { viewModel.download(context, it.id) },
-                onRefresh = viewModel::refreshSubscriptions,
+                onRefresh = { viewModel.refreshSubscriptions(context) },
                 refreshing = refreshing,
                 downloadProgress = downloadProgress,
                 modifier = modifier,

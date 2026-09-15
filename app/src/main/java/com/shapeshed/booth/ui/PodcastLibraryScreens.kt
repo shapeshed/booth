@@ -44,6 +44,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -290,46 +291,33 @@ internal fun PodcastLibrary(
     val orderedPodcasts = remember(podcasts, sortOrder, latestEpisodePublishedAt) {
         orderPodcasts(podcasts, sortOrder, latestEpisodePublishedAt)
     }
-    val listState = rememberLazyListState()
-    if (viewMode == PodcastSubscriptionsViewMode.GRID && !showSearch && orderedPodcasts.isNotEmpty()) {
-        Column(modifier = modifier) {
-            ImportProgressIndicator(importProgress)
-            PullToRefreshBox(
-                isRefreshing = refreshing,
-                onRefresh = onRefresh,
-                modifier = Modifier.weight(1f),
-            ) {
-                PodcastGridLibrary(
-                    podcasts = orderedPodcasts,
-                    sortOrder = sortOrder,
-                    onSortOrderChange = onSortOrderChange,
-                    onViewModeChange = onViewModeChange,
-                    onPodcastClick = onPodcastClick,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
-        }
-        return
-    }
+    val gridState = rememberLazyGridState()
+    val cards = viewMode == PodcastSubscriptionsViewMode.GRID && !showSearch && orderedPodcasts.isNotEmpty()
     PullToRefreshBox(
         isRefreshing = refreshing,
         onRefresh = onRefresh,
         modifier = modifier,
     ) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize(),
-            state = listState,
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp + LocalPodcastMiniPlayerInset.current),
-            verticalArrangement = Arrangement.spacedBy(PodcastListItemSpacing),
+        LazyVerticalGrid(
+            columns = if (cards) GridCells.Adaptive(minSize = 128.dp) else GridCells.Fixed(1),
+            state = gridState,
+            modifier = Modifier.fillMaxSize(),
+            horizontalArrangement = if (cards) Arrangement.spacedBy(16.dp) else Arrangement.Start,
+            verticalArrangement = if (cards) Arrangement.spacedBy(16.dp) else Arrangement.spacedBy(PodcastListItemSpacing),
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                end = 16.dp,
+                top = if (cards) 8.dp else 0.dp,
+                bottom = 16.dp + LocalPodcastMiniPlayerInset.current,
+            ),
         ) {
         if (importProgress != null) {
-            item(key = "import-progress") {
+            item(key = "import-progress", span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
                 ImportProgressIndicator(importProgress)
             }
         }
         if (showSearch) {
-            item(key = "search") {
+            item(key = "search", span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
                 SearchPanel(
                     state = state,
                     directFeedUrl = directFeedUrl,
@@ -341,7 +329,7 @@ internal fun PodcastLibrary(
             }
         }
         if (!showSearch && orderedPodcasts.isNotEmpty()) {
-            item(key = "sort-order") {
+            item(key = "sort-order", span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
                 PodcastLibraryControls(
                     sortOrder = sortOrder,
                     onSortOrderChange = onSortOrderChange,
@@ -352,7 +340,7 @@ internal fun PodcastLibrary(
             }
         }
         if (podcasts.isEmpty() && !showSearch) {
-            item(key = "empty") {
+            item(key = "empty", span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
                 PodcastGettingStarted(
                     popularPodcasts = popularPodcasts,
                     isLoadingPopular = isLoadingPopular,
@@ -369,38 +357,50 @@ internal fun PodcastLibrary(
                 )
             }
         }
-        items(
+        gridItems(
             orderedPodcasts,
             key = { "library-${it.id}-${it.subscribedAtMillis}" },
             contentType = { "podcast" },
         ) { podcast ->
-            PodcastSwipeRow(
-                podcast = podcast,
-                onClick = { onPodcastClick(podcast.id) },
-                onRemove = { onRemovePodcast(podcast) },
-            )
+            Box(modifier = Modifier.animateItem()) {
+                if (cards) {
+                    PodcastGridCard(
+                        artworkUrl = podcast.artworkUrl,
+                        title = podcast.title,
+                        onClick = { onPodcastClick(podcast.id) },
+                    )
+                } else {
+                    PodcastSwipeRow(
+                        podcast = podcast,
+                        onClick = { onPodcastClick(podcast.id) },
+                        onRemove = { onRemovePodcast(podcast) },
+                    )
+                }
+            }
         }
-        items(
+        gridItems(
             state.results,
             key = { "search-${it.podcast.id}" },
             contentType = { "search-result" },
         ) { result ->
-            Surface(
-                shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 1.dp,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                PodcastActionListItem(
-                    colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
-                    leadingContent = {
-                        PodcastArtwork(result.podcast.artworkUrl, result.podcast.title, Modifier.size(56.dp))
-                    },
-                    trailingContent = {
-                        Button(onClick = { onSearchResultClick(result.podcast.feedUrl) }) { Text(stringResource(R.string.subscribe)) }
-                    },
+            Box(modifier = Modifier.fillMaxWidth().animateItem()) {
+                Surface(
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 1.dp,
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(result.podcast.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    PodcastActionListItem(
+                        colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+                        leadingContent = {
+                            PodcastArtwork(result.podcast.artworkUrl, result.podcast.title, Modifier.size(56.dp))
+                        },
+                        trailingContent = {
+                            Button(onClick = { onSearchResultClick(result.podcast.feedUrl) }) { Text(stringResource(R.string.subscribe)) }
+                        },
+                    ) {
+                        Text(result.podcast.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    }
                 }
             }
         }
@@ -475,6 +475,16 @@ internal fun PodcastViewModeToggle(
     onSelected: (PodcastSubscriptionsViewMode) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val gridIconScale by animateFloatAsState(
+        targetValue = if (selected == PodcastSubscriptionsViewMode.GRID) 1f else 0.82f,
+        animationSpec = tween(180),
+        label = "grid view icon scale",
+    )
+    val listIconScale by animateFloatAsState(
+        targetValue = if (selected == PodcastSubscriptionsViewMode.LIST) 1f else 0.82f,
+        animationSpec = tween(180),
+        label = "list view icon scale",
+    )
     ButtonGroup(
         overflowIndicator = {},
         horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
@@ -487,7 +497,14 @@ internal fun PodcastViewModeToggle(
                     onCheckedChange = { if (it) onSelected(PodcastSubscriptionsViewMode.GRID) },
                     shapes = ButtonGroupDefaults.connectedLeadingButtonShapes(),
                 ) {
-                    Icon(Icons.Rounded.GridView, contentDescription = stringResource(R.string.grid_view), modifier = Modifier.size(18.dp))
+                    Icon(
+                        Icons.Rounded.GridView,
+                        contentDescription = stringResource(R.string.grid_view),
+                        modifier = Modifier.size(18.dp).graphicsLayer {
+                            scaleX = gridIconScale
+                            scaleY = gridIconScale
+                        },
+                    )
                 }
             },
             menuContent = {},
@@ -499,7 +516,14 @@ internal fun PodcastViewModeToggle(
                     onCheckedChange = { if (it) onSelected(PodcastSubscriptionsViewMode.LIST) },
                     shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
                 ) {
-                    Icon(Icons.AutoMirrored.Rounded.ViewList, contentDescription = stringResource(R.string.list_view), modifier = Modifier.size(18.dp))
+                    Icon(
+                        Icons.AutoMirrored.Rounded.ViewList,
+                        contentDescription = stringResource(R.string.list_view),
+                        modifier = Modifier.size(18.dp).graphicsLayer {
+                            scaleX = listIconScale
+                            scaleY = listIconScale
+                        },
+                    )
                 }
             },
             menuContent = {},

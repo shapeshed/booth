@@ -1,6 +1,7 @@
 package com.shapeshed.booth.ui
 
 import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -11,6 +12,7 @@ import com.shapeshed.booth.data.EpisodeEntity
 import com.shapeshed.booth.data.QueueEntity
 import com.shapeshed.booth.data.Episode
 import com.shapeshed.booth.data.PodcastRepository
+import com.shapeshed.booth.data.PodcastBackupManager
 import com.shapeshed.booth.data.PodcastSettingsState
 import com.shapeshed.booth.data.PodcastCatalogIndex
 import com.shapeshed.booth.data.buildPodcastCatalogIndex
@@ -31,10 +33,14 @@ import com.shapeshed.booth.data.PodcastFeed
 import com.shapeshed.booth.data.PodcastDiscoveryCategory
 import com.shapeshed.booth.data.PodcastSubscriptionsViewMode
 import com.shapeshed.booth.data.SettingsStore
+import com.shapeshed.booth.data.PodcastDownloadNetwork
 import com.shapeshed.booth.data.DownloadProgress
 import com.shapeshed.booth.data.DownloadProgressStore
 import com.shapeshed.booth.data.mergeDownloadProgress
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
@@ -98,6 +104,7 @@ data class PodcastHomeState(
     val isSearching: Boolean = false,
     val isImporting: Boolean = false,
     val importProgress: PodcastImportProgress? = null,
+    val importFirstPodcastSaved: Boolean = false,
     val discovery: List<PodcastDiscoveryShelfResult> = emptyList(),
     val isLoadingDiscovery: Boolean = false,
     val discoveryLoaded: Boolean = false,
@@ -115,6 +122,12 @@ data class PodcastHomeState(
     val error: PodcastUiError? = null,
 )
 
+sealed interface PodcastBackupEvent {
+    data object ImportStarted : PodcastBackupEvent
+    data object Exported : PodcastBackupEvent
+    data class Imported(val subscriptions: Int) : PodcastBackupEvent
+}
+
 private const val OPML_IMPORT_WORK_NAME = "podcast-opml-import"
 
 data class PodcastImportProgress(
@@ -130,6 +143,17 @@ data class PodcastRefreshProgress(
         get() = if (total > 0) (completed.toFloat() / total).coerceIn(0f, 1f) else 0f
 }
 
+internal fun newEpisodesSince(
+    episodes: List<EpisodeEntity>,
+    existingEpisodeIdentities: Set<Pair<String, String>>,
+): List<EpisodeEntity> = episodes.filterNot {
+    existingEpisodeIdentities.any { (guid, audioUrl) ->
+        guid == it.guid || audioUrl == it.audioUrl
+    }
+}
+
+internal fun importHasSavedPodcast(imported: Int): Boolean = imported > 0
+
 data class PodcastGlobalSearchState(
     val remotePodcasts: List<PodcastSearchResult> = emptyList(),
     val isLoadingRemote: Boolean = false,
@@ -143,6 +167,7 @@ class PodcastViewModel @Inject constructor(
     private val discoveryProviders: @JvmSuppressWildcards List<PodcastDiscoveryProvider>,
     private val settings: SettingsStore,
     private val credentialsStore: PodcastIndexCredentialsStore,
+    @ApplicationContext private val applicationContext: Context,
 ) : ViewModel() {
     private val mediaSizeChecks = ConcurrentHashMap.newKeySet<Long>()
     private var downloadSyncJob: Job? = null
@@ -172,28 +197,31 @@ class PodcastViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), buildPodcastCatalogIndex(emptyList()))
     val podcastSettings: StateFlow<PodcastSettingsState> = combine(
         settings.podcastDownloadVideos,
-        settings.podcastAutoRefreshEnabled,
         settings.podcastRefreshInterval,
         settings.podcastRefreshNetwork,
         settings.podcastNotificationsEnabled,
-    ) { downloadVideos, autoRefreshEnabled, refreshInterval, refreshNetwork, notificationsEnabled ->
+    ) { downloadVideos, refreshInterval, refreshNetwork, notificationsEnabled ->
         PodcastSettingsState(
             downloadVideos = downloadVideos,
-            autoRefreshEnabled = autoRefreshEnabled,
             refreshInterval = refreshInterval,
             refreshNetwork = refreshNetwork,
             notificationsEnabled = notificationsEnabled,
-            autoDownloadEnabled = false,
         )
     }
-        .combine(settings.podcastAutoDownloadEnabled) { state, autoDownloadEnabled ->
-            state.copy(autoDownloadEnabled = autoDownloadEnabled)
-        }
         .combine(settings.podcastAutoQueueEnabled) { state, autoQueueEnabled ->
             state.copy(autoQueueEnabled = autoQueueEnabled)
         }
         .combine(settings.podcastDownloadNetwork) { state, downloadNetwork ->
             state.copy(downloadNetwork = downloadNetwork)
+        }
+        .combine(settings.podcastDownloadLimit) { state, downloadLimit ->
+            state.copy(downloadLimit = downloadLimit)
+        }
+        .combine(settings.podcastDeleteBeforeAutoDownload) { state, deleteBeforeAutoDownload ->
+            state.copy(deleteBeforeAutoDownload = deleteBeforeAutoDownload)
+        }
+        .combine(settings.podcastRemovePlayedDownloads) { state, removePlayedDownloads ->
+            state.copy(removePlayedDownloads = removePlayedDownloads)
         }
         .combine(settings.podcastSelectedTab) { state, savedPodcastTab ->
             state.copy(savedPodcastTab = savedPodcastTab)
@@ -339,6 +367,8 @@ class PodcastViewModel @Inject constructor(
 
     private val _state = MutableStateFlow(PodcastHomeState())
     val state: StateFlow<PodcastHomeState> = _state.asStateFlow()
+    private val _backupEvents = MutableSharedFlow<PodcastBackupEvent>(replay = 1, extraBufferCapacity = 1)
+    val backupEvents: SharedFlow<PodcastBackupEvent> = _backupEvents.asSharedFlow()
     @OptIn(ExperimentalCoroutinesApi::class)
     val previewEpisodeEntities: StateFlow<Map<Long, EpisodeEntity>> = state
         .map { homeState -> homeState.previewFeed?.episodes?.map { it.id }.orEmpty() }
@@ -360,7 +390,6 @@ class PodcastViewModel @Inject constructor(
     fun setPodcastNotificationsEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settings.setPodcastNotificationsEnabled(enabled)
-            repository.setAllPodcastNotifications(enabled)
         }
     }
 
@@ -371,15 +400,19 @@ class PodcastViewModel @Inject constructor(
     fun setPodcastDownloadVideos(enabled: Boolean) {
         viewModelScope.launch {
             settings.setPodcastDownloadVideos(enabled)
-            repository.setAllPodcastVideoDownload(enabled)
         }
     }
 
-    fun setPodcastAutoRefreshEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            settings.setPodcastAutoRefreshEnabled(enabled)
-            repository.setAllPodcastAutoRefresh(enabled)
-        }
+    fun setPodcastDownloadLimit(limit: com.shapeshed.booth.data.PodcastDownloadLimit) {
+        viewModelScope.launch { settings.setPodcastDownloadLimit(limit) }
+    }
+
+    fun setPodcastDeleteBeforeAutoDownload(mode: com.shapeshed.booth.data.PodcastDeleteBeforeAutoDownload) {
+        viewModelScope.launch { settings.setPodcastDeleteBeforeAutoDownload(mode) }
+    }
+
+    fun setPodcastRemovePlayedDownloads(enabled: Boolean) {
+        viewModelScope.launch { settings.setPodcastRemovePlayedDownloads(enabled) }
     }
 
     fun setPodcastRefreshInterval(interval: com.shapeshed.booth.data.PodcastRefreshInterval) {
@@ -388,13 +421,6 @@ class PodcastViewModel @Inject constructor(
 
     fun setPodcastRefreshNetwork(network: com.shapeshed.booth.data.PodcastRefreshNetwork) {
         viewModelScope.launch { settings.setPodcastRefreshNetwork(network) }
-    }
-
-    fun setPodcastAutoDownloadEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            settings.setPodcastAutoDownloadEnabled(enabled)
-            repository.setAllPodcastAutoDownload(enabled)
-        }
     }
 
     fun setPodcastAutoQueueEnabled(enabled: Boolean) {
@@ -830,7 +856,12 @@ class PodcastViewModel @Inject constructor(
                     )
                     .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
                     .build()
-                _state.value = state.value.copy(isImporting = true, importProgress = null, error = null)
+                _state.value = state.value.copy(
+                    isImporting = true,
+                    importProgress = null,
+                    importFirstPodcastSaved = false,
+                    error = null,
+                )
                 WorkManager.getInstance(context.applicationContext).enqueueUniqueWork(
                     OPML_IMPORT_WORK_NAME,
                     ExistingWorkPolicy.REPLACE,
@@ -860,6 +891,8 @@ class PodcastViewModel @Inject constructor(
                     current.progress.getInt(com.shapeshed.booth.data.OPML_IMPORT_COMPLETED, 0),
                     current.progress.getInt(com.shapeshed.booth.data.OPML_IMPORT_TOTAL, 0),
                 ),
+                importFirstPodcastSaved = state.value.importFirstPodcastSaved ||
+                    importHasSavedPodcast(current.progress.getInt(com.shapeshed.booth.data.OPML_IMPORT_IMPORTED, 0)),
             )
             delay(250)
         }
@@ -869,6 +902,7 @@ class PodcastViewModel @Inject constructor(
         _state.value = state.value.copy(
             isImporting = false,
             importProgress = null,
+            importFirstPodcastSaved = state.value.importFirstPodcastSaved || importHasSavedPodcast(imported),
             error = if (info.state == androidx.work.WorkInfo.State.SUCCEEDED) {
                 PodcastUiError.ImportCompleted(imported, total)
             } else {
@@ -893,17 +927,80 @@ class PodcastViewModel @Inject constructor(
         }
     }
 
-    fun refresh(podcast: PodcastEntity) {
+    fun exportBackup(context: Context, uri: Uri) {
+        viewModelScope.launch {
+            runCancellableCatching {
+                val body = com.shapeshed.booth.data.PodcastBackupManager(repository, settings).export()
+                withContext(Dispatchers.IO) {
+                    context.contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { writer ->
+                        writer.write(body)
+                    } ?: error("Could not open backup destination")
+                }
+                _state.value = state.value.copy(error = PodcastUiError.BackupExportCompleted)
+                _backupEvents.emit(PodcastBackupEvent.Exported)
+            }.onFailure {
+                _state.value = state.value.copy(error = PodcastUiError.ExportFailed)
+            }
+        }
+    }
+
+    fun exportBackupZip(context: Context, uri: Uri) {
+        viewModelScope.launch {
+            runCancellableCatching {
+                val body = PodcastBackupManager(repository, settings).exportZip()
+                withContext(Dispatchers.IO) {
+                    context.contentResolver.openOutputStream(uri)?.use { it.write(body) }
+                        ?: error("Could not open backup destination")
+                }
+                _state.value = state.value.copy(error = PodcastUiError.BackupExportCompleted)
+                _backupEvents.emit(PodcastBackupEvent.Exported)
+            }.onFailure { _state.value = state.value.copy(error = PodcastUiError.ExportFailed) }
+        }
+    }
+
+    fun importBackup(context: Context, uri: Uri) {
+        viewModelScope.launch {
+            _backupEvents.emit(PodcastBackupEvent.ImportStarted)
+            val body = runCancellableCatching {
+                withContext(Dispatchers.IO) {
+                    context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                }
+            }.getOrNull()
+            if (body == null) {
+                _state.value = state.value.copy(error = PodcastUiError.BackupImportFailed)
+                return@launch
+            }
+            runCancellableCatching {
+                if (body.size >= 2 && body[0] == 'P'.code.toByte() && body[1] == 'K'.code.toByte()) {
+                    PodcastBackupManager(repository, settings, context).importZip(body)
+                } else {
+                    PodcastBackupManager(repository, settings, context).import(body.toString(Charsets.UTF_8))
+                }
+            }.onSuccess { imported ->
+                _state.value = state.value.copy(error = PodcastUiError.BackupImportCompleted(imported))
+                _backupEvents.emit(PodcastBackupEvent.Imported(imported))
+                com.shapeshed.booth.data.PodcastRefreshWorker.enqueueNow(context)
+            }.onFailure {
+                _state.value = state.value.copy(error = PodcastUiError.BackupImportFailed)
+            }
+        }
+    }
+
+    fun refresh(context: Context, podcast: PodcastEntity) {
         if (_refreshing.value) return
         viewModelScope.launch {
-            val existingGuids = repository.episodeGuids(podcast.id).toSet()
+            val existingEpisodeIdentities = repository.episodes(podcast.id).first()
+                .map { it.guid to it.audioUrl }
+                .toSet()
             _refreshing.value = true
             _refreshProgress.value = PodcastRefreshProgress(total = 1)
             try {
                 repository.refresh(podcast)
+                val newEpisodes = newEpisodesSince(repository.episodes(podcast.id).first(), existingEpisodeIdentities)
                 if (settings.podcastAutoQueueEnabled.first()) {
-                    repository.addNewEpisodesToQueue(podcast, existingGuids)
+                    repository.addNewEpisodesToQueue(podcast, existingEpisodeIdentities)
                 }
+                enqueueAutoDownloads(context, podcast, newEpisodes)
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (_: Exception) {
@@ -922,12 +1019,16 @@ class PodcastViewModel @Inject constructor(
         }
     }
 
-    fun refreshSubscriptions() {
+    fun refreshSubscriptions(context: Context? = null) {
         if (_refreshing.value) return
         viewModelScope.launch {
             _refreshing.value = true
             val refreshTargets = podcasts.value
-            val existingGuids = refreshTargets.associate { it.id to repository.episodeGuids(it.id).toSet() }
+            val existingEpisodeIdentities = refreshTargets.associate { podcast ->
+                podcast.id to repository.episodes(podcast.id).first()
+                    .map { it.guid to it.audioUrl }
+                    .toSet()
+            }
             _refreshProgress.value = PodcastRefreshProgress(total = refreshTargets.size)
             try {
                 val results = repository.refreshAll(refreshTargets) { completed, total ->
@@ -935,7 +1036,19 @@ class PodcastViewModel @Inject constructor(
                 }
                 if (settings.podcastAutoQueueEnabled.first()) {
                     results.filter { it.result.isSuccess }.forEach { result ->
-                        repository.addNewEpisodesToQueue(result.podcast, existingGuids[result.podcast.id].orEmpty())
+                        repository.addNewEpisodesToQueue(
+                            result.podcast,
+                            existingEpisodeIdentities[result.podcast.id].orEmpty(),
+                        )
+                    }
+                }
+                if (context != null) {
+                    results.filter { it.result.isSuccess }.forEach { result ->
+                        val newEpisodes = newEpisodesSince(
+                            repository.episodes(result.podcast.id).first(),
+                            existingEpisodeIdentities[result.podcast.id].orEmpty(),
+                        )
+                        enqueueAutoDownloads(context, result.podcast, newEpisodes)
                     }
                 }
                 results.firstNotNullOfOrNull { it.result.exceptionOrNull() }?.let {
@@ -1065,11 +1178,17 @@ class PodcastViewModel @Inject constructor(
     }
 
     fun markPlayed(episodeId: Long) {
-        viewModelScope.launch { repository.markPlayed(episodeId) }
+        viewModelScope.launch {
+            repository.markPlayed(episodeId)
+            com.shapeshed.booth.data.PlayedDownloadCleanupWorker.schedule(applicationContext, episodeId)
+        }
     }
 
     fun markUnplayed(episodeId: Long) {
-        viewModelScope.launch { repository.markUnplayed(episodeId) }
+        viewModelScope.launch {
+            repository.markUnplayed(episodeId)
+            com.shapeshed.booth.data.PlayedDownloadCleanupWorker.cancel(applicationContext, episodeId)
+        }
     }
 
     fun toggleFavorite(episodeId: Long) {
@@ -1092,12 +1211,31 @@ class PodcastViewModel @Inject constructor(
         // WorkManager and DownloadManager are intentionally asynchronous. Publish the
         // pending state now so every list view gives immediate feedback on the tap.
         DownloadProgressStore.request(episodeId)
+        enqueueDownload(context, episodeId, PodcastDownloadNetwork.ANY_CONNECTION)
+    }
+
+    private suspend fun enqueueAutoDownloads(
+        context: Context,
+        podcast: PodcastEntity,
+        episodes: List<EpisodeEntity>,
+    ) {
+        if (!podcast.includeInAutoDownload) return
+        val network = settings.podcastDownloadNetwork.first()
+        episodes.forEach { episode -> enqueueDownload(context, episode.id, network) }
+    }
+
+    private fun enqueueDownload(context: Context, episodeId: Long, network: PodcastDownloadNetwork) {
+        DownloadProgressStore.request(episodeId)
         val request = OneTimeWorkRequestBuilder<EpisodeDownloadWorker>()
             .setInputData(workDataOf(EPISODE_ID_INPUT to episodeId))
-            .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+            .setConstraints(
+                Constraints.Builder().setRequiredNetworkType(
+                    if (network == PodcastDownloadNetwork.WIFI_ONLY) NetworkType.UNMETERED else NetworkType.CONNECTED,
+                ).build(),
+            )
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.SECONDS)
             .build()
-        WorkManager.getInstance(context).enqueueUniqueWork(
+        WorkManager.getInstance(context.applicationContext).enqueueUniqueWork(
             "podcast-download-$episodeId",
             ExistingWorkPolicy.KEEP,
             request,

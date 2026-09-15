@@ -5,6 +5,8 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.shapeshed.booth.PodcastNotificationActionAddToQueue
 import com.shapeshed.booth.PodcastNotificationActionPlay
 
@@ -25,9 +27,15 @@ internal fun PodcastHomeEffects(
     onOpenInitialEpisode: (com.shapeshed.booth.data.EpisodeEntity) -> Unit,
     onSelectSavedTab: (PodcastTab) -> Unit,
 ) {
-    LaunchedEffect(Unit) {
+    val settings by viewModel.podcastSettings.collectAsStateWithLifecycle()
+    LaunchedEffect(
+        settings.refreshInterval,
+        settings.refreshNetwork,
+    ) {
         com.shapeshed.booth.data.PodcastRefreshWorker.schedule(
             context = context,
+            interval = settings.refreshInterval,
+            network = settings.refreshNetwork,
         )
     }
     LaunchedEffect(Unit) { playbackViewModel.connect(context) }
@@ -84,7 +92,9 @@ internal fun PodcastHomeBackHandlers(
         playbackViewModel.switchToAudioForBackground()
         routeState.showNowPlaying.value = false
     }
-    BackHandler(enabled = routeState.queueReorderMode.value) { routeState.queueReorderMode.value = false }
+    BackHandler(enabled = routeState.queueReorderMode.value) {
+        routeState.queueReorderMode.value = false
+    }
     BackHandler(enabled = inboxSelectionMode) { routeState.selectedInboxIds.value = emptySet() }
     BackHandler(enabled = showGlobalSearch) { onCloseGlobalSearch() }
     BackHandler(enabled = !routeState.showNowPlaying.value && routeState.showDiscoverySearch.value) {

@@ -24,6 +24,10 @@ enum class PodcastRefreshNetwork { ANY_CONNECTION, WIFI_ONLY }
 
 enum class PodcastDownloadNetwork { ANY_CONNECTION, WIFI_ONLY }
 
+enum class PodcastDownloadLimit(val episodeCount: Int?) { TWENTY_FIVE(25), FIFTY(50), ONE_HUNDRED(100), UNLIMITED(null) }
+
+enum class PodcastDeleteBeforeAutoDownload { OFF, PLAYED, ALL_ELIGIBLE }
+
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 /** Podcast-only persisted settings backed by Preferences DataStore. */
@@ -33,13 +37,14 @@ class SettingsStore(private val context: Context) {
     private val lastEpisodeIdKey = longPreferencesKey("podcast_last_episode_id")
     private val playbackSpeedKey = floatPreferencesKey("podcast_playback_speed")
     private val skipSilenceKey = booleanPreferencesKey("podcast_skip_silence")
-    private val autoRefreshEnabledKey = booleanPreferencesKey("podcast_auto_refresh_enabled")
     private val refreshIntervalKey = stringPreferencesKey("podcast_refresh_interval")
     private val refreshNetworkKey = stringPreferencesKey("podcast_refresh_network")
     private val notificationsEnabledKey = booleanPreferencesKey("podcast_notifications_enabled")
-    private val autoDownloadEnabledKey = booleanPreferencesKey("podcast_auto_download_enabled")
     private val autoQueueEnabledKey = booleanPreferencesKey("podcast_auto_queue_enabled")
     private val downloadNetworkKey = stringPreferencesKey("podcast_download_network")
+    private val downloadLimitKey = stringPreferencesKey("podcast_download_limit")
+    private val deleteBeforeAutoDownloadKey = stringPreferencesKey("podcast_delete_before_auto_download")
+    private val removePlayedDownloadsKey = booleanPreferencesKey("podcast_remove_played_downloads")
     private val downloadVideosKey = booleanPreferencesKey("podcast_download_videos")
     private val searchProviderKey = stringPreferencesKey("podcast_search_provider")
 
@@ -83,12 +88,6 @@ class SettingsStore(private val context: Context) {
         context.dataStore.edit { it[skipSilenceKey] = enabled }
     }
 
-    val podcastAutoRefreshEnabled: Flow<Boolean> = context.dataStore.data.map { it[autoRefreshEnabledKey] ?: false }
-
-    suspend fun setPodcastAutoRefreshEnabled(enabled: Boolean) {
-        context.dataStore.edit { it[autoRefreshEnabledKey] = enabled }
-    }
-
     val podcastRefreshInterval: Flow<PodcastRefreshInterval> = context.dataStore.data.map { prefs ->
         prefs[refreshIntervalKey]
             ?.let { runCatching { PodcastRefreshInterval.valueOf(it) }.getOrNull() }
@@ -102,7 +101,7 @@ class SettingsStore(private val context: Context) {
     val podcastRefreshNetwork: Flow<PodcastRefreshNetwork> = context.dataStore.data.map { prefs ->
         prefs[refreshNetworkKey]
             ?.let { runCatching { PodcastRefreshNetwork.valueOf(it) }.getOrNull() }
-            ?: PodcastRefreshNetwork.WIFI_ONLY
+            ?: PodcastRefreshNetwork.ANY_CONNECTION
     }
 
     suspend fun setPodcastRefreshNetwork(network: PodcastRefreshNetwork) {
@@ -113,12 +112,6 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setPodcastNotificationsEnabled(enabled: Boolean) {
         context.dataStore.edit { it[notificationsEnabledKey] = enabled }
-    }
-
-    val podcastAutoDownloadEnabled: Flow<Boolean> = context.dataStore.data.map { it[autoDownloadEnabledKey] ?: false }
-
-    suspend fun setPodcastAutoDownloadEnabled(enabled: Boolean) {
-        context.dataStore.edit { it[autoDownloadEnabledKey] = enabled }
     }
 
     val podcastAutoQueueEnabled: Flow<Boolean> = context.dataStore.data.map { it[autoQueueEnabledKey] ?: false }
@@ -135,6 +128,33 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setPodcastDownloadNetwork(network: PodcastDownloadNetwork) {
         context.dataStore.edit { it[downloadNetworkKey] = network.name }
+    }
+
+    val podcastDownloadLimit: Flow<PodcastDownloadLimit> = context.dataStore.data.map { prefs ->
+        prefs[downloadLimitKey]?.let { runCatching { PodcastDownloadLimit.valueOf(it) }.getOrNull() }
+            ?: PodcastDownloadLimit.FIFTY
+    }
+
+    suspend fun setPodcastDownloadLimit(limit: PodcastDownloadLimit) {
+        context.dataStore.edit { it[downloadLimitKey] = limit.name }
+    }
+
+    val podcastDeleteBeforeAutoDownload: Flow<PodcastDeleteBeforeAutoDownload> = context.dataStore.data.map { prefs ->
+        prefs[deleteBeforeAutoDownloadKey]
+            ?.let { runCatching { PodcastDeleteBeforeAutoDownload.valueOf(it) }.getOrNull() }
+            ?: PodcastDeleteBeforeAutoDownload.PLAYED
+    }
+
+    suspend fun setPodcastDeleteBeforeAutoDownload(mode: PodcastDeleteBeforeAutoDownload) {
+        context.dataStore.edit { it[deleteBeforeAutoDownloadKey] = mode.name }
+    }
+
+    val podcastRemovePlayedDownloads: Flow<Boolean> = context.dataStore.data.map {
+        it[removePlayedDownloadsKey] ?: true
+    }
+
+    suspend fun setPodcastRemovePlayedDownloads(enabled: Boolean) {
+        context.dataStore.edit { it[removePlayedDownloadsKey] = enabled }
     }
 
     val podcastDownloadVideos: Flow<Boolean> = context.dataStore.data.map { it[downloadVideosKey] ?: false }

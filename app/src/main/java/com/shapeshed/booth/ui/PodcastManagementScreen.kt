@@ -116,6 +116,9 @@ internal fun PodcastManagementScreen(
             onDismiss = { editingPodcastId = null },
             inherited = podcast.playbackSpeed == null,
             globalSpeed = globalPlaybackSpeed,
+            inheritedSkipSilence = podcast.skipSilence == null,
+            globalSkipSilence = globalSkipSilence,
+            onUseGlobalSkipSilence = { onPodcastSkipSilenceChange(podcast, null) },
         )
     }
 }

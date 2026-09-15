@@ -133,7 +133,6 @@ internal fun PodcastHomeNowPlayingOverlay(
             PodcastNowPlayingOverlay(
                 episode = episode,
                 podcastTitle = podcastTitle,
-                podcastArtworkUrl = podcastsById[episode.podcastId]?.artworkUrl,
                 onOpenPodcast = { onOpenPodcast(episode.podcastId) },
                 isPlaying = playback.isPlaying,
                 positionMs = playback.positionMs,
@@ -149,7 +148,9 @@ internal fun PodcastHomeNowPlayingOverlay(
                 sleepTimer = sleepTimer,
                 onSetSleepTimer = playbackViewModel::setSleepTimer,
                 onCancelSleepTimer = playbackViewModel::cancelSleepTimer,
-                onSpeedChange = playbackViewModel::setSpeed,
+                onSpeedChange = { speed ->
+                    playbackViewModel.setPodcastPlaybackSpeed(episode.podcastId, speed)
+                },
                 onSkipSilenceChange = playbackViewModel::setSkipSilence,
                 onSeekBack = playbackViewModel::seekBack,
                 onSeekForward = playbackViewModel::seekForward,

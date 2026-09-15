@@ -109,7 +109,7 @@ class PodcastDownloadManager(
                     val status = it.getInt(it.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
                     val bytes = it.getLong(it.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
                     val total = it.getLong(it.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
-                        .takeIf { value -> value >= 0L }
+                        .takeIf { value -> value > 1024L }
                     var mappedStatus = when (status) {
                         DownloadManager.STATUS_RUNNING -> DownloadAssetStatus.DOWNLOADING
                         DownloadManager.STATUS_PENDING -> DownloadAssetStatus.QUEUED
@@ -197,6 +197,22 @@ class PodcastDownloadManager(
             .forEach { downloadManager.remove(it.downloadId) }
         repository.removeDownloadAssets(episodeId)
         DownloadProgressStore.clear(episodeId)
+    }
+
+    /** Frees the oldest safe downloads until [maximumDownloads] is reached. */
+    suspend fun enforceDownloadLimit(
+        downloadedEpisodes: List<EpisodeEntity>,
+        queuedEpisodeIds: Set<Long>,
+        maximumDownloads: Int,
+        mode: PodcastDeleteBeforeAutoDownload,
+    ) {
+        val excess = (
+            downloadedEpisodes.count { it.localUri != null || it.localVideoUri != null } - maximumDownloads
+            ).coerceAtLeast(0)
+        if (mode == PodcastDeleteBeforeAutoDownload.OFF) return
+        downloadsEligibleForDeletion(downloadedEpisodes, queuedEpisodeIds, mode)
+            .take(excess)
+            .forEach { removeEpisodeDownloads(it.id) }
     }
 
     companion object {

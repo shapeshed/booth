@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:keep="@string/long_press_drag_reorder">
     <string name="app_name">Booth</string>
     <string name="clear_search">Clear search</string>
     <string name="back">Back</string>
@@ -30,6 +30,12 @@
     <string name="clear">Clear</string>
     <string name="no_filter_matches">No matches</string>
     <string name="auto_refresh">Auto refresh</string>
+    <string name="refresh_podcasts_automatically" translatable="false">Refresh podcasts automatically</string>
+    <string name="refresh_interval" translatable="false">Refresh interval</string>
+    <string name="refresh_network" translatable="false">Refresh network</string>
+    <string name="refresh_every_hour" translatable="false">Every hour</string>
+    <string name="refresh_every_six_hours" translatable="false">Every 6 hours</string>
+    <string name="refresh_daily" translatable="false">Daily</string>
     <string name="notifications">Notifications</string>
     <string name="on">On</string>
     <string name="off">Off</string>
@@ -87,6 +93,8 @@
     <string name="playback_speed_custom">Playback speed %1$s</string>
     <string name="inherited_global_playback_speed" translatable="false">Global default (%1$s)</string>
     <string name="use_global_playback_speed" translatable="false">Use global playback speed</string>
+    <string name="use_global_skip_silence" translatable="false">Use global skip silence</string>
+    <string name="global_setting_value" translatable="false">Global default (%1$s)</string>
     <string name="enable_all_podcasts" translatable="false">Enable for all podcasts</string>
     <string name="import_and_export" translatable="false">Import &amp; Export</string>
     <plurals name="podcast_count" translatable="false">
@@ -95,7 +103,11 @@
     </plurals>
     <string name="all_podcasts" translatable="false">All podcasts</string>
     <string name="automatically_add_to_up_next" translatable="false">Add new episodes to Up Next</string>
-    <string name="download_up_next" translatable="false">Download Up Next episodes</string>
+    <string name="podcast_auto_queue" translatable="false">Podcasts added to Up Next</string>
+    <string name="download_up_next" translatable="false">Download new episodes</string>
+    <string name="download_videos_when_available" translatable="false">Download videos when available</string>
+    <string name="podcast_video_downloads" translatable="false">Podcast video downloads</string>
+    <string name="disabled_globally" translatable="false">Disabled globally</string>
     <string name="podcast_notifications" translatable="false">Podcast notifications</string>
     <string name="skip_silence">Skip silence</string>
     <string name="skip_silence_summary">Automatically skip quiet sections while playing</string>
@@ -144,6 +156,17 @@
     <string name="selected_item">Selected</string>
     <string name="discovery_settings_group" translatable="false">Podcast discovery</string>
     <string name="download_network" translatable="false">Download network</string>
+    <string name="download_limit" translatable="false">Download limit</string>
+    <string name="delete_before_auto_download" translatable="false">Delete before auto-download</string>
+    <string name="remove_played_downloads" translatable="false">Remove played downloads</string>
+    <string name="remove_played_downloads_summary" translatable="false">24 hours after playback</string>
+    <string name="download_limit_25" translatable="false">25 episodes</string>
+    <string name="download_limit_50" translatable="false">50 episodes</string>
+    <string name="download_limit_100" translatable="false">100 episodes</string>
+    <string name="download_limit_unlimited" translatable="false">Unlimited</string>
+    <string name="download_cleanup_off" translatable="false">Off</string>
+    <string name="download_cleanup_played" translatable="false">Played episodes</string>
+    <string name="download_cleanup_all_eligible" translatable="false">All eligible episodes</string>
     <string name="download_wifi_or_mobile" translatable="false">Wi-Fi or mobile data</string>
     <string name="download_wifi_only" translatable="false">Wi-Fi only</string>
     <string name="auto_download">Auto download</string>
@@ -155,6 +178,12 @@
     <string name="credentials_configured">Credentials configured</string>
     <string name="import_opml_podcasts_summary">Add subscriptions from another podcast app</string>
     <string name="export_opml_podcasts_summary">Save your subscriptions as a portable file</string>
+    <string name="export_backup" translatable="false">Export Booth backup</string>
+    <string name="export_backup_summary" translatable="false">Subscriptions, playback settings, and positions</string>
+    <string name="export_backup_zip" translatable="false">Export Booth backup ZIP</string>
+    <string name="export_backup_zip_summary" translatable="false">Compressed backup with future asset support</string>
+    <string name="import_backup" translatable="false">Import Booth backup</string>
+    <string name="import_backup_summary" translatable="false">Restore subscriptions, playback settings, and positions</string>
     <string name="podcast_search_provider">Podcast search provider</string>
     <string name="credentials_saved_summary">Credentials are saved securely. Leave both fields blank to keep them unchanged.</string>
     <string name="credentials_optional_summary">Optional read-only credentials enable trending podcasts. Public search works without them.</string>
@@ -255,6 +284,10 @@
         <item quantity="other">Imported %1$d of %2$d podcasts</item>
     </plurals>
     <string name="error_opml_export_failed">Could not export OPML</string>
+    <string name="error_backup_import_failed" translatable="false">Could not import Booth backup</string>
+    <string name="backup_export_completed" translatable="false">Backup exported successfully</string>
+    <string name="backup_import_started" translatable="false">Importing backup…</string>
+    <string name="backup_import_completed" translatable="false">Backup imported successfully (%1$d subscriptions)</string>
     <string name="error_refresh_failed">Could not refresh podcast</string>
     <string name="error_partial_refresh_failed">Some podcasts could not be refreshed</string>
     <string name="error_remove_podcast_failed">Could not remove podcast</string>
