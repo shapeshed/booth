@@ -74,8 +74,10 @@ class PodcastRefreshWorker(
             }
             // Use persisted rows: repository identity normalization can differ from the
             // parser's provisional IDs after redirects or feed URL changes.
-            val newPersistedEpisodes = app.podcastRepository.episodes(podcast.id).first()
-                .filterNot { it.guid to it.audioUrl in existingEpisodeIdentities[podcast.id].orEmpty() }
+            val newPersistedEpisodes = newEpisodesSince(
+                app.podcastRepository.episodes(podcast.id).first(),
+                existingEpisodeIdentities[podcast.id].orEmpty(),
+            )
             if (autoQueueEnabled && podcast.includeInAutoQueue) {
                 newPersistedEpisodes.forEach { episode ->
                     app.podcastRepository.addToQueueFromInbox(episode.id)

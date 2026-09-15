@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.io.IOException
 
 /**
  * Complete-feed adapter for the SAX parser. The legacy parser remains the compatibility
@@ -38,6 +39,7 @@ class StreamingCompletePodcastFeedProvider(
         } catch (error: CancellationException) {
             throw error
         } catch (error: StreamingParserFailureException) {
+            if (error.category == FailureCategory.IO) throw error.cause ?: error
             val parsed = fallback.fetch(error.feedUrl, error.etag, error.lastModified, onEpisodeProgress)
             recordMetric(
                 FeedParserMetric(
@@ -47,10 +49,6 @@ class StreamingCompletePodcastFeedProvider(
                     failureCategory = error.category,
                 ),
             )
-            parsed
-        } catch (_: Exception) {
-            val parsed = fallback.fetch(canonicalUrl, etag, lastModified, onEpisodeProgress)
-            recordMetric(FeedParserMetric(FeedParserMode.FALLBACK, elapsedMs(startedAt), parsed.episodes.size))
             parsed
         }
     }
@@ -119,6 +117,8 @@ class StreamingCompletePodcastFeedProvider(
                         }
                     }
                 } catch (error: CancellationException) {
+                    throw error
+                } catch (error: IOException) {
                     throw error
                 } catch (error: Exception) {
                     throw StreamingParserFailureException(

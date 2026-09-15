@@ -138,19 +138,21 @@ data class PodcastImportProgress(
 data class PodcastRefreshProgress(
     val completed: Int = 0,
     val total: Int = 0,
+    val phase: PodcastRefreshPhase = PodcastRefreshPhase.FETCHING,
 ) {
     val fraction: Float
         get() = if (total > 0) (completed.toFloat() / total).coerceIn(0f, 1f) else 0f
+
+    val isDeterminate: Boolean
+        get() = total > 0 && phase == PodcastRefreshPhase.FETCHING
 }
+
+enum class PodcastRefreshPhase { FETCHING, FINALIZING }
 
 internal fun newEpisodesSince(
     episodes: List<EpisodeEntity>,
     existingEpisodeIdentities: Set<Pair<String, String>>,
-): List<EpisodeEntity> = episodes.filterNot {
-    existingEpisodeIdentities.any { (guid, audioUrl) ->
-        guid == it.guid || audioUrl == it.audioUrl
-    }
-}
+): List<EpisodeEntity> = com.shapeshed.booth.data.newEpisodesSince(episodes, existingEpisodeIdentities)
 
 internal fun importHasSavedPodcast(imported: Int): Boolean = imported > 0
 
@@ -992,12 +994,21 @@ class PodcastViewModel @Inject constructor(
             val existingEpisodeIdentities = repository.episodes(podcast.id).first()
                 .map { it.guid to it.audioUrl }
                 .toSet()
+            val shouldAutoQueue = settings.podcastAutoQueueEnabled.first() && podcast.includeInAutoQueue
+            val shouldAutoDownload = podcast.includeInAutoDownload
             _refreshing.value = true
             _refreshProgress.value = PodcastRefreshProgress(total = 1)
             try {
                 repository.refresh(podcast)
+                if (shouldAutoQueue || shouldAutoDownload) {
+                    _refreshProgress.value = PodcastRefreshProgress(
+                        completed = 1,
+                        total = 1,
+                        phase = PodcastRefreshPhase.FINALIZING,
+                    )
+                }
                 val newEpisodes = newEpisodesSince(repository.episodes(podcast.id).first(), existingEpisodeIdentities)
-                if (settings.podcastAutoQueueEnabled.first()) {
+                if (shouldAutoQueue) {
                     repository.addNewEpisodesToQueue(podcast, existingEpisodeIdentities)
                 }
                 enqueueAutoDownloads(context, podcast, newEpisodes)
@@ -1029,12 +1040,23 @@ class PodcastViewModel @Inject constructor(
                     .map { it.guid to it.audioUrl }
                     .toSet()
             }
+            val shouldAutoQueue = settings.podcastAutoQueueEnabled.first() &&
+                refreshTargets.any(PodcastEntity::includeInAutoQueue)
+            val shouldAutoDownload = context != null && refreshTargets.any(PodcastEntity::includeInAutoDownload)
             _refreshProgress.value = PodcastRefreshProgress(total = refreshTargets.size)
             try {
                 val results = repository.refreshAll(refreshTargets) { completed, total ->
-                    _refreshProgress.value = PodcastRefreshProgress(completed, total)
+                    _refreshProgress.value = PodcastRefreshProgress(
+                        completed = completed,
+                        total = total,
+                        phase = if ((shouldAutoQueue || shouldAutoDownload) && completed == total) {
+                            PodcastRefreshPhase.FINALIZING
+                        } else {
+                            PodcastRefreshPhase.FETCHING
+                        },
+                    )
                 }
-                if (settings.podcastAutoQueueEnabled.first()) {
+                if (shouldAutoQueue) {
                     results.filter { it.result.isSuccess }.forEach { result ->
                         repository.addNewEpisodesToQueue(
                             result.podcast,
@@ -1197,6 +1219,10 @@ class PodcastViewModel @Inject constructor(
 
     fun removeFromQueue(episodeId: Long) {
         viewModelScope.launch { repository.removeFromQueue(episodeId) }
+    }
+
+    fun clearQueue() {
+        viewModelScope.launch { repository.clearQueue() }
     }
 
     suspend fun removeFromQueueAwait(episodeId: Long): Result<Unit> = withContext(NonCancellable) {

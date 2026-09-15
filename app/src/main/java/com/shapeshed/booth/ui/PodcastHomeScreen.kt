@@ -1114,9 +1114,11 @@ fun PodcastHomeScreen(
                         PodcastHomeRootActions(
                             selectedTab = selectedTab,
                             queueReorderMode = queueReorderMode,
+                            queueHasItems = queueEntries.isNotEmpty(),
                             menuExpanded = rootMenuExpanded,
-                            viewModel = viewModel,
                             showSearchAction = false,
+                            onClearInbox = viewModel::clearInbox,
+                            onClearQueue = viewModel::clearQueue,
                             onQueueReorderDone = { queueReorderMode = false },
                             onOpenDiscoverySearch = ::openGlobalSearch,
                             onOpenAddPodcast = { routeState.showAddPodcast.value = true },
@@ -1243,16 +1245,18 @@ fun PodcastHomeScreen(
                         PodcastHomeRootActions(
                             selectedTab = selectedTab,
                             queueReorderMode = queueReorderMode,
+                            queueHasItems = queueEntries.isNotEmpty(),
                             menuExpanded = rootMenuExpanded,
-                            viewModel = viewModel,
                             showSearchAction = false,
+                            onClearInbox = viewModel::clearInbox,
+                            onClearQueue = viewModel::clearQueue,
                             onQueueReorderDone = { queueReorderMode = false },
                             onOpenDiscoverySearch = ::openGlobalSearch,
                             onOpenAddPodcast = { routeState.showAddPodcast.value = true },
                             onMenuExpandedChange = { rootMenuExpanded = it },
                             onOpenDownloads = { openSpecialRoot(PodcastNavigationKey.Downloads) },
                             onOpenAllEpisodes = { openSpecialRoot(PodcastNavigationKey.AllEpisodes) },
-                        onOpenSettings = ::openSettings,
+                            onOpenSettings = ::openSettings,
                         )
                     } else {
                         PodcastHomeContextActions(
@@ -1368,7 +1372,7 @@ fun PodcastHomeScreen(
             )
             if (refreshing) {
                 val progress = homeUiState.refreshProgress
-                if (progress.total > 0) {
+                if (progress.isDeterminate) {
                     LinearProgressIndicator(
                         progress = { progress.fraction },
                         modifier = Modifier.fillMaxWidth(),

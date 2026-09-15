@@ -237,12 +237,7 @@ class PodcastRepository(
         existingEpisodeIdentities: Set<Pair<String, String>>,
     ) {
         if (!podcast.includeInAutoQueue) return
-        episodes(podcast.id).first()
-            .filterNot { episode ->
-                existingEpisodeIdentities.none { (guid, audioUrl) ->
-                    guid == episode.guid || audioUrl == episode.audioUrl
-                }
-            }
+        newEpisodesSince(episodes(podcast.id).first(), existingEpisodeIdentities)
             .forEach { addToQueueFromInbox(it.id) }
     }
 
@@ -572,6 +567,8 @@ class PodcastRepository(
 
     suspend fun removeFromQueue(episodeId: Long) = dao.removeFromQueue(episodeId)
 
+    suspend fun clearQueue() = dao.clearQueue()
+
     suspend fun reorderQueue(episodeIds: List<Long>) = withContext(Dispatchers.IO) {
         dao.replaceQueue(episodeIds.mapIndexed { index, episodeId -> QueueEntity(episodeId, index) })
     }
@@ -690,6 +687,15 @@ internal fun mediaTotalBytes(contentRange: String?, contentLength: String?): Lon
         ?.toLongOrNull()
         ?.takeIf { it > 1024L }
     return rangeTotal ?: contentLength?.toLongOrNull()?.takeIf { it > 1024L }
+}
+
+internal fun newEpisodesSince(
+    episodes: List<EpisodeEntity>,
+    existingEpisodeIdentities: Set<Pair<String, String>>,
+): List<EpisodeEntity> {
+    val existingGuids = existingEpisodeIdentities.mapTo(hashSetOf()) { it.first }
+    val existingAudioUrls = existingEpisodeIdentities.mapTo(hashSetOf()) { it.second }
+    return episodes.filterNot { it.guid in existingGuids || it.audioUrl in existingAudioUrls }
 }
 
 private sealed interface SearchIndexRequest {

@@ -139,6 +139,8 @@
     <string name="remove_podcast">Remove %1$s</string>
     <string name="more_options">More options</string>
     <string name="remove_all_from_inbox">Remove all from inbox</string>
+    <string name="clear_up_next" translatable="false">Clear Up next</string>
+    <string name="clear_up_next_message" translatable="false">Remove all episodes from Up next? This won’t delete downloaded episodes.</string>
     <string name="stop_playback">Stop playback</string>
     <string name="removed_from_up_next">Removed from Up next</string>
     <string name="error_add_up_next">Could not add episode to Up Next</string>
