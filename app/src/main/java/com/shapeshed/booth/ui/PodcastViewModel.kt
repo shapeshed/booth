@@ -38,9 +38,8 @@ import com.shapeshed.booth.data.DownloadProgress
 import com.shapeshed.booth.data.DownloadProgressStore
 import com.shapeshed.booth.data.mergeDownloadProgress
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.receiveAsFlow
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
@@ -369,8 +368,8 @@ class PodcastViewModel @Inject constructor(
 
     private val _state = MutableStateFlow(PodcastHomeState())
     val state: StateFlow<PodcastHomeState> = _state.asStateFlow()
-    private val _backupEvents = MutableSharedFlow<PodcastBackupEvent>(replay = 1, extraBufferCapacity = 1)
-    val backupEvents: SharedFlow<PodcastBackupEvent> = _backupEvents.asSharedFlow()
+    private val _backupEvents = Channel<PodcastBackupEvent>(Channel.BUFFERED)
+    val backupEvents: Flow<PodcastBackupEvent> = _backupEvents.receiveAsFlow()
     @OptIn(ExperimentalCoroutinesApi::class)
     val previewEpisodeEntities: StateFlow<Map<Long, EpisodeEntity>> = state
         .map { homeState -> homeState.previewFeed?.episodes?.map { it.id }.orEmpty() }
@@ -939,7 +938,7 @@ class PodcastViewModel @Inject constructor(
                     } ?: error("Could not open backup destination")
                 }
                 _state.value = state.value.copy(error = PodcastUiError.BackupExportCompleted)
-                _backupEvents.emit(PodcastBackupEvent.Exported)
+                _backupEvents.send(PodcastBackupEvent.Exported)
             }.onFailure {
                 _state.value = state.value.copy(error = PodcastUiError.ExportFailed)
             }
@@ -955,14 +954,14 @@ class PodcastViewModel @Inject constructor(
                         ?: error("Could not open backup destination")
                 }
                 _state.value = state.value.copy(error = PodcastUiError.BackupExportCompleted)
-                _backupEvents.emit(PodcastBackupEvent.Exported)
+                _backupEvents.send(PodcastBackupEvent.Exported)
             }.onFailure { _state.value = state.value.copy(error = PodcastUiError.ExportFailed) }
         }
     }
 
     fun importBackup(context: Context, uri: Uri) {
         viewModelScope.launch {
-            _backupEvents.emit(PodcastBackupEvent.ImportStarted)
+            _backupEvents.send(PodcastBackupEvent.ImportStarted)
             val body = runCancellableCatching {
                 withContext(Dispatchers.IO) {
                     context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
@@ -980,7 +979,7 @@ class PodcastViewModel @Inject constructor(
                 }
             }.onSuccess { imported ->
                 _state.value = state.value.copy(error = PodcastUiError.BackupImportCompleted(imported))
-                _backupEvents.emit(PodcastBackupEvent.Imported(imported))
+                _backupEvents.send(PodcastBackupEvent.Imported(imported))
                 com.shapeshed.booth.data.PodcastRefreshWorker.enqueueNow(context)
             }.onFailure {
                 _state.value = state.value.copy(error = PodcastUiError.BackupImportFailed)
@@ -1247,7 +1246,20 @@ class PodcastViewModel @Inject constructor(
     ) {
         if (!podcast.includeInAutoDownload) return
         val network = settings.podcastDownloadNetwork.first()
-        episodes.forEach { episode -> enqueueDownload(context, episode.id, network) }
+        val allEpisodes = repository.podcasts.first()
+            .flatMap { subscribed -> repository.episodes(subscribed.id).first() }
+        val downloadsToEnqueue = com.shapeshed.booth.data.PodcastDownloadManager(
+            context.applicationContext,
+            repository,
+        ).downloadsWithinLimit(
+            candidates = episodes,
+            downloadedEpisodes = allEpisodes,
+            downloadAssets = repository.downloadAssets.first(),
+            queuedEpisodeIds = repository.queue.first().mapTo(mutableSetOf()) { it.episodeId },
+            maximumDownloads = settings.podcastDownloadLimit.first().episodeCount,
+            mode = settings.podcastDeleteBeforeAutoDownload.first(),
+        )
+        downloadsToEnqueue.forEach { episode -> enqueueDownload(context, episode.id, network) }
     }
 
     private fun enqueueDownload(context: Context, episodeId: Long, network: PodcastDownloadNetwork) {

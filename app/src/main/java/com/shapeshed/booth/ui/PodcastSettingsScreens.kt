@@ -49,9 +49,6 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Switch
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -74,7 +71,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.text.style.TextAlign
 import com.shapeshed.booth.BuildConfig
 import com.shapeshed.booth.data.PodcastEntity
@@ -200,20 +196,6 @@ internal fun PodcastAppSettingsScreen(
         stringResource(R.string.build_label_format, label)
     } ?: stringResource(R.string.version_format, BuildConfig.VERSION_NAME)
     val context = LocalContext.current
-    val resources = LocalResources.current
-    val backupSnackbarHostState = remember { SnackbarHostState() }
-    LaunchedEffect(statusMessage) {
-        when (statusMessage) {
-            PodcastUiError.BackupExportCompleted -> backupSnackbarHostState.showSnackbar(
-                resources.getString(R.string.backup_export_completed), duration = SnackbarDuration.Short,
-            )
-            is PodcastUiError.BackupImportCompleted -> backupSnackbarHostState.showSnackbar(
-                resources.getString(R.string.backup_import_completed, statusMessage.imported),
-                duration = SnackbarDuration.Short,
-            )
-            else -> Unit
-        }
-    }
     Box(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.TopCenter,
@@ -528,7 +510,6 @@ internal fun PodcastAppSettingsScreen(
             )
         }
     }
-    SnackbarHost(hostState = backupSnackbarHostState)
     }
     if (showDownloadNetworkChooser) {
         AlertDialog(

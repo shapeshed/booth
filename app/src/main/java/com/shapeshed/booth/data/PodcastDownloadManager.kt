@@ -199,20 +199,39 @@ class PodcastDownloadManager(
         DownloadProgressStore.clear(episodeId)
     }
 
-    /** Frees the oldest safe downloads until [maximumDownloads] is reached. */
-    suspend fun enforceDownloadLimit(
+    /** Frees safe downloads as needed and returns the candidates that fit within the limit. */
+    suspend fun downloadsWithinLimit(
+        candidates: List<EpisodeEntity>,
         downloadedEpisodes: List<EpisodeEntity>,
+        downloadAssets: List<DownloadAssetEntity>,
         queuedEpisodeIds: Set<Long>,
-        maximumDownloads: Int,
+        maximumDownloads: Int?,
         mode: PodcastDeleteBeforeAutoDownload,
-    ) {
-        val excess = (
-            downloadedEpisodes.count { it.localUri != null || it.localVideoUri != null } - maximumDownloads
-            ).coerceAtLeast(0)
-        if (mode == PodcastDeleteBeforeAutoDownload.OFF) return
-        downloadsEligibleForDeletion(downloadedEpisodes, queuedEpisodeIds, mode)
-            .take(excess)
-            .forEach { removeEpisodeDownloads(it.id) }
+    ): List<EpisodeEntity> {
+        val currentEpisodeIds = downloadedEpisodes
+            .asSequence()
+            .filter { it.localUri != null || it.localVideoUri != null }
+            .mapTo(mutableSetOf(), EpisodeEntity::id)
+        downloadAssets
+            .asSequence()
+            .filter { it.status in ACTIVE_STATUSES || it.status == DownloadAssetStatus.COMPLETED }
+            .mapTo(currentEpisodeIds, DownloadAssetEntity::episodeId)
+        val newCandidates = candidates.distinctBy(EpisodeEntity::id)
+            .filterNot { it.id in currentEpisodeIds }
+        if (maximumDownloads == null) return newCandidates
+
+        val excess = (currentEpisodeIds.size + newCandidates.size - maximumDownloads).coerceAtLeast(0)
+        if (mode != PodcastDeleteBeforeAutoDownload.OFF) {
+            downloadsEligibleForDeletion(downloadedEpisodes, queuedEpisodeIds, mode)
+                .asSequence()
+                .filter { it.id in currentEpisodeIds }
+                .take(excess)
+                .forEach { episode ->
+                    removeEpisodeDownloads(episode.id)
+                    currentEpisodeIds.remove(episode.id)
+                }
+        }
+        return newCandidates.take((maximumDownloads - currentEpisodeIds.size).coerceAtLeast(0))
     }
 
     companion object {

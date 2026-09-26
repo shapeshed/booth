@@ -1,6 +1,13 @@
 package com.shapeshed.booth.data
 
 import android.content.Context
+import androidx.work.BackoffPolicy
+import androidx.work.Constraints
+import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
 import com.shapeshed.booth.BuildConfig
 import java.util.Locale
 import kotlinx.coroutines.flow.first
@@ -8,9 +15,11 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import kotlinx.coroutines.CancellationException
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
+import java.util.concurrent.TimeUnit
 
 /** Portable, schema-independent export of subscriptions and listening state. */
 class PodcastBackupManager(
@@ -19,12 +28,26 @@ class PodcastBackupManager(
     private val context: Context? = null,
     private val restoreDownload: suspend (EpisodeEntity) -> Unit = { episode ->
         context?.let { restoreContext ->
-            PodcastDownloadManager(restoreContext, repository).enqueue(
-                episode,
-                DownloadAssetType.AUDIO,
-                episode.audioUrl,
-                episode.mimeType,
-                episode.audioSizeBytes,
+            val network = settings.podcastDownloadNetwork.first()
+            val request = OneTimeWorkRequestBuilder<EpisodeDownloadWorker>()
+                .setInputData(workDataOf(EPISODE_ID_INPUT to episode.id))
+                .setConstraints(
+                    Constraints.Builder()
+                        .setRequiredNetworkType(
+                            if (network == PodcastDownloadNetwork.WIFI_ONLY) {
+                                NetworkType.UNMETERED
+                            } else {
+                                NetworkType.CONNECTED
+                            },
+                        )
+                        .build(),
+                )
+                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.SECONDS)
+                .build()
+            WorkManager.getInstance(restoreContext.applicationContext).enqueueUniqueWork(
+                "podcast-download-${episode.id}",
+                ExistingWorkPolicy.KEEP,
+                request,
             )
         }
     },
@@ -261,8 +284,9 @@ class PodcastBackupManager(
             restored?.let { repository.restoreBackupInboxState(it.id, item.optBoolean("inInbox", false)) }
         }
 
-        // Downloaded media files cannot be copied between app sandboxes, but preserve the intent
-        // to have them offline by re-enqueuing their audio after the episode records are restored.
+        // Downloaded media files cannot be copied between app sandboxes. Collect the intent now;
+        // requests are constrained and capped after the backed-up settings are restored below.
+        val downloadCandidates = mutableListOf<EpisodeEntity>()
         for (index in 0 until importedEpisodes.length()) {
             val item = importedEpisodes.optJSONObject(index) ?: continue
             if (!item.optBoolean("downloaded", false)) continue
@@ -271,7 +295,7 @@ class PodcastBackupManager(
             val audioUrl = item.optString("audioUrl").trim()
             val episode = repository.episodes(podcastId).first().firstOrNull { it.guid == guid || it.audioUrl == audioUrl }
                 ?: continue
-            runCatching { restoreDownload(episode) }
+            downloadCandidates += episode
         }
 
         val playback = document.optJSONArray("playback") ?: JSONArray()
@@ -345,6 +369,27 @@ class PodcastBackupManager(
             global.optionalBoolean("removePlayedDownloads")?.let { settings.setPodcastRemovePlayedDownloads(it) }
             global.optionalBoolean("downloadVideos")?.let { settings.setPodcastDownloadVideos(it) }
             global.optionalString("searchProvider")?.let { settings.setPodcastSearchProvider(it) }
+        }
+        val allEpisodes = repository.podcasts.first()
+            .flatMap { podcast -> repository.episodes(podcast.id).first() }
+        val downloadsToRestore = context?.let { restoreContext ->
+            PodcastDownloadManager(restoreContext, repository).downloadsWithinLimit(
+                candidates = downloadCandidates,
+                downloadedEpisodes = allEpisodes,
+                downloadAssets = repository.downloadAssets.first(),
+                queuedEpisodeIds = repository.queue.first().mapTo(mutableSetOf(), QueueEntity::episodeId),
+                maximumDownloads = settings.podcastDownloadLimit.first().episodeCount,
+                mode = settings.podcastDeleteBeforeAutoDownload.first(),
+            )
+        } ?: downloadCandidates
+        downloadsToRestore.forEach { episode ->
+            try {
+                restoreDownload(episode)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                // A failed media request must not prevent the remaining backup from restoring.
+            }
         }
         return importedIds.size
     }
