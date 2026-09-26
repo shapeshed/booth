@@ -62,6 +62,29 @@ class PodcastEpisodeRowTest {
         composeRule.runOnIdle { assertEquals(1, openCount) }
     }
 
+    @Test
+    fun restoredPlaybackPositionIsVisibleInEpisodeRow() {
+        composeRule.setContent {
+            BoothAppTheme {
+                EpisodeRow(
+                    episode = episode().copy(durationMs = 600_000L, positionMs = 120_000L, inInbox = true),
+                    onOpen = {},
+                    onLongPress = {},
+                    onPlay = {},
+                    onTogglePlayPause = {},
+                    active = false,
+                    isPlaying = false,
+                    onDownload = {},
+                    downloadProgress = null,
+                )
+            }
+        }
+
+        // EpisodePlaybackButton labels a partially played episode with the remaining
+        // time via formatPlaybackMinutes, so 600s - 120s renders as "8 min".
+        composeRule.onNodeWithText("8 min").assertIsDisplayed()
+    }
+
     private fun episode() = EpisodeEntity(
         id = 1L,
         podcastId = 1L,

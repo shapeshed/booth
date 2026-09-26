@@ -15,6 +15,7 @@ import org.xml.sax.InputSource
 import org.xml.sax.SAXException
 import org.xml.sax.SAXParseException
 import org.xml.sax.ext.DefaultHandler2
+import java.io.IOException
 import java.io.InputStream
 import java.io.StringReader
 import java.util.Locale
@@ -99,6 +100,7 @@ class SaxStreamingFeedParser(
             val category = when (t) {
                 is FeedResponseTooLargeException -> FailureCategory.LIMIT
                 is ParserLimitException -> FailureCategory.LIMIT
+                is IOException -> FailureCategory.IO
                 is SAXException, is SAXParseException -> FailureCategory.STRUCTURAL
                 else -> FailureCategory.UNKNOWN
             }

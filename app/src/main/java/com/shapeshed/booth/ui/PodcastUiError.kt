@@ -16,6 +16,9 @@ sealed interface PodcastUiError {
     data object NoPodcastFeeds : PodcastUiError
     data class ImportCompleted(val imported: Int, val total: Int) : PodcastUiError
     data object ExportFailed : PodcastUiError
+    data object BackupImportFailed : PodcastUiError
+    data object BackupExportCompleted : PodcastUiError
+    data class BackupImportCompleted(val imported: Int) : PodcastUiError
     data object RefreshFailed : PodcastUiError
     data object PartialRefreshFailed : PodcastUiError
     data object RemovePodcastFailed : PodcastUiError
@@ -45,6 +48,9 @@ internal fun podcastErrorMessage(error: PodcastUiError): String = when (error) {
         )
     }
     PodcastUiError.ExportFailed -> stringResource(R.string.error_opml_export_failed)
+    PodcastUiError.BackupImportFailed -> stringResource(R.string.error_backup_import_failed)
+    PodcastUiError.BackupExportCompleted -> stringResource(R.string.backup_export_completed)
+    is PodcastUiError.BackupImportCompleted -> stringResource(R.string.backup_import_completed, error.imported)
     PodcastUiError.RefreshFailed -> stringResource(R.string.error_refresh_failed)
     PodcastUiError.PartialRefreshFailed -> stringResource(R.string.error_partial_refresh_failed)
     PodcastUiError.RemovePodcastFailed -> stringResource(R.string.error_remove_podcast_failed)

@@ -71,6 +71,28 @@ class PodcastRepository(
         podcasts.withCategories(categories)
     }
 
+    /** Snapshot of persisted episodes used by portable backup/export jobs. */
+    suspend fun allEpisodesSnapshot(): List<EpisodeEntity> = dao.allEpisodesForSearchIndex()
+
+    suspend fun podcastByFeedUrl(feedUrl: String): PodcastEntity? = dao.podcastByFeedUrl(feedUrl)
+
+    suspend fun upsertBackupPodcast(podcast: PodcastEntity) = dao.upsertPodcast(podcast)
+
+    suspend fun upsertBackupEpisode(episode: EpisodeEntity) = dao.upsertEpisodes(listOf(episode))
+
+    suspend fun restoreBackupPlayback(
+        episodeId: Long,
+        positionMs: Long,
+        completed: Boolean,
+        durationMs: Long?,
+        favorite: Boolean,
+    ) {
+        dao.updateProgress(episodeId, positionMs, completed, durationMs)
+        dao.setFavorite(episodeId, favorite)
+    }
+
+    suspend fun restoreBackupInboxState(episodeId: Long, inInbox: Boolean) = dao.setInbox(episodeId, inInbox)
+
     val latestEpisodePublishedAt: Flow<Map<Long, Long?>> =
         dao.observeLatestEpisodePublishedAt().map { rows ->
             rows.associate { it.podcastId to it.publishedAtMillis }
@@ -210,10 +232,12 @@ class PodcastRepository(
             refreshInternal(podcast)
         }
 
-    suspend fun addNewEpisodesToQueue(podcast: PodcastEntity, existingGuids: Set<String>) {
+    suspend fun addNewEpisodesToQueue(
+        podcast: PodcastEntity,
+        existingEpisodeIdentities: Set<Pair<String, String>>,
+    ) {
         if (!podcast.includeInAutoQueue) return
-        episodes(podcast.id).first()
-            .filterNot { it.guid in existingGuids }
+        newEpisodesSince(episodes(podcast.id).first(), existingEpisodeIdentities)
             .forEach { addToQueueFromInbox(it.id) }
     }
 
@@ -454,13 +478,14 @@ class PodcastRepository(
 
     suspend fun resolveMediaSizes(episode: EpisodeEntity): Pair<Long?, Long?> = withContext(Dispatchers.IO) {
         val client = httpClient ?: return@withContext episode.audioSizeBytes to episode.videoSizeBytes
-        val shouldCheckAudio = episode.audioSizeBytes == null && !episode.audioSizeChecked
+        val shouldCheckAudio = episode.audioSizeBytes == null || episode.audioSizeBytes <= 1024L
         val audioLookup = if (shouldCheckAudio) {
             headContentLength(client, episode.audioUrl)
         } else null
-        val audioSize = episode.audioSizeBytes ?: (audioLookup as? MediaSizeLookup.Completed)?.bytes
+        val audioSize = episode.audioSizeBytes?.takeIf { it > 1024L }
+            ?: (audioLookup as? MediaSizeLookup.Completed)?.bytes
         val audioChecked = episode.audioSizeChecked || audioLookup is MediaSizeLookup.Completed
-        var videoSize = episode.videoSizeBytes
+        var videoSize = episode.videoSizeBytes?.takeIf { it > 1024L }
         var videoChecked = episode.videoSizeChecked
         if (episode.videoUrl.isNullOrBlank() || episode.videoUrl == episode.audioUrl) {
             if (videoSize == null && episode.videoUrl == episode.audioUrl) videoSize = audioSize
@@ -483,24 +508,46 @@ class PodcastRepository(
     private fun headContentLength(client: OkHttpClient, url: String): MediaSizeLookup {
         if (!url.startsWith("http", ignoreCase = true)) return MediaSizeLookup.Unavailable
         return try {
-            client.newCall(
+            val headBytes = client.newCall(
                 Request.Builder()
                     .url(url)
                     .header("Accept-Encoding", "identity")
                     .head()
                     .build(),
             ).execute().use { response ->
-                if (!response.isSuccessful) {
-                    MediaSizeLookup.Unavailable
-                } else {
-                    MediaSizeLookup.Completed(response.header("Content-Length")?.toLongOrNull()?.takeIf { it > 0L })
-                }
+                response.header("Content-Length")
+                    ?.toLongOrNull()
+                    ?.takeIf { response.isSuccessful && it > MIN_PLAUSIBLE_MEDIA_BYTES }
+            }
+            if (headBytes != null) return MediaSizeLookup.Completed(headBytes)
+
+            // Acast's Sphinx endpoint responds to HEAD with Content-Length: 2. A range request
+            // follows its media redirect and exposes the real total in Content-Range.
+            client.newCall(
+                Request.Builder()
+                    .url(url)
+                    .header("Accept-Encoding", "identity")
+                    .header("Range", "bytes=0-0")
+                    .get()
+                    .build(),
+            ).execute().use { response ->
+                if (!response.isSuccessful) return MediaSizeLookup.Unavailable
+                MediaSizeLookup.Completed(
+                    mediaTotalBytes(
+                        contentRange = response.header("Content-Range"),
+                        contentLength = response.header("Content-Length"),
+                    ),
+                )
             }
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: Exception) {
             MediaSizeLookup.Unavailable
         }
+    }
+
+    private companion object {
+        const val MIN_PLAUSIBLE_MEDIA_BYTES = 1024L
     }
 
     private sealed interface MediaSizeLookup {
@@ -519,6 +566,8 @@ class PodcastRepository(
     suspend fun restoreToInbox(episodeId: Long) = dao.setInbox(episodeId, true)
 
     suspend fun removeFromQueue(episodeId: Long) = dao.removeFromQueue(episodeId)
+
+    suspend fun clearQueue() = dao.clearQueue()
 
     suspend fun reorderQueue(episodeIds: List<Long>) = withContext(Dispatchers.IO) {
         dao.replaceQueue(episodeIds.mapIndexed { index, episodeId -> QueueEntity(episodeId, index) })
@@ -562,8 +611,10 @@ class PodcastRepository(
         val existingEpisodes = dao.episodesForPodcast(podcastId).associateBy(EpisodeEntity::id)
         val episodes = feed.episodes.map { episode ->
             val persistedId = episodeId(podcastId, episode.guid, episode.audioUrl)
-            val existing = existingEpisodes[episode.id] ?: existingEpisodes[persistedId]
-            episode.copy(id = persistedId, podcastId = podcastId).toEntity(existing)
+            val existing = existingEpisodes[episode.id]
+                ?: existingEpisodes[persistedId]
+                ?: existingEpisodes.values.firstOrNull { it.audioUrl == episode.audioUrl }
+            episode.copy(id = existing?.id ?: persistedId, podcastId = podcastId).toEntity(existing)
         }
         dao.upsertPodcastAndEpisodes(podcast, episodes)
         importedTags?.let { tags ->
@@ -627,6 +678,24 @@ class PodcastRepository(
         }
     }
 
+}
+
+internal fun mediaTotalBytes(contentRange: String?, contentLength: String?): Long? {
+    val rangeTotal = contentRange
+        ?.substringAfterLast('/', missingDelimiterValue = "")
+        ?.takeUnless { it == "*" }
+        ?.toLongOrNull()
+        ?.takeIf { it > 1024L }
+    return rangeTotal ?: contentLength?.toLongOrNull()?.takeIf { it > 1024L }
+}
+
+internal fun newEpisodesSince(
+    episodes: List<EpisodeEntity>,
+    existingEpisodeIdentities: Set<Pair<String, String>>,
+): List<EpisodeEntity> {
+    val existingGuids = existingEpisodeIdentities.mapTo(hashSetOf()) { it.first }
+    val existingAudioUrls = existingEpisodeIdentities.mapTo(hashSetOf()) { it.second }
+    return episodes.filterNot { it.guid in existingGuids || it.audioUrl in existingAudioUrls }
 }
 
 private sealed interface SearchIndexRequest {

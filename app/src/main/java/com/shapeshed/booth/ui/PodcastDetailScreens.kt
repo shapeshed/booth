@@ -440,7 +440,7 @@ internal fun PodcastEpisodeActionsSheet(
     onDownload: () -> Unit,
     onRemoveDownload: (() -> Unit)?,
     onToggleQueue: () -> Unit,
-    onReorder: (() -> Unit)?,
+    onReorder: (() -> Unit)? = null,
     onSetPlayed: (Boolean) -> Unit,
     onResetPosition: () -> Unit,
     onDismiss: () -> Unit,
@@ -537,9 +537,7 @@ internal fun PodcastEpisodeActionsSheet(
                 }
                 onReorder?.let { reorder ->
                     PodcastActionListItem(
-                        headlineContent = {
-                            Text(stringResource(R.string.reorder), style = MaterialTheme.typography.bodyLarge)
-                        },
+                        headlineContent = { Text(stringResource(R.string.reorder), style = MaterialTheme.typography.bodyLarge) },
                         leadingContent = {
                             Icon(Icons.Rounded.DragHandle, contentDescription = null, modifier = Modifier.size(24.dp))
                         },

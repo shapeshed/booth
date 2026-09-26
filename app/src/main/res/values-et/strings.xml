@@ -119,8 +119,6 @@
     <string name="long_press_drag_reorder">Hoia all ja lohista %1$s ümberjärjestamiseks</string>
     <string name="move_episode">Liiguta %1$s</string>
     <string name="selected_item">Valitud</string>
-    <string name="auto_download">Automaatne allalaadimine</string>
-    <string name="download_video">Laadi video alla</string>
     <string name="podcast_search">Taskuhäälinguotsing</string>
     <string name="default_value">Vaikimisi</string>
     <string name="podcast_index_access">Podcast Indexi juurdepääs</string>

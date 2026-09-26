@@ -119,8 +119,6 @@
     <string name="long_press_drag_reorder">Yeniden sıralamak için %1$s öğesine basılı tutup sürükleyin</string>
     <string name="move_episode">%1$s bölümünü taşı</string>
     <string name="selected_item">Seçildi</string>
-    <string name="auto_download">Otomatik indirme</string>
-    <string name="download_video">Videoyu indir</string>
     <string name="podcast_search">Podcast arama</string>
     <string name="default_value">Varsayılan</string>
     <string name="podcast_index_access">Podcast Index erişimi</string>

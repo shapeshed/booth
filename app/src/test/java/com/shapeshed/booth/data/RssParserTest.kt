@@ -6,6 +6,8 @@ import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.ByteArrayInputStream
+import java.io.IOException
+import java.io.InputStream
 import java.nio.charset.StandardCharsets
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.flow.filterIsInstance
@@ -14,6 +16,21 @@ import kotlinx.coroutines.withTimeout
 import kotlin.random.Random
 
 class RssParserTest {
+    @Test
+    fun streamingParserClassifiesResponseReadFailuresAsIo() = runBlocking {
+        val failingInput = object : InputStream() {
+            override fun read(): Int = throw IOException("connection lost")
+        }
+
+        val events = SaxStreamingFeedParser()
+            .parse(failingInput, "https://example.com/feed.xml")
+            .toList()
+
+        val failure = events.single() as FeedParseEvent.Failed
+        assertEquals(FailureCategory.IO, failure.category)
+        assertTrue(failure.cause is IOException)
+    }
+
     @Test
     fun streamingParserEmitsTenThenTwentyFiveAndPreservesNamespaces() = runBlocking {
         val items = (1..36).joinToString("") { index ->

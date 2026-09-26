@@ -109,7 +109,7 @@ class PodcastDownloadManager(
                     val status = it.getInt(it.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
                     val bytes = it.getLong(it.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
                     val total = it.getLong(it.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
-                        .takeIf { value -> value >= 0L }
+                        .takeIf { value -> value > 1024L }
                     var mappedStatus = when (status) {
                         DownloadManager.STATUS_RUNNING -> DownloadAssetStatus.DOWNLOADING
                         DownloadManager.STATUS_PENDING -> DownloadAssetStatus.QUEUED
@@ -197,6 +197,42 @@ class PodcastDownloadManager(
             .forEach { downloadManager.remove(it.downloadId) }
         repository.removeDownloadAssets(episodeId)
         DownloadProgressStore.clear(episodeId)
+    }
+
+    /** Frees safe downloads as needed and returns the candidates that fit within the limit. */
+    suspend fun downloadsWithinLimit(
+        candidates: List<EpisodeEntity>,
+        downloadedEpisodes: List<EpisodeEntity>,
+        downloadAssets: List<DownloadAssetEntity>,
+        queuedEpisodeIds: Set<Long>,
+        maximumDownloads: Int?,
+        mode: PodcastDeleteBeforeAutoDownload,
+    ): List<EpisodeEntity> {
+        val currentEpisodeIds = downloadedEpisodes
+            .asSequence()
+            .filter { it.localUri != null || it.localVideoUri != null }
+            .mapTo(mutableSetOf(), EpisodeEntity::id)
+        downloadAssets
+            .asSequence()
+            .filter { it.status in ACTIVE_STATUSES || it.status == DownloadAssetStatus.COMPLETED }
+            .mapTo(currentEpisodeIds, DownloadAssetEntity::episodeId)
+        val newCandidates = candidates.distinctBy(EpisodeEntity::id)
+            .filterNot { it.id in currentEpisodeIds }
+        if (newCandidates.isEmpty()) return emptyList()
+        if (maximumDownloads == null) return newCandidates
+
+        val excess = (currentEpisodeIds.size + newCandidates.size - maximumDownloads).coerceAtLeast(0)
+        if (mode != PodcastDeleteBeforeAutoDownload.OFF) {
+            downloadsEligibleForDeletion(downloadedEpisodes, queuedEpisodeIds, mode)
+                .asSequence()
+                .filter { it.id in currentEpisodeIds }
+                .take(excess)
+                .forEach { episode ->
+                    removeEpisodeDownloads(episode.id)
+                    currentEpisodeIds.remove(episode.id)
+                }
+        }
+        return newCandidates.take((maximumDownloads - currentEpisodeIds.size).coerceAtLeast(0))
     }
 
     companion object {

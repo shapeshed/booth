@@ -31,11 +31,8 @@ internal fun PodcastHomeTopBarTitle(
         inboxSelectionMode -> Text(selectedInboxCount.toString())
         showPodcastAppSettings -> Text(
             when (podcastManagementCategory) {
-                PodcastManagementCategory.PLAYBACK_SPEED -> stringResource(R.string.playback_speed)
                 PodcastManagementCategory.AUTO_REFRESH -> stringResource(R.string.auto_refresh)
-                PodcastManagementCategory.AUTO_DOWNLOAD -> stringResource(R.string.auto_download)
                 PodcastManagementCategory.AUTO_QUEUE -> stringResource(R.string.add_new_episodes_to_up_next)
-                PodcastManagementCategory.VIDEO_DOWNLOAD -> stringResource(R.string.download_video)
                 PodcastManagementCategory.NOTIFICATIONS -> stringResource(R.string.notifications)
                 null -> stringResource(R.string.podcast_settings)
             },

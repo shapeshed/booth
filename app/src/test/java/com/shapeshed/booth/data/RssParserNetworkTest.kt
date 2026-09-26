@@ -1,8 +1,10 @@
 package com.shapeshed.booth.data
 
 import com.sun.net.httpserver.HttpServer
+import java.io.IOException
 import java.net.InetSocketAddress
 import java.nio.charset.StandardCharsets
+import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancelAndJoin
@@ -44,6 +46,61 @@ class RssParserNetworkTest {
             }
 
             assertEquals(503, error.statusCode)
+        }
+    }
+
+    @Test
+    fun streamingCompleteProviderDoesNotRetryHttpFailureThroughFallback() {
+        runBlocking {
+            val requests = AtomicInteger()
+            server.createContext("/feed") { exchange ->
+                requests.incrementAndGet()
+                exchange.sendResponseHeaders(503, 0)
+                exchange.close()
+            }
+
+            var fallbackCalls = 0
+            assertThrows(FeedHttpException::class.java) {
+                runBlocking {
+                    StreamingCompletePodcastFeedProvider(
+                        client = OkHttpClient(),
+                        parser = SaxStreamingFeedParser(),
+                        fallback = testFallbackProvider { fallbackCalls++ },
+                    ).fetch(feedUrl())
+                }
+            }
+
+            assertEquals(1, requests.get())
+            assertEquals(0, fallbackCalls)
+        }
+    }
+
+    @Test
+    fun streamingCompleteProviderDoesNotRetryParserIoFailureThroughFallback() {
+        runBlocking {
+            server.createContext("/feed") { exchange ->
+                val body = "feed".toByteArray(StandardCharsets.UTF_8)
+                exchange.sendResponseHeaders(200, body.size.toLong())
+                exchange.responseBody.use { it.write(body) }
+            }
+            val parser = object : StreamingFeedParser {
+                override fun parse(input: java.io.InputStream, feedUrl: String) = flow {
+                    emit(FeedParseEvent.Failed(FailureCategory.IO, IOException("connection lost")))
+                }
+            }
+            var fallbackCalls = 0
+
+            assertThrows(IOException::class.java) {
+                runBlocking {
+                    StreamingCompletePodcastFeedProvider(
+                        client = OkHttpClient(),
+                        parser = parser,
+                        fallback = testFallbackProvider { fallbackCalls++ },
+                    ).fetch(feedUrl())
+                }
+            }
+
+            assertEquals(0, fallbackCalls)
         }
     }
 
@@ -215,9 +272,11 @@ class RssParserNetworkTest {
     }
 
     @Test
-    fun htmlResponseUsesFallbackInsteadOfStreamingParser() {
+    fun htmlResponseIsRejectedWithoutRepeatingTheRequest() {
         runBlocking {
+            val requests = AtomicInteger()
             server.createContext("/feed") { exchange ->
+                requests.incrementAndGet()
                 val body = "<html><body>not a podcast feed</body></html>".toByteArray(StandardCharsets.UTF_8)
                 exchange.responseHeaders.add("Content-Type", "text/html; charset=utf-8")
                 exchange.sendResponseHeaders(200, body.size.toLong())
@@ -225,14 +284,18 @@ class RssParserNetworkTest {
             }
 
             var fallbackCalls = 0
-            val result = StreamingCompletePodcastFeedProvider(
-                client = OkHttpClient(),
-                parser = SaxStreamingFeedParser(),
-                fallback = testFallbackProvider { fallbackCalls++ },
-            ).fetch(feedUrl())
+            assertThrows(NotAFeedResponseException::class.java) {
+                runBlocking {
+                    StreamingCompletePodcastFeedProvider(
+                        client = OkHttpClient(),
+                        parser = SaxStreamingFeedParser(),
+                        fallback = testFallbackProvider { fallbackCalls++ },
+                    ).fetch(feedUrl())
+                }
+            }
 
-            assertEquals("Fallback show", result.podcast.title)
-            assertEquals(1, fallbackCalls)
+            assertEquals(1, requests.get())
+            assertEquals(0, fallbackCalls)
         }
     }
 

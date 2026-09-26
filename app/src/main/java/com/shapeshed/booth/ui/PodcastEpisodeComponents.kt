@@ -331,52 +331,60 @@ internal fun EpisodeTitleBlock(
     downloaded: Boolean = episode.localUri != null,
     downloadProgress: DownloadProgress? = null,
     explicit: Boolean? = episode.explicit,
+    trailingContent: (@Composable (() -> Unit))? = null,
 ) {
+    val showDownloadStatus = downloaded || downloadProgress?.isActive == true || downloadProgress?.completed == true
+
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        episode.publishedAtMillis?.let { publishedAtMillis ->
+        if (episode.publishedAtMillis != null || showDownloadStatus || trailingContent != null) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    Text(
-                        text = episodeDateLabel(publishedAtMillis),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = if (active) {
-                            MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                    )
-                    if (explicit == true) {
+                episode.publishedAtMillis?.let { publishedAtMillis ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
                         Text(
-                            text = "·",
+                            text = episodeDateLabel(publishedAtMillis),
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = if (active) {
+                                MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
                         )
-                        ExplicitEpisodeIndicator()
+                        if (explicit == true) {
+                            Text(
+                                text = "·",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            ExplicitEpisodeIndicator()
+                        }
                     }
                 }
                 Spacer(Modifier.weight(1f))
-                if (downloadProgress?.isActive == true && !downloaded) {
-                    if (downloadProgress.fraction != null) {
-                        CircularProgressIndicator(
-                            progress = { downloadProgress.fraction ?: 0f },
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp,
-                        )
+                if (showDownloadStatus) {
+                    if (downloadProgress?.isActive == true && !downloaded) {
+                        if (downloadProgress.fraction != null) {
+                            CircularProgressIndicator(
+                                progress = { downloadProgress.fraction ?: 0f },
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                            )
+                        } else {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                            )
+                        }
                     } else {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp,
-                        )
+                        OfflineEpisodeIndicator()
                     }
-                } else if (downloaded || downloadProgress?.completed == true) {
-                    OfflineEpisodeIndicator()
                 }
+                trailingContent?.invoke()
             }
         }
         Text(

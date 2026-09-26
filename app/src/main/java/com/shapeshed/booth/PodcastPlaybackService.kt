@@ -12,6 +12,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.ForwardingPlayer
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.DefaultMediaNotificationProvider
@@ -101,7 +102,14 @@ class PodcastPlaybackService : MediaLibraryService() {
             .setPlayerCommand(Player.COMMAND_SEEK_FORWARD)
             .setSlots(CommandButton.SLOT_FORWARD)
             .build()
-        session = MediaLibrarySession.Builder(this, player, SessionCallback(this))
+        // Car stereos commonly send the generic media "next" command for their physical
+        // next-track button. For spoken-word playback that should behave like the in-app
+        // forward button so listeners can skip adverts without leaving the episode.
+        val sessionPlayer = object : ForwardingPlayer(player) {
+            override fun seekToPrevious() = seekBack()
+            override fun seekToNext() = seekForward()
+        }
+        session = MediaLibrarySession.Builder(this, sessionPlayer, SessionCallback(this))
             .setMediaButtonPreferences(listOf(seekBackButton, seekForwardButton))
             .setSessionActivity(
                 PendingIntent.getActivity(
@@ -283,6 +291,7 @@ class PodcastPlaybackService : MediaLibraryService() {
 
     private suspend fun markQueueEpisodeCompleted(episodeId: Long) {
         repository.markCompletedAndRemoveFromQueue(episodeId)
+        com.shapeshed.booth.data.PlayedDownloadCleanupWorker.schedule(applicationContext, episodeId)
     }
 
     private fun playNextQueuedEpisode(endedEpisodeId: Long) {

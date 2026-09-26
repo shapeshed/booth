@@ -119,8 +119,6 @@
     <string name="long_press_drag_reorder">长按并拖动 %1$s 以重新排序</string>
     <string name="move_episode">移动 %1$s</string>
     <string name="selected_item">已选择</string>
-    <string name="auto_download">自动下载</string>
-    <string name="download_video">下载视频</string>
     <string name="podcast_search">播客搜索</string>
     <string name="default_value">默认</string>
     <string name="podcast_index_access">Podcast Index 访问权限</string>

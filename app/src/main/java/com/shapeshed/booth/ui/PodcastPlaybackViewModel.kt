@@ -51,6 +51,9 @@ data class PlaybackUiState(
     val playbackError: PodcastUiError? = null,
 )
 
+internal fun playbackStartPositionMs(episode: EpisodeEntity): Long =
+    if (episode.completed) 0L else episode.positionMs.coerceAtLeast(0L)
+
 @SuppressLint("UnsafeOptInUsageError")
 @HiltViewModel
 class PodcastPlaybackViewModel @Inject constructor(
@@ -225,14 +228,14 @@ class PodcastPlaybackViewModel @Inject constructor(
         videoMode = useVideo
         foregroundVideoPreference = useVideo
         activeSourceIsVideo = useVideo
-        displayedPositionMs = selectedEpisode.positionMs
+        displayedPositionMs = playbackStartPositionMs(selectedEpisode)
         displayedDurationMs = selectedEpisode.durationMs ?: 0L
         _state.value = PlaybackUiState(
             episode = selectedEpisode,
             isPlaying = true,
             speed = preferredSpeed,
             skipSilence = _state.value.skipSilence,
-            positionMs = selectedEpisode.positionMs,
+            positionMs = playbackStartPositionMs(selectedEpisode),
             durationMs = selectedEpisode.durationMs ?: 0L,
             isVideoMode = useVideo,
             // Publish buffering before Media3's first polling tick so remote playback does not
@@ -242,8 +245,9 @@ class PodcastPlaybackViewModel @Inject constructor(
         )
         viewModelScope.launch { settings?.setPodcastLastEpisodeId(selectedEpisode.id) }
         viewModelScope.launch {
-            val persistedPosition = repository?.episode(selectedEpisode.id)?.positionMs
-                ?: selectedEpisode.positionMs
+            val persistedPosition = repository?.episode(selectedEpisode.id)
+                ?.let(::playbackStartPositionMs)
+                ?: playbackStartPositionMs(selectedEpisode)
             val podcast = repository?.podcast(selectedEpisode.podcastId)
             val effectiveSpeed = podcast?.playbackSpeed ?: preferredSpeed
             val effectiveSkipSilence = podcast?.skipSilence

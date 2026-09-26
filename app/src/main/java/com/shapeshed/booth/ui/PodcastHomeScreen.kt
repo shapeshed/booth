@@ -72,7 +72,6 @@ import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.rounded.OpenInBrowser
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Stop
@@ -175,6 +174,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.navigation3.runtime.entryProvider
@@ -210,6 +210,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -397,6 +398,7 @@ fun PodcastHomeScreen(
     playbackViewModel: PodcastPlaybackViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
     val homeUiState = rememberPodcastHomeUiState(viewModel, playbackViewModel)
@@ -430,9 +432,7 @@ fun PodcastHomeScreen(
     val selectedSearchProvider = viewModel.searchProviders.firstOrNull {
         it.id == settingsState.searchProviderId
     }
-    val podcastDownloadVideos = settingsState.downloadVideos
     val podcastNotificationsEnabled = settingsState.notificationsEnabled
-    val podcastAutoDownloadEnabled = settingsState.autoDownloadEnabled
     val podcastAutoQueueEnabled = settingsState.autoQueueEnabled
     val podcastDownloadNetwork = settingsState.downloadNetwork
     val savedPodcastTab = settingsState.savedPodcastTab
@@ -762,12 +762,6 @@ fun PodcastHomeScreen(
     var notifiedSubscriptionFailures by remember { mutableStateOf<Set<String>>(emptySet()) }
     LaunchedEffect(state.error) {
         val result = state.error as? PodcastUiError.ImportCompleted ?: return@LaunchedEffect
-        if (result.imported > 0) {
-            showSubscriptionsAfterImport(routeState)
-            subscriptionsBackStack.clear()
-            subscriptionsBackStack.add(PodcastNavigationKey.Subscriptions)
-            viewModel.setPodcastSelectedTab(PodcastTab.SUBSCRIPTIONS.name)
-        }
         val message = if (result.imported == result.total) {
             context.resources.getQuantityString(
                 R.plurals.imported_podcasts,
@@ -783,6 +777,27 @@ fun PodcastHomeScreen(
             )
         }
         snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short)
+    }
+    LaunchedEffect(viewModel) {
+        viewModel.backupEvents.collect { event ->
+            val message = when (event) {
+                PodcastBackupEvent.ImportStarted -> resources.getString(R.string.backup_import_started)
+                PodcastBackupEvent.Exported -> resources.getString(R.string.backup_export_completed)
+                is PodcastBackupEvent.Imported -> resources.getString(
+                    R.string.backup_import_completed,
+                    event.subscriptions,
+                )
+            }
+            snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short)
+        }
+    }
+    LaunchedEffect(state.importFirstPodcastSaved) {
+        if (state.importFirstPodcastSaved) {
+            showSubscriptionsAfterImport(routeState)
+            subscriptionsBackStack.clear()
+            subscriptionsBackStack.add(PodcastNavigationKey.Subscriptions)
+            viewModel.setPodcastSelectedTab(PodcastTab.SUBSCRIPTIONS.name)
+        }
     }
     fun enqueueFeedSubscription(
         feedUrl: String,
@@ -978,9 +993,7 @@ fun PodcastHomeScreen(
     fun SettingsContent() {
         PodcastHomeSettingsDestination(
             homeUiState = homeUiState,
-            globalPlaybackSpeed = globalPlaybackSpeed,
             viewModel = viewModel,
-            playbackViewModel = playbackViewModel,
             platformActions = platformActions,
             onManagePodcasts = ::openPodcastManagement,
             modifier = Modifier.fillMaxSize(),
@@ -1098,9 +1111,11 @@ fun PodcastHomeScreen(
                         PodcastHomeRootActions(
                             selectedTab = selectedTab,
                             queueReorderMode = queueReorderMode,
+                            queueHasItems = queueEntries.isNotEmpty(),
                             menuExpanded = rootMenuExpanded,
-                            viewModel = viewModel,
                             showSearchAction = false,
+                            onClearInbox = viewModel::clearInbox,
+                            onClearQueue = viewModel::clearQueue,
                             onQueueReorderDone = { queueReorderMode = false },
                             onOpenDiscoverySearch = ::openGlobalSearch,
                             onOpenAddPodcast = { routeState.showAddPodcast.value = true },
@@ -1227,16 +1242,18 @@ fun PodcastHomeScreen(
                         PodcastHomeRootActions(
                             selectedTab = selectedTab,
                             queueReorderMode = queueReorderMode,
+                            queueHasItems = queueEntries.isNotEmpty(),
                             menuExpanded = rootMenuExpanded,
-                            viewModel = viewModel,
                             showSearchAction = false,
+                            onClearInbox = viewModel::clearInbox,
+                            onClearQueue = viewModel::clearQueue,
                             onQueueReorderDone = { queueReorderMode = false },
                             onOpenDiscoverySearch = ::openGlobalSearch,
                             onOpenAddPodcast = { routeState.showAddPodcast.value = true },
                             onMenuExpandedChange = { rootMenuExpanded = it },
                             onOpenDownloads = { openSpecialRoot(PodcastNavigationKey.Downloads) },
                             onOpenAllEpisodes = { openSpecialRoot(PodcastNavigationKey.AllEpisodes) },
-                        onOpenSettings = ::openSettings,
+                            onOpenSettings = ::openSettings,
                         )
                     } else {
                         PodcastHomeContextActions(
@@ -1352,7 +1369,7 @@ fun PodcastHomeScreen(
             )
             if (refreshing) {
                 val progress = homeUiState.refreshProgress
-                if (progress.total > 0) {
+                if (progress.isDeterminate) {
                     LinearProgressIndicator(
                         progress = { progress.fraction },
                         modifier = Modifier.fillMaxWidth(),
@@ -1441,7 +1458,7 @@ fun PodcastHomeScreen(
                     else playbackViewModel.play(episode, podcastsById[episode.podcastId]?.title.orEmpty())
                 },
                 onDownload = { viewModel.download(context, it.id) },
-                onRefresh = viewModel::refreshSubscriptions,
+                onRefresh = { viewModel.refreshSubscriptions(context) },
                 refreshing = refreshing,
                 downloadProgress = downloadProgress,
                 modifier = Modifier.fillMaxSize(),
@@ -1559,7 +1576,7 @@ fun PodcastHomeScreen(
                 } else {
                     emptyList()
                 },
-                onRefresh = viewModel::refreshSubscriptions,
+                onRefresh = { viewModel.refreshSubscriptions(context) },
                 refreshing = refreshing,
                 modifier = Modifier.fillMaxSize(),
                     )
@@ -1717,7 +1734,7 @@ fun PodcastHomeScreen(
                                 podcast = pagePodcast,
                                 episodes = pageEpisodes,
                                 modifier = Modifier.fillMaxSize(),
-                                onRefresh = { viewModel.refresh(pagePodcast) },
+                                onRefresh = { viewModel.refresh(context, pagePodcast) },
                                 // Discovery downloads refresh their retained feed in the
                                 // background on entry; do not present that as a user pull.
                                 refreshing = refreshing && pagePodcast.isSubscribed,
@@ -1808,26 +1825,29 @@ fun PodcastHomeScreen(
                     modifier = Modifier.fillMaxSize(),
                 )
             }
+            // Navigation 3 retains root entries while their back-stack key is unchanged. Keep
+            // the entry itself stable, but have it read the current content rather than the
+            // empty-library content it captured when the app first opened.
+            val currentRootTabContent = rememberUpdatedState<@Composable (PodcastTab) -> Unit>(
+                newValue = { tab -> RootTabContent(tab) },
+            )
             NavDisplay(
-                backStack = topLevelBackStack,
-                onBack = {
-                    if (topLevelBackStack.size > 1) {
-                        popTopLevelRoute()
-                        showPodcastDescription = false
-                    }
-                },
-                sceneStrategies = listOf(listDetailStrategy),
-                entryProvider = entryProvider {
+                    backStack = topLevelBackStack,
+                    onBack = {
+                        if (topLevelBackStack.size > 1) {
+                            popTopLevelRoute()
+                            showPodcastDescription = false
+                        }
+                    },
+                    sceneStrategies = listOf(listDetailStrategy),
+                    entryProvider = entryProvider {
                     entry<PodcastNavigationKey.GlobalSearch> { globalSearchResults() }
                     entry<PodcastNavigationKey.Settings> { SettingsContent() }
                     entry<PodcastNavigationKey.PodcastManagement> { destination ->
                         PodcastHomeManagementDestination(
                             destination = destination,
                             podcasts = allPodcasts,
-                            globalPlaybackSpeed = globalPlaybackSpeed,
-                            globalSkipSilence = homeUiState.playback.skipSilence,
                             viewModel = viewModel,
-                            playbackViewModel = playbackViewModel,
                             modifier = Modifier.fillMaxSize(),
                         )
                     }
@@ -1839,12 +1859,12 @@ fun PodcastHomeScreen(
                         metadata = ListDetailSceneStrategy.listPane(
                             detailPlaceholder = { PodcastEmptyDetailPlaceholder() },
                         ),
-                    ) { RootTabContent(PodcastTab.HOME) }
+                    ) { currentRootTabContent.value(PodcastTab.HOME) }
                     entry<PodcastNavigationKey.UpNext>(
                         metadata = ListDetailSceneStrategy.listPane(
                             detailPlaceholder = { PodcastEmptyDetailPlaceholder() },
                         ),
-                    ) { RootTabContent(PodcastTab.UP_NEXT) }
+                    ) { currentRootTabContent.value(PodcastTab.UP_NEXT) }
                     entry<PodcastNavigationKey.Subscriptions>(
                         metadata = if ((podcasts.isEmpty() || forceGettingStarted) && !showSearch) {
                             emptyMap()
@@ -1853,7 +1873,7 @@ fun PodcastHomeScreen(
                                 detailPlaceholder = { PodcastEmptyDetailPlaceholder() },
                             )
                         },
-                    ) { RootTabContent(PodcastTab.SUBSCRIPTIONS) }
+                    ) { currentRootTabContent.value(PodcastTab.SUBSCRIPTIONS) }
                     entry<PodcastNavigationKey.Downloads>(
                         metadata = ListDetailSceneStrategy.listPane(
                             detailPlaceholder = { PodcastEmptyDetailPlaceholder() },
@@ -1881,10 +1901,6 @@ fun PodcastHomeScreen(
                                 onSkipSilenceChange = { enabled ->
                                     playbackViewModel.setPodcastSkipSilence(podcast.id, enabled)
                                 },
-                                videoDownloadsEnabled = podcastDownloadVideos,
-                                onVideoDownloadsEnabledChange = viewModel::setPodcastDownloadVideos,
-                                globalAutoRefreshEnabled = true,
-                                globalAutoDownloadEnabled = podcastAutoDownloadEnabled,
                                 globalAutoQueueEnabled = podcastAutoQueueEnabled,
                                 globalNotificationsEnabled = podcastNotificationsEnabled &&
                                     platformActions.notificationsPermissionGranted,
@@ -1908,7 +1924,7 @@ fun PodcastHomeScreen(
                     entry<PodcastNavigationKey.EpisodeDetail>(
                         metadata = ListDetailSceneStrategy.detailPane(),
                     ) { destination -> DetailContent(destination) }
-                },
+                    },
             )
         }
         PodcastHomeMiniPlayerOverlay(

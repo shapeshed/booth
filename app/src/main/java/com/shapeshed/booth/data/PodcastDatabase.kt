@@ -411,7 +411,6 @@ interface PodcastDao {
     @Query("DELETE FROM queue WHERE episodeId = :episodeId")
     suspend fun removeFromQueue(episodeId: Long)
 
-
     @Query("UPDATE episodes SET inInbox = :inInbox WHERE id = :episodeId")
     suspend fun setInbox(episodeId: Long, inInbox: Boolean)
 

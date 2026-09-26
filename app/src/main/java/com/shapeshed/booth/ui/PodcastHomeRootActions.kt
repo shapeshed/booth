@@ -12,6 +12,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -19,14 +20,18 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 
 @Composable
 internal fun PodcastHomeRootActions(
     selectedTab: PodcastTab,
     queueReorderMode: Boolean,
+    queueHasItems: Boolean,
     menuExpanded: Boolean,
-    viewModel: PodcastViewModel,
     showSearchAction: Boolean = true,
+    onClearInbox: () -> Unit,
+    onClearQueue: () -> Unit,
     onQueueReorderDone: () -> Unit,
     onOpenDiscoverySearch: () -> Unit,
     onOpenAddPodcast: () -> Unit,
@@ -35,6 +40,7 @@ internal fun PodcastHomeRootActions(
     onOpenAllEpisodes: () -> Unit,
     onOpenSettings: () -> Unit,
 ) {
+    val showClearQueueConfirmation = rememberSaveable { mutableStateOf(false) }
     if (selectedTab == PodcastTab.UP_NEXT && queueReorderMode) {
         TextButton(onClick = onQueueReorderDone) {
             Text(stringResource(R.string.done))
@@ -59,7 +65,18 @@ internal fun PodcastHomeRootActions(
                         leadingIcon = { Icon(Icons.Rounded.Delete, contentDescription = null) },
                         onClick = {
                             onMenuExpandedChange(false)
-                            viewModel.clearInbox()
+                            onClearInbox()
+                        },
+                    )
+                }
+                if (selectedTab == PodcastTab.UP_NEXT) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.clear_up_next)) },
+                        leadingIcon = { Icon(Icons.Rounded.Delete, contentDescription = null) },
+                        enabled = queueHasItems,
+                        onClick = {
+                            onMenuExpandedChange(false)
+                            showClearQueueConfirmation.value = true
                         },
                     )
                 }
@@ -99,5 +116,27 @@ internal fun PodcastHomeRootActions(
                 )
             }
         }
+    }
+    if (showClearQueueConfirmation.value) {
+        AlertDialog(
+            onDismissRequest = { showClearQueueConfirmation.value = false },
+            title = { Text(stringResource(R.string.clear_up_next)) },
+            text = { Text(stringResource(R.string.clear_up_next_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showClearQueueConfirmation.value = false
+                        onClearQueue()
+                    },
+                ) {
+                    Text(stringResource(R.string.clear))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearQueueConfirmation.value = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
     }
 }

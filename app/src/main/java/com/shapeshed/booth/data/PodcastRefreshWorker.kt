@@ -22,6 +22,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
+import com.shapeshed.booth.di.boothWorkerEntryPoint
 import com.shapeshed.booth.R
 import com.shapeshed.booth.ExtraInitialPodcastEpisodeId
 import com.shapeshed.booth.ExtraInitialPodcastNotificationAction
@@ -47,17 +48,25 @@ class PodcastRefreshWorker(
 ) : CoroutineWorker(context, workerParams) {
     override suspend fun doWork(): Result {
         val app = applicationContext as com.shapeshed.booth.BoothApp
+        val entryPoint = boothWorkerEntryPoint(applicationContext)
+        val repository = entryPoint.podcastRepository
+        val settings = entryPoint.settings
         var retryableFailure = false
-        val notificationsEnabled = app.settings.podcastNotificationsEnabled.first()
-        val autoDownloadEnabled = app.settings.podcastAutoDownloadEnabled.first()
-        val autoQueueEnabled = app.settings.podcastAutoQueueEnabled.first()
-        val downloadNetwork = app.settings.podcastDownloadNetwork.first()
+        val notificationsEnabled = settings.podcastNotificationsEnabled.first()
+        val autoQueueEnabled = settings.podcastAutoQueueEnabled.first()
+        val downloadEpisodesAddedToUpNext = settings.podcastDownloadEpisodesAddedToUpNext.first()
+        val downloadNetwork = settings.podcastDownloadNetwork.first()
+        val downloadLimit = settings.podcastDownloadLimit.first()
+        val deleteBeforeAutoDownload = settings.podcastDeleteBeforeAutoDownload.first()
         val newEpisodes = mutableListOf<NewPodcastEpisodeNotification>()
-        val podcasts = app.podcastRepository.podcasts.first().filter { it.includeInAutoRefresh }
-        val existingGuids = podcasts.associate { podcast ->
-            podcast.id to app.podcastRepository.episodeGuids(podcast.id).toHashSet()
+        val queuedDownloadCandidates = mutableListOf<EpisodeEntity>()
+        val podcasts = repository.podcasts.first().filter { it.includeInAutoRefresh }
+        val existingEpisodeIdentities = podcasts.associate { podcast ->
+            podcast.id to repository.episodes(podcast.id).first()
+                .map { it.guid to it.audioUrl }
+                .toHashSet()
         }
-        val refreshResults = app.podcastRepository.refreshAll(podcasts)
+        val refreshResults = repository.refreshAll(podcasts)
         refreshResults.forEach { refreshResult ->
             currentCoroutineContext().ensureActive()
             val podcast = refreshResult.podcast
@@ -71,36 +80,15 @@ class PodcastRefreshWorker(
             }
             // Use persisted rows: repository identity normalization can differ from the
             // parser's provisional IDs after redirects or feed URL changes.
-            val newPersistedEpisodes = app.podcastRepository.episodes(podcast.id).first()
-                .filterNot { it.guid in existingGuids[podcast.id].orEmpty() }
+            val newPersistedEpisodes = newEpisodesSince(
+                repository.episodes(podcast.id).first(),
+                existingEpisodeIdentities[podcast.id].orEmpty(),
+            )
             if (autoQueueEnabled && podcast.includeInAutoQueue) {
                 newPersistedEpisodes.forEach { episode ->
-                    app.podcastRepository.addToQueueFromInbox(episode.id)
+                    repository.addToQueueFromInbox(episode.id)
                 }
-            }
-            if (autoDownloadEnabled && podcast.includeInAutoDownload) {
-                newPersistedEpisodes.forEach { episode ->
-                    val request = OneTimeWorkRequestBuilder<EpisodeDownloadWorker>()
-                        .setInputData(workDataOf(EPISODE_ID_INPUT to episode.id))
-                        .setConstraints(
-                            Constraints.Builder()
-                                .setRequiredNetworkType(
-                                    if (downloadNetwork == PodcastDownloadNetwork.WIFI_ONLY) {
-                                        NetworkType.UNMETERED
-                                    } else {
-                                        NetworkType.CONNECTED
-                                    },
-                                )
-                                .build(),
-                        )
-                        .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.SECONDS)
-                        .build()
-                    WorkManager.getInstance(applicationContext).enqueueUniqueWork(
-                        "podcast-download-${episode.id}",
-                        androidx.work.ExistingWorkPolicy.KEEP,
-                        request,
-                    )
-                }
+                if (downloadEpisodesAddedToUpNext) queuedDownloadCandidates += newPersistedEpisodes
             }
             if (notificationsEnabled && podcast.includeInNotifications) {
                 newPersistedEpisodes
@@ -115,6 +103,38 @@ class PodcastRefreshWorker(
                     }
             }
         }
+        val allEpisodes = repository.podcasts.first()
+            .flatMap { subscribed -> repository.episodes(subscribed.id).first() }
+        val downloadsToEnqueue = PodcastDownloadManager(applicationContext, repository).downloadsWithinLimit(
+            candidates = queuedDownloadCandidates,
+            downloadedEpisodes = allEpisodes,
+            downloadAssets = repository.downloadAssets.first(),
+            queuedEpisodeIds = repository.queue.first().mapTo(mutableSetOf(), QueueEntity::episodeId),
+            maximumDownloads = downloadLimit.episodeCount,
+            mode = deleteBeforeAutoDownload,
+        )
+        downloadsToEnqueue.forEach { episode ->
+            val request = OneTimeWorkRequestBuilder<EpisodeDownloadWorker>()
+                .setInputData(workDataOf(EPISODE_ID_INPUT to episode.id))
+                .setConstraints(
+                    Constraints.Builder()
+                        .setRequiredNetworkType(
+                            if (downloadNetwork == PodcastDownloadNetwork.WIFI_ONLY) {
+                                NetworkType.UNMETERED
+                            } else {
+                                NetworkType.CONNECTED
+                            },
+                        )
+                        .build(),
+                )
+                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.SECONDS)
+                .build()
+            WorkManager.getInstance(applicationContext).enqueueUniqueWork(
+                "podcast-download-${episode.id}",
+                androidx.work.ExistingWorkPolicy.KEEP,
+                request,
+            )
+        }
         if (newEpisodes.isNotEmpty()) {
             applicationContext.postPodcastNotifications(newEpisodes, app.okHttpClient)
         }
@@ -126,15 +146,23 @@ class PodcastRefreshWorker(
 
         fun schedule(
             context: Context,
+            interval: PodcastRefreshInterval,
+            network: PodcastRefreshNetwork,
         ) {
             val workManager = WorkManager.getInstance(context.applicationContext)
             val request = PeriodicWorkRequestBuilder<PodcastRefreshWorker>(
-                PodcastRefreshInterval.HOURLY.minutes,
+                interval.minutes,
                 TimeUnit.MINUTES,
             )
                 .setConstraints(
                     Constraints.Builder()
-                        .setRequiredNetworkType(NetworkType.CONNECTED)
+                        .setRequiredNetworkType(
+                            if (network == PodcastRefreshNetwork.WIFI_ONLY) {
+                                NetworkType.UNMETERED
+                            } else {
+                                NetworkType.CONNECTED
+                            },
+                        )
                         .build(),
                 )
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
@@ -142,6 +170,21 @@ class PodcastRefreshWorker(
             workManager.enqueueUniquePeriodicWork(
                 WorkName,
                 ExistingPeriodicWorkPolicy.UPDATE,
+                request,
+            )
+        }
+
+        fun enqueueNow(context: Context) {
+            val request = OneTimeWorkRequestBuilder<PodcastRefreshWorker>()
+                .setConstraints(
+                    Constraints.Builder()
+                        .setRequiredNetworkType(NetworkType.CONNECTED)
+                        .build(),
+                )
+                .build()
+            WorkManager.getInstance(context.applicationContext).enqueueUniqueWork(
+                "podcast-auto-refresh-after-import",
+                androidx.work.ExistingWorkPolicy.KEEP,
                 request,
             )
         }

@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
-import com.shapeshed.booth.BoothApp
+import com.shapeshed.booth.di.boothWorkerEntryPoint
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -34,7 +34,9 @@ class PodcastOpmlImportWorker(
             }
             if (feeds.isEmpty()) return@withContext Result.failure()
 
-            val repository = (applicationContext as BoothApp).podcastRepository
+            // Use Hilt's singleton. BoothApp's legacy repository creates a second Room
+            // instance, whose writes do not invalidate the ViewModel's observed database.
+            val repository = boothWorkerEntryPoint(applicationContext).podcastRepository
             val imported = AtomicInteger(0)
             val completed = AtomicInteger(0)
             val semaphore = Semaphore(MAX_CONCURRENT_FEEDS)
@@ -49,6 +51,7 @@ class PodcastOpmlImportWorker(
                                 workDataOf(
                                     OPML_IMPORT_COMPLETED to completed.incrementAndGet(),
                                     OPML_IMPORT_TOTAL to feeds.size,
+                                    OPML_IMPORT_IMPORTED to imported.get(),
                                 ),
                             )
                         }

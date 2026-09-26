@@ -34,7 +34,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
@@ -189,7 +188,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -433,10 +431,11 @@ internal fun PodcastQueueScreen(
                                 val targetIndex = orderedEpisodes.indexOfFirst { it.id == targetId }
                                 if (targetIndex < 0) return@detectDragGesturesAfterLongPress
                                 if (targetIndex in orderedEpisodes.indices && targetIndex != currentIndex) {
-                                    val reordered = orderedEpisodes.toMutableList()
-                                    val moved = reordered.removeAt(currentIndex)
-                                    reordered.add(targetIndex.coerceIn(0, reordered.size), moved)
-                                    orderedEpisodes = reordered
+                                    orderedEpisodes = reorderQueueItem(
+                                        orderedEpisodes,
+                                        episode,
+                                        orderedEpisodes[targetIndex],
+                                    )
                                     dragDistance -= (targetInfo.offset - currentInfo.offset).toFloat()
                                 }
                             },
@@ -524,44 +523,17 @@ internal fun QueueEpisodeSwipeRow(
             },
             tonalElevation = 1.dp,
             modifier = Modifier
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .combinedClickable(onClick = onOpen, onLongClick = onLongPress),
             ) {
                 PodcastActionListItem(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     leadingContent = {
-                        if (compact) {
-                            PodcastArtwork(
-                                episode.artworkUrl,
-                                episode.title,
-                                Modifier
-                                    .size(PodcastEpisodeArtworkSize),
-                            )
-                        } else {
-                            Row(
-                                modifier = dragHandleModifier,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                if (showDragHandle) {
-                                    Box(
-                                        modifier = Modifier.width(32.dp).height(PodcastEpisodeArtworkSize).offset(x = (-8).dp),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        Icon(
-                                            Icons.Rounded.DragHandle,
-                                            contentDescription = stringResource(R.string.long_press_drag_reorder, episode.title),
-                                            tint = if (dragging) MaterialTheme.colorScheme.primary
-                                            else MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.size(20.dp),
-                                        )
-                                    }
-                                }
-                                PodcastArtwork(
-                                    episode.artworkUrl,
-                                    episode.title,
-                                    Modifier.size(PodcastEpisodeArtworkSize),
-                                )
-                            }
-                        }
+                        PodcastArtwork(
+                            episode.artworkUrl,
+                            episode.title,
+                            Modifier.size(PodcastEpisodeArtworkSize),
+                        )
                     },
                     headlineContent = {
                         if (compact) {
@@ -575,18 +547,17 @@ internal fun QueueEpisodeSwipeRow(
                                     .combinedClickable(onClick = onOpen, onLongClick = onLongPress),
                             )
                         } else {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .combinedClickable(onClick = onOpen, onLongClick = onLongPress),
-                                verticalArrangement = Arrangement.spacedBy(2.dp),
-                            ) {
-                                EpisodeTitleBlock(
-                                    episode,
-                                    active,
-                                    downloaded = episode.localUri != null || downloadProgress?.completed == true,
-                                    downloadProgress = downloadProgress,
-                                )
+                            EpisodeTitleBlock(
+                                episode,
+                                active,
+                                downloaded = episode.localUri != null || downloadProgress?.completed == true,
+                                downloadProgress = downloadProgress,
+                            )
+                        }
+                    },
+                    supportingContent = if (!compact) {
+                        {
+                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                 EpisodeMetadataLine(episode, downloadProgress, active)
                                 EpisodeActionRow(
                                     episode = episode,
@@ -599,21 +570,18 @@ internal fun QueueEpisodeSwipeRow(
                                 )
                             }
                         }
-                    },
-                    trailingContent = if (compact && showDragHandle) {
+                    } else null,
+                    trailingContent = if (showDragHandle) {
                         {
-                            Box(
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .then(dragHandleModifier),
-                                contentAlignment = Alignment.Center,
+                            IconButton(
+                                onClick = {},
+                                modifier = dragHandleModifier,
                             ) {
                                 Icon(
-                                    Icons.Rounded.DragHandle,
+                                    imageVector = Icons.Rounded.DragHandle,
                                     contentDescription = stringResource(R.string.move_episode, episode.title),
                                     tint = if (dragging) MaterialTheme.colorScheme.primary
                                     else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(20.dp),
                                 )
                             }
                         }
