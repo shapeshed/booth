@@ -23,7 +23,8 @@ private object FakeDirectoryProvider : PodcastDiscoveryProvider {
     override val id: String = "fake-directory"
     override val supportsCategoryPaging: Boolean = true
 
-    override suspend fun browse(shelf: com.shapeshed.booth.data.PodcastDiscoveryShelf) = emptyList<com.shapeshed.booth.data.PodcastSearchResult>()
+    override suspend fun browse(shelf: com.shapeshed.booth.data.PodcastDiscoveryShelf) =
+        emptyList<com.shapeshed.booth.data.PodcastSearchResult>()
 
     override suspend fun browse(category: com.shapeshed.booth.data.PodcastDiscoveryCategory) =
         listOf(com.shapeshed.booth.data.PodcastSearchResult(id, fakePodcast(category.title)))

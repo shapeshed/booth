@@ -2,7 +2,6 @@ package com.shapeshed.booth.ui
 
 import android.content.ClipboardManager
 import android.content.Context
-import androidx.test.core.app.ApplicationProvider
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasText
@@ -11,10 +10,11 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
+import androidx.test.core.app.ApplicationProvider
 import com.shapeshed.booth.BuildConfig
-import com.shapeshed.booth.data.PodcastDownloadNetwork
-import com.shapeshed.booth.data.PodcastDownloadLimit
 import com.shapeshed.booth.data.PodcastDeleteBeforeAutoDownload
+import com.shapeshed.booth.data.PodcastDownloadLimit
+import com.shapeshed.booth.data.PodcastDownloadNetwork
 import com.shapeshed.booth.data.PodcastRefreshInterval
 import com.shapeshed.booth.data.PodcastRefreshNetwork
 import com.shapeshed.booth.data.PodcastSearchProvider

@@ -1,265 +1,263 @@
 package com.shapeshed.booth.ui
 
-import androidx.compose.ui.res.stringResource
-import com.shapeshed.booth.R
-
-import android.annotation.SuppressLint
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.StartOffset
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.background
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.FileDownload
-import androidx.compose.material.icons.rounded.FastForward
-import androidx.compose.material.icons.rounded.Label
-import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.Pause
-import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.rounded.KeyboardArrowUp
-import androidx.compose.material.icons.rounded.Replay10
-import androidx.compose.material.icons.rounded.Replay
-import androidx.compose.material.icons.rounded.Forward30
-import androidx.compose.material.icons.rounded.Notifications
-import androidx.compose.material.icons.rounded.OfflinePin
+import androidx.compose.material.icons.automirrored.rounded.ViewList
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.rounded.Schedule
-import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.rounded.Sync
-import androidx.compose.material.icons.rounded.Wifi
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Block
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DragHandle
-import androidx.compose.material.icons.rounded.OpenInBrowser
-import androidx.compose.material.icons.rounded.Share
-import androidx.compose.material.icons.rounded.Stop
-import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.ErrorOutline
+import androidx.compose.material.icons.rounded.FastForward
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.ErrorOutline
-import androidx.compose.material.icons.rounded.Block
-import androidx.compose.material.icons.rounded.VideoLibrary
+import androidx.compose.material.icons.rounded.FileDownload
+import androidx.compose.material.icons.rounded.Forward30
 import androidx.compose.material.icons.rounded.Fullscreen
 import androidx.compose.material.icons.rounded.FullscreenExit
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.Inbox
-import androidx.compose.material.icons.automirrored.rounded.ViewList
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.Label
 import androidx.compose.material.icons.rounded.MoreHoriz
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.RssFeed
+import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.OfflinePin
+import androidx.compose.material.icons.rounded.OpenInBrowser
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Replay
+import androidx.compose.material.icons.rounded.Replay10
+import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.Stop
+import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.UploadFile
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.AssistChip
+import androidx.compose.material.icons.rounded.VideoLibrary
+import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.BottomSheetScaffold
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ButtonGroup
+import androidx.compose.material3.ButtonGroupDefaults
+import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.VerticalDivider
-import androidx.compose.material3.InputChip
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.Switch
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.ButtonGroup
-import androidx.compose.material3.ButtonGroupDefaults
-import androidx.compose.material3.ToggleButton
-import androidx.compose.material3.FloatingToolbarDefaults
-import androidx.compose.material3.HorizontalFloatingToolbar
-import androidx.compose.material3.BottomSheetScaffold
-import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingToolbarDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.HorizontalFloatingToolbar
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.InputChip
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.ShortNavigationBar
 import androidx.compose.material3.ShortNavigationBarItem
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.SheetValue
-import androidx.compose.material3.rememberBottomSheetState
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.material3.adaptive.navigation3.SupportingPaneSceneStrategy
 import androidx.compose.material3.adaptive.navigation3.rememberSupportingPaneSceneStrategy
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.rememberBottomSheetScaffoldState
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
-import androidx.navigation3.runtime.entryProvider
-import androidx.navigation3.runtime.NavKey
-import androidx.navigation3.runtime.rememberNavBackStack
-import androidx.navigation3.ui.NavDisplay
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.StartOffset
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.media3.ui.AspectRatioFrameLayout
-import androidx.media3.ui.PlayerView
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.media3.ui.AspectRatioFrameLayout
+import androidx.media3.ui.PlayerView
+import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.runtime.rememberNavBackStack
+import androidx.navigation3.ui.NavDisplay
 import coil3.compose.AsyncImage
 import com.shapeshed.booth.BoothApp
-import com.shapeshed.booth.data.EpisodeEntity
+import com.shapeshed.booth.R
 import com.shapeshed.booth.data.DownloadAssetEntity
 import com.shapeshed.booth.data.DownloadAssetStatus
 import com.shapeshed.booth.data.DownloadAssetType
 import com.shapeshed.booth.data.DownloadProgress
+import com.shapeshed.booth.data.EpisodeEntity
 import com.shapeshed.booth.data.PodcastDownloadManager
 import com.shapeshed.booth.data.PodcastEntity
 import com.shapeshed.booth.data.PodcastRefreshInterval
 import com.shapeshed.booth.data.PodcastRefreshNetwork
-import com.shapeshed.booth.data.PodcastSubscriptionsViewMode
-import com.shapeshed.booth.data.PodcastSearchProvider
-import com.shapeshed.booth.data.relativeTime
 import com.shapeshed.booth.data.PodcastRefreshWorker
-import kotlinx.coroutines.flow.emptyFlow
+import com.shapeshed.booth.data.PodcastSearchProvider
+import com.shapeshed.booth.data.PodcastSubscriptionsViewMode
+import com.shapeshed.booth.data.relativeTime
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import org.jsoup.nodes.Node
 import org.jsoup.nodes.TextNode
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 @Composable
 internal fun PodcastMiniPlayer(
@@ -324,7 +322,7 @@ internal fun PodcastMiniPlayer(
                             .size(52.dp)
                             .clip(RoundedCornerShape(playPauseCorner))
                             .clickable(onClick = onPlayPause),
-                        ) {
+                    ) {
                         Box(contentAlignment = Alignment.Center) {
                             if (isBuffering) {
                                 CircularProgressIndicator(
@@ -335,7 +333,9 @@ internal fun PodcastMiniPlayer(
                             } else {
                                 Icon(
                                     imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                                    contentDescription = stringResource(if (isPlaying) R.string.pause else R.string.play),
+                                    contentDescription = stringResource(
+                                        if (isPlaying) R.string.pause else R.string.play,
+                                    ),
                                     modifier = Modifier.size(30.dp),
                                 )
                             }
@@ -460,13 +460,19 @@ internal fun PodcastNowPlayingOverlay(
                             setVideoFullScreen(false)
                             onDismiss()
                         }) {
-                            Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = stringResource(R.string.close_player))
+                            Icon(
+                                Icons.Rounded.KeyboardArrowDown,
+                                contentDescription = stringResource(R.string.close_player),
+                            )
                         }
                     },
                     actions = {
                         if (descriptionBlocks.isNotEmpty()) {
                             IconButton(onClick = { showDescription = true }) {
-                                Icon(Icons.Outlined.Info, contentDescription = stringResource(R.string.episode_description))
+                                Icon(
+                                    Icons.Outlined.Info,
+                                    contentDescription = stringResource(R.string.episode_description),
+                                )
                             }
                         }
                     },
@@ -487,8 +493,11 @@ internal fun PodcastNowPlayingOverlay(
                         Box(
                             modifier = Modifier
                                 .then(
-                                    if (fullScreenVideo) Modifier.fillMaxSize()
-                                    else Modifier.fillMaxWidth().aspectRatio(16f / 9f),
+                                    if (fullScreenVideo) {
+                                        Modifier.fillMaxSize()
+                                    } else {
+                                        Modifier.fillMaxWidth().aspectRatio(16f / 9f)
+                                    },
                                 )
                                 .clip(if (videoMode) RoundedCornerShape(0.dp) else RoundedCornerShape(28.dp)),
                         ) {
@@ -521,9 +530,14 @@ internal fun PodcastNowPlayingOverlay(
                                     ),
                             ) {
                                 Icon(
-                                    imageVector = if (fullScreenVideo) Icons.Rounded.FullscreenExit
-                                    else Icons.Rounded.Fullscreen,
-                                    contentDescription = stringResource(if (fullScreenVideo) R.string.exit_full_screen else R.string.full_screen),
+                                    imageVector = if (fullScreenVideo) {
+                                        Icons.Rounded.FullscreenExit
+                                    } else {
+                                        Icons.Rounded.Fullscreen
+                                    },
+                                    contentDescription = stringResource(
+                                        if (fullScreenVideo) R.string.exit_full_screen else R.string.full_screen,
+                                    ),
                                     tint = Color.White,
                                 )
                             }
@@ -671,7 +685,7 @@ internal fun PodcastNowPlayingOverlay(
                                     color = MaterialTheme.colorScheme.error,
                                     modifier = Modifier.weight(1f),
                                 )
-                        TextButton(onClick = onRetry) { Text(stringResource(R.string.retry_playback)) }
+                                TextButton(onClick = onRetry) { Text(stringResource(R.string.retry_playback)) }
                             }
                         }
                         Spacer(Modifier.height(20.dp))
@@ -692,7 +706,10 @@ internal fun PodcastNowPlayingOverlay(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 FilledTonalIconButton(onClick = onSeekBack) {
-                                    Icon(Icons.Rounded.Replay10, contentDescription = stringResource(R.string.back_10_seconds))
+                                    Icon(
+                                        Icons.Rounded.Replay10,
+                                        contentDescription = stringResource(R.string.back_10_seconds),
+                                    )
                                 }
                                 FilledIconButton(
                                     onClick = onToggle,
@@ -707,13 +724,18 @@ internal fun PodcastNowPlayingOverlay(
                                     } else {
                                         Icon(
                                             if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                                            contentDescription = stringResource(if (isPlaying) R.string.pause else R.string.play),
+                                            contentDescription = stringResource(
+                                                if (isPlaying) R.string.pause else R.string.play,
+                                            ),
                                             modifier = Modifier.size(32.dp),
                                         )
                                     }
                                 }
                                 FilledTonalIconButton(onClick = onSeekForward) {
-                                    Icon(Icons.Rounded.Forward30, contentDescription = stringResource(R.string.forward_30_seconds))
+                                    Icon(
+                                        Icons.Rounded.Forward30,
+                                        contentDescription = stringResource(R.string.forward_30_seconds),
+                                    )
                                 }
                             }
                             Box(
@@ -744,22 +766,22 @@ internal fun PodcastNowPlayingOverlay(
         modifier = modifier
             .fillMaxSize()
             .pointerInput(onDismiss) {
-            var totalDrag = 0f
-            detectVerticalDragGestures(
-                onVerticalDrag = { change, dragAmount ->
-                    change.consume()
-                    totalDrag += dragAmount
-                },
-                onDragEnd = {
-                    if (totalDrag > 48f) {
-                        setVideoFullScreen(false)
-                        onDismiss()
-                    }
-                    totalDrag = 0f
-                },
-                onDragCancel = { totalDrag = 0f },
-            )
-        },
+                var totalDrag = 0f
+                detectVerticalDragGestures(
+                    onVerticalDrag = { change, dragAmount ->
+                        change.consume()
+                        totalDrag += dragAmount
+                    },
+                    onDragEnd = {
+                        if (totalDrag > 48f) {
+                            setVideoFullScreen(false)
+                            onDismiss()
+                        }
+                        totalDrag = 0f
+                    },
+                    onDragCancel = { totalDrag = 0f },
+                )
+            },
         color = MaterialTheme.colorScheme.background,
     ) {
         if (isWideWindow) {
@@ -1080,7 +1102,7 @@ internal fun PodcastNowPlayingOverlay(
                 }
             }
         }
-        */
+         */
     }
     if (showDescription && descriptionBlocks.isNotEmpty()) {
         val sheetState = rememberBottomSheetState(initialValue = SheetValue.Hidden)
@@ -1155,43 +1177,46 @@ internal fun PodcastNowPlayingQueueSheet(
             .fillMaxHeight(),
     ) {
         ListItem(
-                modifier = Modifier.padding(horizontal = 8.dp),
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                leadingContent = {
-                    PodcastArtwork(
-                        currentEpisode.artworkUrl,
-                        currentEpisode.title,
-                        Modifier.size(PodcastEpisodeArtworkSize),
-                    )
-                },
-                supportingContent = {
-                    Text(
-                        podcastsById[currentEpisode.podcastId]?.title.orEmpty(),
-                        style = MaterialTheme.typography.bodyMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                },
-                trailingContent = {
-                    FilledTonalIconButton(
-                        onClick = {
-                            if (currentEpisode.id == activeEpisodeId) onToggle()
-                            else onPlay(currentEpisode)
-                        },
-                    ) {
-                        if (isBuffering) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                strokeWidth = 2.dp,
-                            )
+            modifier = Modifier.padding(horizontal = 8.dp),
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+            leadingContent = {
+                PodcastArtwork(
+                    currentEpisode.artworkUrl,
+                    currentEpisode.title,
+                    Modifier.size(PodcastEpisodeArtworkSize),
+                )
+            },
+            supportingContent = {
+                Text(
+                    podcastsById[currentEpisode.podcastId]?.title.orEmpty(),
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            },
+            trailingContent = {
+                FilledTonalIconButton(
+                    onClick = {
+                        if (currentEpisode.id == activeEpisodeId) {
+                            onToggle()
                         } else {
-                            Icon(
-                                if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                                contentDescription = stringResource(if (isPlaying) R.string.pause else R.string.play),
-                            )
+                            onPlay(currentEpisode)
                         }
+                    },
+                ) {
+                    if (isBuffering) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                        )
+                    } else {
+                        Icon(
+                            if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                            contentDescription = stringResource(if (isPlaying) R.string.pause else R.string.play),
+                        )
                     }
-                },
+                }
+            },
         ) {
             Text(
                 currentEpisode.title,
@@ -1347,6 +1372,7 @@ internal fun DescriptionBlockContent(block: DescriptionBlock) {
                 Modifier
             },
         )
+
         is DescriptionBlock.ListBlock -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             block.items.forEachIndexed { index, item ->
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1359,6 +1385,7 @@ internal fun DescriptionBlockContent(block: DescriptionBlock) {
                 }
             }
         }
+
         is DescriptionBlock.ImageBlock -> AsyncImage(
             model = block.url,
             contentDescription = block.description,
@@ -1403,6 +1430,7 @@ internal fun formatDescriptionBlocks(html: String, linkColor: Color): List<Descr
             "img" -> block.attr("abs:src").ifBlank { block.attr("src") }
                 .takeIf(String::isNotBlank)
                 ?.let { DescriptionBlock.ImageBlock(it, block.attr("alt").ifBlank { null }) }
+
             "ul", "ol" -> DescriptionBlock.ListBlock(
                 items = block.children().filter { it.tagName() == "li" }.mapNotNull { item ->
                     buildAnnotatedString { appendDescriptionNode(item, linkColor) }
@@ -1410,6 +1438,7 @@ internal fun formatDescriptionBlocks(html: String, linkColor: Color): List<Descr
                 },
                 ordered = block.tagName() == "ol",
             )
+
             else -> {
                 val role = when (block.tagName()) {
                     "h1", "h2", "h3", "h4", "h5", "h6" -> DescriptionBlock.Role.Heading
@@ -1457,12 +1486,18 @@ private fun AnnotatedString.Builder.appendDescriptionNode(node: Node, linkColor:
                 .replace(Regex(" *\\n *"), "\n")
             appendTextWithLinks(text, linkColor)
         }
+
         is Element -> {
             if (node.tagName() == "br") {
                 append("\n")
             } else if (node.tagName() == "a" && node.hasAttr("href")) {
                 pushStringAnnotation(DescriptionUrlAnnotation, node.attr("abs:href").ifBlank { node.attr("href") })
-                withStyle(SpanStyle(color = linkColor, textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline)) {
+                withStyle(
+                    SpanStyle(
+                        color = linkColor,
+                        textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline,
+                    ),
+                ) {
                     append(node.text())
                 }
                 pop()

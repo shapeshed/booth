@@ -32,16 +32,15 @@ class PodcastHomeCategoryDiscoveryTest {
         assertNull(localTagDiscoveryCategory("", listOf(podcast)))
     }
 
-    private fun podcastWithCategories(vararg categories: CategoryEntity): PodcastEntity =
-        PodcastEntity(
-            id = 1,
-            title = "Test podcast",
-            author = null,
-            feedUrl = "https://example.com/feed.xml",
-            siteUrl = null,
-            descriptionHtml = null,
-            artworkUrl = null,
-            subscribedAtMillis = 0,
-            lastRefreshMillis = null,
-        ).also { it.categories = categories.toList() }
+    private fun podcastWithCategories(vararg categories: CategoryEntity): PodcastEntity = PodcastEntity(
+        id = 1,
+        title = "Test podcast",
+        author = null,
+        feedUrl = "https://example.com/feed.xml",
+        siteUrl = null,
+        descriptionHtml = null,
+        artworkUrl = null,
+        subscribedAtMillis = 0,
+        lastRefreshMillis = null,
+    ).also { it.categories = categories.toList() }
 }

@@ -5,9 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /** Adapts the existing RSS/Atom parser to the podcast domain. */
-class RssPodcastFeedProvider(
-    private val parser: FeedParser,
-) : PodcastFeedProvider {
+class RssPodcastFeedProvider(private val parser: FeedParser) : PodcastFeedProvider {
     override suspend fun fetch(
         feedUrl: String,
         etag: String?,

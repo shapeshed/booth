@@ -25,7 +25,9 @@ internal class PodcastHomeUndoActions(
                 episode.id,
                 onError = {
                     scope.launch {
-                        snackbarHostState.showSnackbar(context.getString(com.shapeshed.booth.R.string.error_add_up_next))
+                        snackbarHostState.showSnackbar(
+                            context.getString(com.shapeshed.booth.R.string.error_add_up_next),
+                        )
                     }
                 },
             )
@@ -46,11 +48,7 @@ internal class PodcastHomeUndoActions(
         }
     }
 
-    fun removeSelectedInboxEpisodes(
-        inbox: List<EpisodeEntity>,
-        selectedIds: Set<Long>,
-        clearSelection: () -> Unit,
-    ) {
+    fun removeSelectedInboxEpisodes(inbox: List<EpisodeEntity>, selectedIds: Set<Long>, clearSelection: () -> Unit) {
         val selected = inbox.filter { it.id in selectedIds }
         if (selected.isEmpty()) {
             clearSelection()
@@ -63,7 +61,15 @@ internal class PodcastHomeUndoActions(
                 message = context.resources.getString(
                     com.shapeshed.booth.R.string.selected_episodes_removed_from_inbox,
                     selected.size,
-                    context.resources.getString(if (selected.size == 1) com.shapeshed.booth.R.string.episode_singular else com.shapeshed.booth.R.string.episode_plural),
+                    context.resources.getString(
+                        if (selected.size ==
+                            1
+                        ) {
+                            com.shapeshed.booth.R.string.episode_singular
+                        } else {
+                            com.shapeshed.booth.R.string.episode_plural
+                        },
+                    ),
                 ),
                 actionLabel = context.getString(com.shapeshed.booth.R.string.undo),
                 duration = SnackbarDuration.Short,

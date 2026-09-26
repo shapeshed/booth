@@ -1,100 +1,100 @@
 package com.shapeshed.booth.ui
 
 import android.content.Context
-import dagger.hilt.android.qualifiers.ApplicationContext
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
-import com.shapeshed.booth.data.PodcastEntity
-import com.shapeshed.booth.data.Podcast
-import com.shapeshed.booth.data.EpisodeEntity
-import com.shapeshed.booth.data.QueueEntity
-import com.shapeshed.booth.data.Episode
-import com.shapeshed.booth.data.PodcastRepository
-import com.shapeshed.booth.data.PodcastBackupManager
-import com.shapeshed.booth.data.PodcastSettingsState
-import com.shapeshed.booth.data.PodcastCatalogIndex
-import com.shapeshed.booth.data.buildPodcastCatalogIndex
-import com.shapeshed.booth.data.DownloadAssetEntity
-import com.shapeshed.booth.data.downloadEpisodeIds
-import com.shapeshed.booth.data.orderedQueueEpisodes
-import com.shapeshed.booth.data.PodcastSearchProvider
-import com.shapeshed.booth.data.PodcastSearchCatalog
-import com.shapeshed.booth.data.PodcastSearchResult
-import com.shapeshed.booth.data.PodcastDiscoveryCatalog
-import com.shapeshed.booth.data.PodcastDiscoveryProvider
-import com.shapeshed.booth.data.DefaultPodcastDiscoveryCatalog
-import com.shapeshed.booth.data.PodcastIndexCredentials
-import com.shapeshed.booth.data.PodcastIndexCredentialsStore
-import com.shapeshed.booth.data.PodcastDiscoveryShelfResult
-import com.shapeshed.booth.data.PodcastDiscoveryShelf
-import com.shapeshed.booth.data.PodcastFeed
-import com.shapeshed.booth.data.PodcastDiscoveryCategory
-import com.shapeshed.booth.data.PodcastSubscriptionsViewMode
-import com.shapeshed.booth.data.SettingsStore
-import com.shapeshed.booth.data.PodcastDownloadNetwork
-import com.shapeshed.booth.data.DownloadProgress
-import com.shapeshed.booth.data.DownloadProgressStore
-import com.shapeshed.booth.data.mergeDownloadProgress
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.receiveAsFlow
-import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.emptyFlow
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.stateIn
 import androidx.paging.cachedIn
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.async
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.coroutineScope
-import java.util.concurrent.ConcurrentHashMap
-import androidx.work.Constraints
 import androidx.work.BackoffPolicy
+import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
+import com.shapeshed.booth.data.APPLE_DIRECTORY_PROVIDER_ID
+import com.shapeshed.booth.data.CategoryEntity
+import com.shapeshed.booth.data.DefaultPodcastDiscoveryCatalog
+import com.shapeshed.booth.data.DownloadAssetEntity
+import com.shapeshed.booth.data.DownloadProgress
+import com.shapeshed.booth.data.DownloadProgressStore
 import com.shapeshed.booth.data.EPISODE_ID_INPUT
+import com.shapeshed.booth.data.Episode
 import com.shapeshed.booth.data.EpisodeDownloadWorker
+import com.shapeshed.booth.data.EpisodeEntity
+import com.shapeshed.booth.data.Podcast
+import com.shapeshed.booth.data.PodcastBackupManager
+import com.shapeshed.booth.data.PodcastCatalogIndex
+import com.shapeshed.booth.data.PodcastDiscoveryCatalog
+import com.shapeshed.booth.data.PodcastDiscoveryCategory
+import com.shapeshed.booth.data.PodcastDiscoveryProvider
+import com.shapeshed.booth.data.PodcastDiscoveryShelf
+import com.shapeshed.booth.data.PodcastDiscoveryShelfResult
+import com.shapeshed.booth.data.PodcastDownloadNetwork
+import com.shapeshed.booth.data.PodcastEntity
+import com.shapeshed.booth.data.PodcastFeed
+import com.shapeshed.booth.data.PodcastIndexCredentials
+import com.shapeshed.booth.data.PodcastIndexCredentialsStore
+import com.shapeshed.booth.data.PodcastRepository
+import com.shapeshed.booth.data.PodcastSearchCatalog
+import com.shapeshed.booth.data.PodcastSearchProvider
+import com.shapeshed.booth.data.PodcastSearchResult
+import com.shapeshed.booth.data.PodcastSettingsState
 import com.shapeshed.booth.data.PodcastSubscribeWorker
-import com.shapeshed.booth.data.SUBSCRIBE_FEED_URL_INPUT
-import com.shapeshed.booth.data.SUBSCRIBE_TITLE_INPUT
-import com.shapeshed.booth.data.SUBSCRIBE_DESCRIPTION_INPUT
+import com.shapeshed.booth.data.PodcastSubscriptionProgress
+import com.shapeshed.booth.data.PodcastSubscriptionProgressStore
+import com.shapeshed.booth.data.PodcastSubscriptionStage
+import com.shapeshed.booth.data.PodcastSubscriptionsViewMode
+import com.shapeshed.booth.data.QueueEntity
 import com.shapeshed.booth.data.SUBSCRIBE_APPLE_CATEGORIES_INPUT
 import com.shapeshed.booth.data.SUBSCRIBE_APPLE_CATEGORY_IDS_INPUT
 import com.shapeshed.booth.data.SUBSCRIBE_CATEGORY_PROVIDER_ID_INPUT
-import com.shapeshed.booth.data.APPLE_DIRECTORY_PROVIDER_ID
-import com.shapeshed.booth.data.podcastId
-import com.shapeshed.booth.data.PodcastSubscriptionProgressStore
-import com.shapeshed.booth.data.PodcastSubscriptionProgress
-import com.shapeshed.booth.data.PodcastSubscriptionStage
+import com.shapeshed.booth.data.SUBSCRIBE_DESCRIPTION_INPUT
+import com.shapeshed.booth.data.SUBSCRIBE_FEED_URL_INPUT
+import com.shapeshed.booth.data.SUBSCRIBE_TITLE_INPUT
+import com.shapeshed.booth.data.SettingsStore
+import com.shapeshed.booth.data.buildPodcastCatalogIndex
+import com.shapeshed.booth.data.downloadEpisodeIds
 import com.shapeshed.booth.data.encodeAppleCategories
 import com.shapeshed.booth.data.encodeAppleCategoryIds
+import com.shapeshed.booth.data.mergeDownloadProgress
+import com.shapeshed.booth.data.orderedQueueEpisodes
+import com.shapeshed.booth.data.podcastId
 import com.shapeshed.booth.data.searchableCategories
-import com.shapeshed.booth.data.CategoryEntity
-import java.util.concurrent.TimeUnit
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit
+import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.async
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class PodcastHomeState(
     val query: String = "",
@@ -129,10 +129,7 @@ sealed interface PodcastBackupEvent {
 
 private const val OPML_IMPORT_WORK_NAME = "podcast-opml-import"
 
-data class PodcastImportProgress(
-    val completed: Int = 0,
-    val total: Int = 0,
-)
+data class PodcastImportProgress(val completed: Int = 0, val total: Int = 0)
 
 data class PodcastRefreshProgress(
     val completed: Int = 0,
@@ -257,6 +254,7 @@ class PodcastViewModel @Inject constructor(
     val inboxPager: Flow<PagingData<EpisodeEntity>> = repository.inboxPager().cachedIn(viewModelScope)
     private val _globalSearchQuery = MutableStateFlow("")
     val globalSearchQuery: StateFlow<String> = _globalSearchQuery.asStateFlow()
+
     @OptIn(ExperimentalCoroutinesApi::class, kotlinx.coroutines.FlowPreview::class)
     val globalSearchEpisodes: StateFlow<List<com.shapeshed.booth.data.PodcastEpisodeSearchResult>> =
         _globalSearchQuery
@@ -332,13 +330,17 @@ class PodcastViewModel @Inject constructor(
         loadDiscovery(force = true)
     }
     fun allEpisodes(podcastIds: List<Long>?): Flow<PagingData<EpisodeEntity>> =
-        if (podcastIds != null && podcastIds.isEmpty()) flowOf(PagingData.empty())
-        else repository.allEpisodesPager(podcastIds).cachedIn(viewModelScope)
+        if (podcastIds != null && podcastIds.isEmpty()) {
+            flowOf(PagingData.empty())
+        } else {
+            repository.allEpisodesPager(podcastIds).cachedIn(viewModelScope)
+        }
     val queue: StateFlow<List<QueueEntity>> = repository.queue.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5_000),
         emptyList(),
     )
+
     @OptIn(ExperimentalCoroutinesApi::class)
     val queueEpisodes: StateFlow<List<EpisodeEntity>> = repository.queue
         .flatMapLatest { entries ->
@@ -356,6 +358,7 @@ class PodcastViewModel @Inject constructor(
         SharingStarted.WhileSubscribed(5_000),
         emptyList(),
     )
+
     @OptIn(ExperimentalCoroutinesApi::class)
     val downloadedEpisodes: StateFlow<Map<Long, EpisodeEntity>> = repository.downloadAssets
         .map(::downloadEpisodeIds)
@@ -373,6 +376,7 @@ class PodcastViewModel @Inject constructor(
     val state: StateFlow<PodcastHomeState> = _state.asStateFlow()
     private val _backupEvents = Channel<PodcastBackupEvent>(Channel.BUFFERED)
     val backupEvents: Flow<PodcastBackupEvent> = _backupEvents.receiveAsFlow()
+
     @OptIn(ExperimentalCoroutinesApi::class)
     val previewEpisodeEntities: StateFlow<Map<Long, EpisodeEntity>> = state
         .map { homeState -> homeState.previewFeed?.episodes?.map { it.id }.orEmpty() }
@@ -449,10 +453,7 @@ class PodcastViewModel @Inject constructor(
         viewModelScope.launch { repository.setAllPodcastAutoQueue(enabled) }
     }
 
-    fun resolveMediaSizes(
-        episode: EpisodeEntity,
-        onResolved: ((Pair<Long?, Long?>) -> Unit)? = null,
-    ) {
+    fun resolveMediaSizes(episode: EpisodeEntity, onResolved: ((Pair<Long?, Long?>) -> Unit)? = null) {
         if ((episode.audioSizeBytes != null || episode.audioSizeChecked) &&
             (episode.videoUrl.isNullOrBlank() || episode.videoSizeBytes != null || episode.videoSizeChecked)
         ) {
@@ -672,11 +673,7 @@ class PodcastViewModel @Inject constructor(
         }
     }
 
-    fun subscribe(
-        feedUrl: String,
-        fallbackDescriptionHtml: String? = null,
-        onSuccess: (PodcastFeed) -> Unit = {},
-    ) {
+    fun subscribe(feedUrl: String, fallbackDescriptionHtml: String? = null, onSuccess: (PodcastFeed) -> Unit = {}) {
         viewModelScope.launch {
             runCancellableCatching {
                 repository.subscribe(
@@ -790,7 +787,8 @@ class PodcastViewModel @Inject constructor(
     fun closePreview() {
         previewJob?.cancel()
         previewJob = null
-        _state.value = state.value.copy(previewResult = null, previewFeed = null, previewEpisode = null, isLoadingPreview = false)
+        _state.value =
+            state.value.copy(previewResult = null, previewFeed = null, previewEpisode = null, isLoadingPreview = false)
     }
 
     fun openPreviewEpisode(episode: com.shapeshed.booth.data.Episode) {
@@ -1173,11 +1171,9 @@ class PodcastViewModel @Inject constructor(
         viewModelScope.launch { repository.setAllPodcastNotifications(enabled) }
     }
 
-    fun episodes(podcastId: Long): Flow<List<com.shapeshed.booth.data.EpisodeEntity>> =
-        repository.episodes(podcastId)
+    fun episodes(podcastId: Long): Flow<List<com.shapeshed.booth.data.EpisodeEntity>> = repository.episodes(podcastId)
 
-    suspend fun episode(episodeId: Long): com.shapeshed.booth.data.EpisodeEntity? =
-        repository.episode(episodeId)
+    suspend fun episode(episodeId: Long): com.shapeshed.booth.data.EpisodeEntity? = repository.episode(episodeId)
 
     fun observeEpisode(episodeId: Long): Flow<com.shapeshed.booth.data.EpisodeEntity?> =
         repository.observeEpisode(episodeId)
@@ -1255,10 +1251,7 @@ class PodcastViewModel @Inject constructor(
         }
     }
 
-    private suspend fun enqueueConfiguredDownloads(
-        context: Context,
-        episodes: List<EpisodeEntity>,
-    ) {
+    private suspend fun enqueueConfiguredDownloads(context: Context, episodes: List<EpisodeEntity>) {
         if (episodes.isEmpty()) return
         val network = settings.podcastDownloadNetwork.first()
         val allEpisodes = repository.podcasts.first()
@@ -1310,5 +1303,4 @@ class PodcastViewModel @Inject constructor(
             ).removeEpisodeDownloads(episodeId)
         }
     }
-
 }

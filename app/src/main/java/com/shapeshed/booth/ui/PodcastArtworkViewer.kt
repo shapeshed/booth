@@ -1,8 +1,5 @@
 package com.shapeshed.booth.ui
 
-import androidx.compose.ui.res.stringResource
-import com.shapeshed.booth.R
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,15 +9,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.shapeshed.booth.R
 import me.saket.telephoto.zoomable.coil3.ZoomableAsyncImage
 
 @Composable
-internal fun PodcastArtworkViewer(
-    imageUrl: String,
-    title: String,
-    onDismiss: () -> Unit,
-) {
+internal fun PodcastArtworkViewer(imageUrl: String, title: String, onDismiss: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()

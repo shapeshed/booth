@@ -6,8 +6,8 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.paging.PagingData
 import androidx.paging.compose.collectAsLazyPagingItems
-import com.shapeshed.booth.ui.theme.BoothAppTheme
 import com.shapeshed.booth.data.EpisodeEntity
+import com.shapeshed.booth.ui.theme.BoothAppTheme
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Rule
 import org.junit.Test

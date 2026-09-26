@@ -13,7 +13,10 @@ class PodcastModelsTest {
     @Test
     fun differentEpisodeIdentityProducesDifferentIds() {
         val podcast = podcastId("https://example.com/feed")
-        assertNotEquals(episodeId(podcast, "one", "https://example.com/one.mp3"), episodeId(podcast, "two", "https://example.com/two.mp3"))
+        assertNotEquals(
+            episodeId(podcast, "one", "https://example.com/one.mp3"),
+            episodeId(podcast, "two", "https://example.com/two.mp3"),
+        )
     }
 
     @Test

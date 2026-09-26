@@ -1,18 +1,15 @@
 package com.shapeshed.booth.ui
 
-import androidx.compose.ui.res.stringResource
-import com.shapeshed.booth.R
-
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Inbox
-import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.FloatingActionButton
@@ -25,7 +22,9 @@ import androidx.compose.material3.ShortNavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
+import com.shapeshed.booth.R
 
 @Composable
 internal fun PodcastHomeBottomNavigation(
@@ -127,11 +126,7 @@ private fun PodcastHomeNavigationItems(
 }
 
 @Composable
-internal fun PodcastHomeDiscoverFab(
-    visible: Boolean,
-    bottomInset: Dp,
-    onClick: () -> Unit,
-) {
+internal fun PodcastHomeDiscoverFab(visible: Boolean, bottomInset: Dp, onClick: () -> Unit) {
     if (!visible) return
     Box(modifier = Modifier.padding(bottom = bottomInset)) {
         FloatingActionButton(onClick = onClick) {

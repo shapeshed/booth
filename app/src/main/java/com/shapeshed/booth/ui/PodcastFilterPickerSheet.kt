@@ -66,8 +66,10 @@ internal fun <T> PodcastFilterPickerSheetContent(
             placeholder = { Text(searchLabel) },
             leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
             trailingIcon = {
-                if (query.isNotEmpty()) IconButton(onClick = { onQueryChange("") }) {
-                    Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.clear_search))
+                if (query.isNotEmpty()) {
+                    IconButton(onClick = { onQueryChange("") }) {
+                        Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.clear_search))
+                    }
                 }
             },
             modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp),

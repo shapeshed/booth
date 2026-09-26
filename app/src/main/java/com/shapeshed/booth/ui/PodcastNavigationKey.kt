@@ -36,24 +36,17 @@ internal sealed interface PodcastNavigationKey : NavKey {
     data class DiscoveryPodcast(val feedUrl: String) : PodcastNavigationKey
 
     @Serializable
-    data class DiscoveryCategory(
-        val providerId: String,
-        val categoryId: String,
-        val title: String,
-    ) : PodcastNavigationKey
+    data class DiscoveryCategory(val providerId: String, val categoryId: String, val title: String) :
+        PodcastNavigationKey
 
     @Serializable
     data class DiscoveryEpisode(val episodeId: Long) : PodcastNavigationKey
 
     @Serializable
-    data class PodcastDetail(
-        val podcastId: Long,
-    ) : PodcastNavigationKey
+    data class PodcastDetail(val podcastId: Long) : PodcastNavigationKey
 
     @Serializable
-    data class PodcastSettings(
-        val podcastId: Long,
-    ) : PodcastNavigationKey
+    data class PodcastSettings(val podcastId: Long) : PodcastNavigationKey
 
     @Serializable
     data class EpisodeDetail(
@@ -62,11 +55,7 @@ internal sealed interface PodcastNavigationKey : NavKey {
     ) : PodcastNavigationKey
 
     @Serializable
-    data class Category(
-        val providerId: String,
-        val categoryId: String,
-        val title: String,
-    ) : PodcastNavigationKey
+    data class Category(val providerId: String, val categoryId: String, val title: String) : PodcastNavigationKey
 
     @Serializable
     data object AllEpisodes : PodcastNavigationKey

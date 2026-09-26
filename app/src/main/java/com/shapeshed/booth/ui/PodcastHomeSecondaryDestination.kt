@@ -37,12 +37,15 @@ internal fun PodcastHomeSecondaryDestination(
             isBuffering = playback.isBuffering,
             downloadProgress = downloadProgress,
             onOpen = { onOpen(it, EpisodeNavigationOrigin.Downloads) },
-            onPlay = { episode -> playbackViewModel.play(episode, allPodcastsById[episode.podcastId]?.title.orEmpty()) },
+            onPlay = { episode ->
+                playbackViewModel.play(episode, allPodcastsById[episode.podcastId]?.title.orEmpty())
+            },
             onDownload = { viewModel.download(context, it.id) },
             onRemove = { viewModel.removeDownload(context, it.id) },
             onLongPress = onAction,
             modifier = modifier,
         )
+
         PodcastNavigationKey.AllEpisodes -> {
             val allEpisodes = remember {
                 viewModel.allEpisodes(null)
@@ -54,7 +57,9 @@ internal fun PodcastHomeSecondaryDestination(
                 onOpen = { onOpen(it, EpisodeNavigationOrigin.AllEpisodes) },
                 onAddToQueue = { viewModel.addToQueueFromInbox(it.id) },
                 onActions = onAction,
-                onPlay = { episode -> playbackViewModel.play(episode, allPodcastsById[episode.podcastId]?.title.orEmpty()) },
+                onPlay = { episode ->
+                    playbackViewModel.play(episode, allPodcastsById[episode.podcastId]?.title.orEmpty())
+                },
                 onDownload = { viewModel.download(context, it.id) },
                 onRefresh = { viewModel.refreshSubscriptions(context) },
                 refreshing = refreshing,
@@ -62,6 +67,7 @@ internal fun PodcastHomeSecondaryDestination(
                 modifier = modifier,
             )
         }
+
         else -> Unit
     }
 }

@@ -8,9 +8,8 @@ import kotlinx.coroutines.flow.Flow
 enum class DownloadAssetType { AUDIO, VIDEO }
 enum class DownloadAssetStatus { QUEUED, DOWNLOADING, RETRYING, COMPLETED, FAILED, CANCELLED }
 
-internal fun isValidDownloadedFile(file: File, expectedBytes: Long?): Boolean =
-    file.isFile && file.length() > 0L &&
-        (expectedBytes == null || expectedBytes <= 0L || file.length() == expectedBytes)
+internal fun isValidDownloadedFile(file: File, expectedBytes: Long?): Boolean = file.isFile && file.length() > 0L &&
+    (expectedBytes == null || expectedBytes <= 0L || file.length() == expectedBytes)
 
 @Entity(
     tableName = "download_assets",
@@ -38,7 +37,9 @@ interface DownloadAssetDao {
     @androidx.room.Query("SELECT * FROM download_assets ORDER BY updatedAtMillis DESC")
     fun observeAll(): Flow<List<DownloadAssetEntity>>
 
-    @androidx.room.Query("SELECT * FROM download_assets WHERE episodeId = :episodeId AND assetType = :assetType LIMIT 1")
+    @androidx.room.Query(
+        "SELECT * FROM download_assets WHERE episodeId = :episodeId AND assetType = :assetType LIMIT 1",
+    )
     suspend fun find(episodeId: Long, assetType: DownloadAssetType): DownloadAssetEntity?
 
     @androidx.room.Query("SELECT * FROM download_assets WHERE downloadId = :downloadId LIMIT 1")
@@ -50,7 +51,9 @@ interface DownloadAssetDao {
     @androidx.room.Query("DELETE FROM download_assets WHERE episodeId = :episodeId")
     suspend fun deleteByEpisodeId(episodeId: Long)
 
-    @androidx.room.Query("UPDATE download_assets SET status = :status, bytesDownloaded = :bytesDownloaded, totalBytes = :totalBytes, errorMessage = :errorMessage, updatedAtMillis = :updatedAtMillis, completedAtMillis = :completedAtMillis WHERE episodeId = :episodeId AND assetType = :assetType")
+    @androidx.room.Query(
+        "UPDATE download_assets SET status = :status, bytesDownloaded = :bytesDownloaded, totalBytes = :totalBytes, errorMessage = :errorMessage, updatedAtMillis = :updatedAtMillis, completedAtMillis = :completedAtMillis WHERE episodeId = :episodeId AND assetType = :assetType",
+    )
     suspend fun updateStatus(
         episodeId: Long,
         assetType: DownloadAssetType,
@@ -62,7 +65,9 @@ interface DownloadAssetDao {
         completedAtMillis: Long?,
     )
 
-    @androidx.room.Query("UPDATE download_assets SET status = :status, errorMessage = :errorMessage, retryCount = retryCount + 1, updatedAtMillis = :updatedAtMillis WHERE episodeId = :episodeId AND assetType = :assetType")
+    @androidx.room.Query(
+        "UPDATE download_assets SET status = :status, errorMessage = :errorMessage, retryCount = retryCount + 1, updatedAtMillis = :updatedAtMillis WHERE episodeId = :episodeId AND assetType = :assetType",
+    )
     suspend fun markRetrying(
         episodeId: Long,
         assetType: DownloadAssetType,

@@ -1,15 +1,14 @@
 package com.shapeshed.booth.ui
 
-import androidx.compose.ui.res.stringResource
-import com.shapeshed.booth.R
-
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import com.shapeshed.booth.R
 
 @Composable
 internal fun PodcastHomeTopBarTitle(
@@ -29,6 +28,7 @@ internal fun PodcastHomeTopBarTitle(
 ) {
     when {
         inboxSelectionMode -> Text(selectedInboxCount.toString())
+
         showPodcastAppSettings -> Text(
             when (podcastManagementCategory) {
                 PodcastManagementCategory.AUTO_REFRESH -> stringResource(R.string.auto_refresh)
@@ -37,14 +37,19 @@ internal fun PodcastHomeTopBarTitle(
                 null -> stringResource(R.string.podcast_settings)
             },
         )
+
         showDownloads -> Text(stringResource(R.string.downloads))
+
         showAllEpisodes -> Text(stringResource(R.string.all_episodes))
+
         showPodcastSettings -> Text(
             podcastSettingsTitle ?: stringResource(R.string.podcast_settings_title),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
+
         showDiscovery -> Text(discoveryTitle ?: stringResource(R.string.discover))
+
         !hasSelectedPodcast && !hasSelectedEpisode -> Text(
             when (selectedTab) {
                 PodcastTab.HOME -> stringResource(R.string.podcast_inbox)
@@ -71,7 +76,9 @@ internal fun PodcastHomeTopBarNavigationIcon(
         inboxSelectionMode -> IconButton(onClick = onCloseSelection) {
             Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.close_selection))
         }
-        showPodcastAppSettings || showDownloads || showAllEpisodes || showDiscovery || hasSelectedEpisode || hasSelectedPodcast -> {
+
+        showPodcastAppSettings || showDownloads || showAllEpisodes || showDiscovery || hasSelectedEpisode ||
+            hasSelectedPodcast -> {
             IconButton(onClick = onBack) {
                 Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back))
             }

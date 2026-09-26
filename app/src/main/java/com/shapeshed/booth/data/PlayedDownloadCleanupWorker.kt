@@ -8,17 +8,15 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.shapeshed.booth.di.boothWorkerEntryPoint
-import kotlinx.coroutines.flow.first
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.flow.first
 
 internal const val PLAYED_DOWNLOAD_CLEANUP_EPISODE_ID_INPUT = "playedDownloadCleanupEpisodeId"
 private const val PLAYED_DOWNLOAD_CLEANUP_DELAY_HOURS = 24L
 
 /** Removes a downloaded episode 24 hours after it was marked played. */
-class PlayedDownloadCleanupWorker(
-    appContext: Context,
-    workerParams: WorkerParameters,
-) : CoroutineWorker(appContext, workerParams) {
+class PlayedDownloadCleanupWorker(appContext: Context, workerParams: WorkerParameters) :
+    CoroutineWorker(appContext, workerParams) {
     override suspend fun doWork(): Result {
         val episodeId = inputData.getLong(PLAYED_DOWNLOAD_CLEANUP_EPISODE_ID_INPUT, 0L)
         if (episodeId <= 0L) return Result.failure()

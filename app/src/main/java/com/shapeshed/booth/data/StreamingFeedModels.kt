@@ -1,8 +1,8 @@
 package com.shapeshed.booth.data
 
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.Flow
 import java.io.InputStream
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collect
 
 sealed interface FeedParseEvent {
     data class FeedMetadataAvailable(val feed: RssFeed) : FeedParseEvent
@@ -33,10 +33,7 @@ interface StreamingFeedParser {
     fun parse(input: InputStream, feedUrl: String): Flow<FeedParseEvent>
 }
 
-suspend fun StreamingFeedParser.parseCompletely(
-    input: InputStream,
-    feedUrl: String,
-): RssParseResult {
+suspend fun StreamingFeedParser.parseCompletely(input: InputStream, feedUrl: String): RssParseResult {
     var failure: FeedParseEvent.Failed? = null
     var completed: RssParseResult? = null
     parse(input, feedUrl).collect { event ->

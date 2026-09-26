@@ -5,25 +5,23 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.shapeshed.booth.di.boothWorkerEntryPoint
+import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
-import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.withContext
 
 const val OPML_IMPORT_FILE_INPUT = "opmlFile"
 const val OPML_IMPORT_COMPLETED = "completed"
 const val OPML_IMPORT_TOTAL = "total"
 const val OPML_IMPORT_IMPORTED = "imported"
 
-class PodcastOpmlImportWorker(
-    appContext: Context,
-    workerParams: WorkerParameters,
-) : CoroutineWorker(appContext, workerParams) {
+class PodcastOpmlImportWorker(appContext: Context, workerParams: WorkerParameters) :
+    CoroutineWorker(appContext, workerParams) {
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val filePath = inputData.getString(OPML_IMPORT_FILE_INPUT)
             ?.takeIf(String::isNotBlank)

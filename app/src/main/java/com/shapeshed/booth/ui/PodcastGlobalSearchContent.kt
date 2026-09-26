@@ -1,46 +1,45 @@
 package com.shapeshed.booth.ui
 
-import androidx.compose.ui.res.stringResource
-import com.shapeshed.booth.R
-import com.shapeshed.booth.data.searchableCategories
-
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.shapeshed.booth.R
 import com.shapeshed.booth.data.EpisodeEntity
 import com.shapeshed.booth.data.PodcastEntity
 import com.shapeshed.booth.data.PodcastEpisodeSearchResult
 import com.shapeshed.booth.data.PodcastSearchResult
+import com.shapeshed.booth.data.searchableCategories
 
 internal enum class SearchEpisodeSort { RELEVANCE, NEWEST, OLDEST, TITLE }
 internal enum class SearchEpisodePlayedFilter { ALL, UNPLAYED, IN_PROGRESS, PLAYED }
@@ -74,7 +73,7 @@ internal fun PodcastGlobalSearchContent(
         normalizedQuery.isNotEmpty() && (
             podcast.title.contains(normalizedQuery, ignoreCase = true) ||
                 podcast.author.orEmpty().contains(normalizedQuery, ignoreCase = true)
-        )
+            )
     }
     val subscribedIds = subscriptions.map(PodcastEntity::id).toSet()
     val subscribedFeedUrls = subscriptions.map { it.feedUrl }.toSet()
@@ -84,7 +83,7 @@ internal fun PodcastGlobalSearchContent(
             normalizedQuery.isNotEmpty() && (
                 result.podcast.title.contains(normalizedQuery, ignoreCase = true) ||
                     result.podcast.author.orEmpty().contains(normalizedQuery, ignoreCase = true)
-            )
+                )
         }
         .distinctBy { it.podcast.feedUrl }
     val discoverablePodcasts = (if (query.isBlank()) popularPodcasts else remotePodcasts)
@@ -111,8 +110,13 @@ internal fun PodcastGlobalSearchContent(
         .let { results ->
             when (sort) {
                 SearchEpisodeSort.RELEVANCE -> results
-                SearchEpisodeSort.NEWEST -> results.sortedByDescending { it.episode.publishedAtMillis ?: Long.MIN_VALUE }
+
+                SearchEpisodeSort.NEWEST -> results.sortedByDescending {
+                    it.episode.publishedAtMillis ?: Long.MIN_VALUE
+                }
+
                 SearchEpisodeSort.OLDEST -> results.sortedBy { it.episode.publishedAtMillis ?: Long.MAX_VALUE }
+
                 SearchEpisodeSort.TITLE -> results.sortedBy { it.episode.title.lowercase() }
             }
         }
@@ -140,7 +144,9 @@ internal fun PodcastGlobalSearchContent(
                             }
                         },
                         trailingContent = { SubscribedPodcastIndicator() },
-                        colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+                        colors = ListItemDefaults.colors(
+                            containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                        ),
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onOpenPodcast(podcast.id) },
@@ -165,7 +171,9 @@ internal fun PodcastGlobalSearchContent(
                             }
                         },
                         trailingContent = { PendingSubscriptionIndicator() },
-                        colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+                        colors = ListItemDefaults.colors(
+                            containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                        ),
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onOpenRemotePodcast(result) },
@@ -183,7 +191,13 @@ internal fun PodcastGlobalSearchContent(
             if (discoverablePodcasts.isNotEmpty()) {
                 item(key = "discover-podcasts") {
                     Text(
-                        if (query.isBlank()) stringResource(R.string.popular_podcasts) else stringResource(R.string.discover_podcasts_results),
+                        if (query.isBlank()) {
+                            stringResource(
+                                R.string.popular_podcasts,
+                            )
+                        } else {
+                            stringResource(R.string.discover_podcasts_results)
+                        },
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                     )
@@ -206,7 +220,9 @@ internal fun PodcastGlobalSearchContent(
                                 Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.subscribe))
                             }
                         },
-                        colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+                        colors = ListItemDefaults.colors(
+                            containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                        ),
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onOpenRemotePodcast(result) },
@@ -221,10 +237,22 @@ internal fun PodcastGlobalSearchContent(
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 }
             }
-            if (isLoadingRemote) item(key = "remote-loading") {
-                Text(stringResource(R.string.searching_podcasts), modifier = Modifier.padding(16.dp))
+            if (isLoadingRemote) {
+                item(key = "remote-loading") {
+                    Text(stringResource(R.string.searching_podcasts), modifier = Modifier.padding(16.dp))
+                }
             }
-            if (error != null) item(key = "remote-error") { Text(podcastErrorMessage(error), color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp)) }
+            if (error !=
+                null
+            ) {
+                item(key = "remote-error") {
+                    Text(
+                        podcastErrorMessage(error),
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(16.dp),
+                    )
+                }
+            }
         } else {
             item(key = "episode-search-filters") {
                 EpisodeSearchFilters(
@@ -246,9 +274,15 @@ internal fun PodcastGlobalSearchContent(
                 }
             }
         }
-        if (query.length >= 2 && filteredEpisodes.isEmpty() && localPodcasts.isEmpty() && discoverablePodcasts.isEmpty() && !isLoadingRemote) {
+        if (query.length >= 2 && filteredEpisodes.isEmpty() && localPodcasts.isEmpty() && discoverablePodcasts.isEmpty() &&
+            !isLoadingRemote
+        ) {
             item(key = "no-results") {
-                Text(stringResource(R.string.no_results), modifier = Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    stringResource(R.string.no_results),
+                    modifier = Modifier.padding(16.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }
@@ -309,7 +343,10 @@ private fun EpisodeSearchFilters(
                 SearchEpisodeSort.entries.forEach { option ->
                     DropdownMenuItem(
                         text = { Text(option.localizedLabel()) },
-                        onClick = { onSortChange(option); sortExpanded.value = false },
+                        onClick = {
+                            onSortChange(option)
+                            sortExpanded.value = false
+                        },
                     )
                 }
             }
@@ -324,7 +361,10 @@ private fun EpisodeSearchFilters(
                 SearchEpisodePlayedFilter.entries.forEach { option ->
                     DropdownMenuItem(
                         text = { Text(option.localizedLabel()) },
-                        onClick = { onPlayedFilterChange(option); playedExpanded.value = false },
+                        onClick = {
+                            onPlayedFilterChange(option)
+                            playedExpanded.value = false
+                        },
                     )
                 }
             }
@@ -339,12 +379,18 @@ private fun EpisodeSearchFilters(
                 DropdownMenu(expanded = tagExpanded.value, onDismissRequest = { tagExpanded.value = false }) {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.all_tags)) },
-                        onClick = { onSelectedTagChange(null); tagExpanded.value = false },
+                        onClick = {
+                            onSelectedTagChange(null)
+                            tagExpanded.value = false
+                        },
                     )
                     availableTags.forEach { tag ->
                         DropdownMenuItem(
                             text = { Text(tag) },
-                            onClick = { onSelectedTagChange(tag); tagExpanded.value = false },
+                            onClick = {
+                                onSelectedTagChange(tag)
+                                tagExpanded.value = false
+                            },
                         )
                     }
                 }
@@ -370,10 +416,7 @@ private fun SearchEpisodePlayedFilter.localizedLabel(): String = when (this) {
 }
 
 @Composable
-private fun SearchEpisodeRow(
-    result: PodcastEpisodeSearchResult,
-    onOpen: () -> Unit,
-) {
+private fun SearchEpisodeRow(result: PodcastEpisodeSearchResult, onOpen: () -> Unit) {
     val episode = result.episode
     PodcastActionListItem(
         leadingContent = {

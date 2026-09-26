@@ -1,23 +1,38 @@
 package com.shapeshed.booth.ui
 
-import androidx.compose.ui.res.stringResource
-import com.shapeshed.booth.R
-
-import android.annotation.SuppressLint
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.StartOffset
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -26,233 +41,216 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.background
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAddCheck
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.FileDownload
-import androidx.compose.material.icons.rounded.FastForward
-import androidx.compose.material.icons.rounded.Label
-import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.Pause
-import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.rounded.KeyboardArrowUp
-import androidx.compose.material.icons.rounded.Replay10
-import androidx.compose.material.icons.rounded.Replay
-import androidx.compose.material.icons.rounded.Forward30
-import androidx.compose.material.icons.rounded.Notifications
-import androidx.compose.material.icons.rounded.OfflinePin
+import androidx.compose.material.icons.automirrored.rounded.ViewList
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Speed
-import androidx.compose.material.icons.rounded.Schedule
-import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.rounded.Sync
-import androidx.compose.material.icons.rounded.Wifi
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Block
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DragHandle
-import androidx.compose.material.icons.rounded.OpenInBrowser
-import androidx.compose.material.icons.rounded.Share
-import androidx.compose.material.icons.rounded.Stop
-import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.ErrorOutline
+import androidx.compose.material.icons.rounded.FastForward
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.ErrorOutline
-import androidx.compose.material.icons.rounded.Block
-import androidx.compose.material.icons.rounded.VideoLibrary
+import androidx.compose.material.icons.rounded.FileDownload
+import androidx.compose.material.icons.rounded.Forward30
 import androidx.compose.material.icons.rounded.Fullscreen
 import androidx.compose.material.icons.rounded.FullscreenExit
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.Inbox
-import androidx.compose.material.icons.automirrored.rounded.ViewList
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.Label
 import androidx.compose.material.icons.rounded.MoreHoriz
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.RssFeed
+import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.OfflinePin
+import androidx.compose.material.icons.rounded.OpenInBrowser
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Replay
+import androidx.compose.material.icons.rounded.Replay10
+import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.Stop
+import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.UploadFile
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.AssistChip
+import androidx.compose.material.icons.rounded.VideoLibrary
+import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.BottomSheetScaffold
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ButtonGroup
+import androidx.compose.material3.ButtonGroupDefaults
+import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.InputChip
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.Switch
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.ButtonGroup
-import androidx.compose.material3.ButtonGroupDefaults
-import androidx.compose.material3.ToggleButton
-import androidx.compose.material3.FloatingToolbarDefaults
-import androidx.compose.material3.HorizontalFloatingToolbar
-import androidx.compose.material3.BottomSheetScaffold
-import androidx.compose.material3.rememberBottomSheetScaffoldState
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingToolbarDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.HorizontalFloatingToolbar
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.InputChip
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ShortNavigationBar
 import androidx.compose.material3.ShortNavigationBarItem
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.StartOffset
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.media3.ui.AspectRatioFrameLayout
-import androidx.media3.ui.PlayerView
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.media3.ui.AspectRatioFrameLayout
+import androidx.media3.ui.PlayerView
 import coil3.compose.AsyncImage
 import com.shapeshed.booth.BoothApp
-import com.shapeshed.booth.data.EpisodeEntity
+import com.shapeshed.booth.R
 import com.shapeshed.booth.data.DownloadAssetEntity
 import com.shapeshed.booth.data.DownloadAssetStatus
 import com.shapeshed.booth.data.DownloadAssetType
 import com.shapeshed.booth.data.DownloadProgress
+import com.shapeshed.booth.data.EpisodeEntity
 import com.shapeshed.booth.data.PodcastDownloadManager
 import com.shapeshed.booth.data.PodcastEntity
 import com.shapeshed.booth.data.PodcastRefreshInterval
 import com.shapeshed.booth.data.PodcastRefreshNetwork
-import com.shapeshed.booth.data.PodcastSubscriptionsViewMode
-import com.shapeshed.booth.data.PodcastSearchProvider
-import com.shapeshed.booth.data.relativeTime
 import com.shapeshed.booth.data.PodcastRefreshWorker
-import kotlinx.coroutines.flow.emptyFlow
+import com.shapeshed.booth.data.PodcastSearchProvider
+import com.shapeshed.booth.data.PodcastSubscriptionsViewMode
+import com.shapeshed.booth.data.relativeTime
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import org.jsoup.nodes.Node
 import org.jsoup.nodes.TextNode
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 @Composable
 internal fun EpisodeRow(
@@ -312,12 +310,12 @@ internal fun EpisodeRow(
                     }
                 },
                 headlineContent = {
-                        EpisodeTitleBlock(
-                            episode,
-                            active,
-                            downloaded = downloaded,
-                            downloadProgress = downloadProgress,
-                        )
+                    EpisodeTitleBlock(
+                        episode,
+                        active,
+                        downloaded = downloaded,
+                        downloadProgress = downloadProgress,
+                    )
                 },
             )
         }
@@ -547,9 +545,15 @@ internal fun EpisodePlaybackButton(
 ) {
     val label = labelOverride ?: when {
         completed && durationMs != null && durationMs > 0L -> formatPlaybackMinutes(durationMs)
+
         completed -> stringResource(R.string.play)
-        durationMs != null && durationMs > 0L && positionMs > 0L -> formatPlaybackMinutes((durationMs - positionMs).coerceAtLeast(0L))
+
+        durationMs != null && durationMs > 0L && positionMs > 0L -> formatPlaybackMinutes(
+            (durationMs - positionMs).coerceAtLeast(0L),
+        )
+
         durationMs != null && durationMs > 0L -> formatPlaybackMinutes(durationMs)
+
         else -> stringResource(R.string.play)
     }
     val episodeProgress = durationMs
@@ -564,7 +568,13 @@ internal fun EpisodePlaybackButton(
             .height(if (prominent) 48.dp else 36.dp)
             .animateContentSize(animationSpec = tween(220)),
         contentPadding = PaddingValues(
-            start = if (prominent) 16.dp else if (isPlaying || isBuffering) 10.dp else 8.dp,
+            start = if (prominent) {
+                16.dp
+            } else if (isPlaying || isBuffering) {
+                10.dp
+            } else {
+                8.dp
+            },
             top = if (prominent) 8.dp else 4.dp,
             end = if (prominent) 16.dp else 12.dp,
             bottom = if (prominent) 8.dp else 4.dp,
@@ -601,7 +611,9 @@ internal fun EpisodePlaybackButton(
             } else {
                 Icon(
                     imageVector = if (completed) Icons.Rounded.Replay else Icons.Rounded.PlayArrow,
-                    contentDescription = stringResource(if (completed) R.string.replay_episode else R.string.play_episode),
+                    contentDescription = stringResource(
+                        if (completed) R.string.replay_episode else R.string.play_episode,
+                    ),
                     modifier = Modifier.size(16.dp),
                 )
             }
@@ -625,17 +637,31 @@ internal fun EpisodePlaybackButton(
 }
 
 @Composable
-internal fun EpisodeInlineProgressBar(
-    progress: Float,
-    active: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    val trackColor = if (active) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.24f)
-    else MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.24f)
+internal fun EpisodeInlineProgressBar(progress: Float, active: Boolean, modifier: Modifier = Modifier) {
+    val trackColor = if (active) {
+        MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.24f)
+    } else {
+        MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.24f)
+    }
     val progressColor = if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
     Canvas(modifier.height(2.dp)) {
-        drawLine(trackColor, Offset(0f, size.height / 2f), Offset(size.width, size.height / 2f), 2.dp.toPx(), StrokeCap.Butt)
-        drawLine(progressColor, Offset(0f, size.height / 2f), Offset(size.width * progress.coerceIn(0f, 1f), size.height / 2f), 2.dp.toPx(), StrokeCap.Butt)
+        drawLine(
+            trackColor,
+            Offset(0f, size.height / 2f),
+            Offset(size.width, size.height / 2f),
+            2.dp.toPx(),
+            StrokeCap.Butt,
+        )
+        drawLine(
+            progressColor,
+            Offset(0f, size.height / 2f),
+            Offset(
+                size.width * progress.coerceIn(0f, 1f),
+                size.height / 2f,
+            ),
+            2.dp.toPx(),
+            StrokeCap.Butt,
+        )
     }
 }
 
@@ -683,11 +709,7 @@ internal fun episodeDateLabel(publishedAtMillis: Long): String {
 }
 
 @Composable
-internal fun EpisodeMetadataLine(
-    episode: EpisodeEntity,
-    downloadProgress: DownloadProgress?,
-    active: Boolean,
-) {
+internal fun EpisodeMetadataLine(episode: EpisodeEntity, downloadProgress: DownloadProgress?, active: Boolean) {
     val metadataColor = if (active) {
         MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
     } else {
@@ -874,10 +896,16 @@ private fun EpisodeActionButtons(
             onClick = onDownload,
             modifier = Modifier.size(48.dp),
             colors = IconButtonDefaults.filledIconButtonColors(
-                containerColor = if (isDownloaded) MaterialTheme.colorScheme.primaryContainer
-                else MaterialTheme.colorScheme.surfaceContainerHighest,
-                contentColor = if (isDownloaded) MaterialTheme.colorScheme.onPrimaryContainer
-                else MaterialTheme.colorScheme.onSurfaceVariant,
+                containerColor = if (isDownloaded) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surfaceContainerHighest
+                },
+                contentColor = if (isDownloaded) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
             ),
         ) {
             when {
@@ -889,7 +917,12 @@ private fun EpisodeActionButtons(
                         strokeWidth = 2.dp,
                     )
                 }
-                isDownloaded -> Icon(Icons.Rounded.OfflinePin, contentDescription = stringResource(R.string.available_offline))
+
+                isDownloaded -> Icon(
+                    Icons.Rounded.OfflinePin,
+                    contentDescription = stringResource(R.string.available_offline),
+                )
+
                 else -> Icon(Icons.Rounded.FileDownload, contentDescription = stringResource(R.string.download_episode))
             }
         }
@@ -897,18 +930,30 @@ private fun EpisodeActionButtons(
             onClick = onToggleQueue,
             modifier = Modifier.size(48.dp),
             colors = IconButtonDefaults.filledIconButtonColors(
-                containerColor = if (isInQueue) MaterialTheme.colorScheme.primaryContainer
-                else MaterialTheme.colorScheme.surfaceContainerHighest,
-                contentColor = if (isInQueue) MaterialTheme.colorScheme.onPrimaryContainer
-                else MaterialTheme.colorScheme.onSurfaceVariant,
+                containerColor = if (isInQueue) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surfaceContainerHighest
+                },
+                contentColor = if (isInQueue) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
             ),
         ) {
             Icon(
-                imageVector = if (isInQueue) Icons.AutoMirrored.Rounded.PlaylistAddCheck
-                else Icons.AutoMirrored.Rounded.PlaylistAdd,
+                imageVector = if (isInQueue) {
+                    Icons.AutoMirrored.Rounded.PlaylistAddCheck
+                } else {
+                    Icons.AutoMirrored.Rounded.PlaylistAdd
+                },
                 contentDescription = stringResource(
-                    if (isInQueue) R.string.remove_from_up_next
-                    else R.string.add_to_up_next_accessibility,
+                    if (isInQueue) {
+                        R.string.remove_from_up_next
+                    } else {
+                        R.string.add_to_up_next_accessibility
+                    },
                 ),
             )
         }
@@ -920,10 +965,16 @@ private fun EpisodeActionButtons(
                     contentDescription = favoriteContentDescription
                 },
             colors = IconButtonDefaults.filledIconButtonColors(
-                containerColor = if (isFavorite) MaterialTheme.colorScheme.primaryContainer
-                else MaterialTheme.colorScheme.surfaceContainerHighest,
-                contentColor = if (isFavorite) MaterialTheme.colorScheme.onPrimaryContainer
-                else MaterialTheme.colorScheme.onSurfaceVariant,
+                containerColor = if (isFavorite) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surfaceContainerHighest
+                },
+                contentColor = if (isFavorite) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
             ),
         ) {
             Icon(
@@ -985,25 +1036,25 @@ internal fun PodcastEpisodeDetailContent(
                     color = MaterialTheme.colorScheme.surface,
                 ) {
                     EpisodeActionButtons(
-                    durationMs = durationMs,
-                    positionMs = positionMs,
-                    completed = completed,
-                    isPlaying = isPlaying,
-                    isBuffering = isBuffering,
-                    onPlay = onPlay,
-                    isDownloaded = isDownloaded,
-                    isFavorite = isFavorite,
-                    isInQueue = isInQueue,
-                    downloadProgress = downloadProgress,
-                    downloadRequested = downloadRequested,
-                    onDownload = {
-                        if (isDownloaded) {
-                            showRemoveDownloadConfirmation = true
-                        } else if (downloadProgress?.isActive != true) {
-                            downloadRequested = true
-                            onDownload()
-                        }
-                    },
+                        durationMs = durationMs,
+                        positionMs = positionMs,
+                        completed = completed,
+                        isPlaying = isPlaying,
+                        isBuffering = isBuffering,
+                        onPlay = onPlay,
+                        isDownloaded = isDownloaded,
+                        isFavorite = isFavorite,
+                        isInQueue = isInQueue,
+                        downloadProgress = downloadProgress,
+                        downloadRequested = downloadRequested,
+                        onDownload = {
+                            if (isDownloaded) {
+                                showRemoveDownloadConfirmation = true
+                            } else if (downloadProgress?.isActive != true) {
+                                downloadRequested = true
+                                onDownload()
+                            }
+                        },
                         onToggleQueue = onToggleQueue,
                         onToggleFavorite = onToggleFavorite,
                         modifier = Modifier.padding(bottom = 12.dp),
@@ -1216,8 +1267,8 @@ internal fun PodcastEpisodeDetailContent(
                         title = title,
                         modifier = Modifier
                             .widthIn(max = 400.dp)
-                        .fillMaxWidth()
-                        .aspectRatio(1f),
+                            .fillMaxWidth()
+                            .aspectRatio(1f),
                         contentScale = ContentScale.Fit,
                         onClick = artworkUrl?.takeIf(String::isNotBlank)?.let { { showArtworkViewer = true } },
                     )
@@ -1248,7 +1299,9 @@ internal fun PodcastEpisodeDetailContent(
                 ) { Text(stringResource(R.string.remove)) }
             },
             dismissButton = {
-                TextButton(onClick = { showRemoveDownloadConfirmation = false }) { Text(stringResource(R.string.cancel)) }
+                TextButton(onClick = {
+                    showRemoveDownloadConfirmation = false
+                }) { Text(stringResource(R.string.cancel)) }
             },
         )
     }
@@ -1274,15 +1327,20 @@ private fun downloadProgressLabel(progress: DownloadProgress): String {
         ?: stringResource(R.string.downloading)
     val remaining = when {
         fraction == null -> stringResource(R.string.estimating_time)
+
         fraction <= 0f || fraction >= 1f -> stringResource(R.string.almost_done)
+
         else -> {
             val elapsed = (android.os.SystemClock.elapsedRealtime() - progress.startedAtElapsedMs).coerceAtLeast(1L)
             val remainingMs = ((elapsed.toDouble() / fraction) * (1.0 - fraction)).toLong()
             val totalSeconds = (remainingMs / 1_000L).coerceAtLeast(1L)
             val minutes = totalSeconds / 60L
             val seconds = totalSeconds % 60L
-            if (minutes > 0L) stringResource(R.string.time_minutes_left, minutes, seconds)
-            else stringResource(R.string.time_seconds_left, seconds)
+            if (minutes > 0L) {
+                stringResource(R.string.time_minutes_left, minutes, seconds)
+            } else {
+                stringResource(R.string.time_seconds_left, seconds)
+            }
         }
     }
     return "$percent · $remaining"
@@ -1342,7 +1400,11 @@ internal fun PodcastArtwork(
     ) {
         if (imageUrl.isNullOrBlank()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(title.take(1).uppercase(), style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                Text(
+                    title.take(1).uppercase(),
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
             }
         } else {
             AsyncImage(

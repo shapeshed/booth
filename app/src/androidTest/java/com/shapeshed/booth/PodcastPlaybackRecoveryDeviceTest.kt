@@ -14,7 +14,6 @@ import com.shapeshed.booth.data.PodcastRepository
 import com.shapeshed.booth.data.SettingsStore
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
-import javax.inject.Inject
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.net.Inet4Address
@@ -24,6 +23,7 @@ import java.net.ServerSocket
 import java.util.Collections
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import javax.inject.Inject
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals

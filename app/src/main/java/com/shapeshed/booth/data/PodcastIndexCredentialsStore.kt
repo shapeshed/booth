@@ -3,15 +3,15 @@ package com.shapeshed.booth.data
 import android.content.Context
 import android.util.Base64
 import androidx.core.content.edit
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import java.nio.charset.StandardCharsets
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 data class PodcastIndexCredentials(val apiKey: String, val apiSecret: String)
 
@@ -44,7 +44,9 @@ class PodcastIndexCredentialsStore(context: Context) {
         val parts = decrypt(Base64.decode(encoded, Base64.NO_WRAP)).split('\u0000', limit = 2)
         if (parts.size == 2 && parts[0].isNotBlank() && parts[1].isNotBlank()) {
             PodcastIndexCredentials(parts[0], parts[1])
-        } else null
+        } else {
+            null
+        }
     }.getOrNull()
 
     private fun encrypt(value: String): ByteArray {
@@ -63,13 +65,15 @@ class PodcastIndexCredentialsStore(context: Context) {
         val store = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
         (store.getKey(KEY_ALIAS, null) as? SecretKey)?.let { return it }
         return KeyGenerator.getInstance(KEY_ALGORITHM, ANDROID_KEYSTORE).apply {
-            init(android.security.keystore.KeyGenParameterSpec.Builder(
-                KEY_ALIAS,
-                android.security.keystore.KeyProperties.PURPOSE_ENCRYPT or
-                    android.security.keystore.KeyProperties.PURPOSE_DECRYPT,
-            ).setBlockModes(android.security.keystore.KeyProperties.BLOCK_MODE_GCM)
-                .setEncryptionPaddings(android.security.keystore.KeyProperties.ENCRYPTION_PADDING_NONE)
-                .build())
+            init(
+                android.security.keystore.KeyGenParameterSpec.Builder(
+                    KEY_ALIAS,
+                    android.security.keystore.KeyProperties.PURPOSE_ENCRYPT or
+                        android.security.keystore.KeyProperties.PURPOSE_DECRYPT,
+                ).setBlockModes(android.security.keystore.KeyProperties.BLOCK_MODE_GCM)
+                    .setEncryptionPaddings(android.security.keystore.KeyProperties.ENCRYPTION_PADDING_NONE)
+                    .build(),
+            )
         }.generateKey()
     }
 

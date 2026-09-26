@@ -1,8 +1,8 @@
 package com.shapeshed.booth.ui
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import com.shapeshed.booth.R
 
 sealed interface PodcastUiError {
@@ -30,13 +30,21 @@ sealed interface PodcastUiError {
 @Composable
 internal fun podcastErrorMessage(error: PodcastUiError): String = when (error) {
     PodcastUiError.SearchFailed -> stringResource(R.string.error_search_failed)
+
     PodcastUiError.DiscoveryLoadFailed -> stringResource(R.string.error_discovery_load_failed)
+
     PodcastUiError.CategoryLoadFailed -> stringResource(R.string.error_category_load_failed)
+
     PodcastUiError.SubscribeFailed -> stringResource(R.string.error_subscribe_failed)
+
     PodcastUiError.PodcastLoadFailed -> stringResource(R.string.error_podcast_load_failed)
+
     PodcastUiError.EpisodeLoadFailed -> stringResource(R.string.error_episode_load_failed)
+
     PodcastUiError.OpmlReadFailed -> stringResource(R.string.error_opml_read_failed)
+
     PodcastUiError.NoPodcastFeeds -> stringResource(R.string.error_no_podcast_feeds)
+
     is PodcastUiError.ImportCompleted -> if (error.imported == error.total) {
         pluralStringResource(R.plurals.imported_podcasts, error.imported, error.imported)
     } else {
@@ -47,14 +55,24 @@ internal fun podcastErrorMessage(error: PodcastUiError): String = when (error) {
             error.total,
         )
     }
+
     PodcastUiError.ExportFailed -> stringResource(R.string.error_opml_export_failed)
+
     PodcastUiError.BackupImportFailed -> stringResource(R.string.error_backup_import_failed)
+
     PodcastUiError.BackupExportCompleted -> stringResource(R.string.backup_export_completed)
+
     is PodcastUiError.BackupImportCompleted -> stringResource(R.string.backup_import_completed, error.imported)
+
     PodcastUiError.RefreshFailed -> stringResource(R.string.error_refresh_failed)
+
     PodcastUiError.PartialRefreshFailed -> stringResource(R.string.error_partial_refresh_failed)
+
     PodcastUiError.RemovePodcastFailed -> stringResource(R.string.error_remove_podcast_failed)
+
     PodcastUiError.PlaybackConnectionFailed -> stringResource(R.string.error_playback_connection)
+
     PodcastUiError.PlaybackServerFailed -> stringResource(R.string.error_playback_server)
+
     PodcastUiError.PlaybackFailed -> stringResource(R.string.error_playback_failed)
 }

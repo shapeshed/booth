@@ -13,11 +13,7 @@ class PlayedDownloadCleanupWorkerTest {
         assertFalse(shouldRemovePlayedDownload(episode(completed = true)))
     }
 
-    private fun episode(
-        completed: Boolean,
-        localUri: String? = null,
-        localVideoUri: String? = null,
-    ) = EpisodeEntity(
+    private fun episode(completed: Boolean, localUri: String? = null, localVideoUri: String? = null) = EpisodeEntity(
         id = 1,
         podcastId = 1,
         guid = "episode-1",

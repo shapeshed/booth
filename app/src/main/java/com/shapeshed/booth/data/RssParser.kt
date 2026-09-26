@@ -6,11 +6,6 @@ import com.prof18.rssparser.RssParserBuilder
 import com.prof18.rssparser.model.RssChannel
 import com.prof18.rssparser.model.RssItem
 import com.shapeshed.booth.BuildConfig
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import org.jsoup.Jsoup
-import org.jsoup.parser.Parser
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.nio.charset.Charset
@@ -21,13 +16,14 @@ import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeFormatterBuilder
 import java.util.Locale
 import java.util.concurrent.TimeUnit
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.jsoup.Jsoup
+import org.jsoup.parser.Parser
 
 interface FeedParser {
-    suspend fun fetch(
-        feedUrl: String,
-        etag: String? = null,
-        lastModified: String? = null,
-    ): RssParseResult
+    suspend fun fetch(feedUrl: String, etag: String? = null, lastModified: String? = null): RssParseResult
     suspend fun parse(feedUrl: String, body: String): RssParseResult
 
     suspend fun discover(feedUrl: String): String? = null
@@ -41,10 +37,8 @@ data class RssParseResult(
     val notModified: Boolean = false,
 )
 
-class Prof18FeedParser private constructor(
-    private val parser: RssParser,
-    private val client: OkHttpClient? = null,
-) : FeedParser {
+class Prof18FeedParser private constructor(private val parser: RssParser, private val client: OkHttpClient? = null) :
+    FeedParser {
     constructor(client: OkHttpClient) : this(
         RssParserBuilder(callFactory = client).build(),
         client,
@@ -173,15 +167,17 @@ internal val FeedUserAgent = "Booth/${BuildConfig.VERSION_NAME} (Android; podcas
 
 class NotAFeedResponseException : IllegalArgumentException("The address returned a web page")
 
-class FeedHttpException(val statusCode: Int) : IllegalArgumentException(
-    "Feed request failed with HTTP $statusCode",
-)
+class FeedHttpException(val statusCode: Int) :
+    IllegalArgumentException(
+        "Feed request failed with HTTP $statusCode",
+    )
 
 class FeedResponseException(message: String, cause: Throwable? = null) : IllegalArgumentException(message, cause)
 
-class FeedResponseTooLargeException(val maxBytes: Long) : IllegalArgumentException(
-    "Feed response exceeded the $maxBytes byte limit",
-)
+class FeedResponseTooLargeException(val maxBytes: Long) :
+    IllegalArgumentException(
+        "Feed response exceeded the $maxBytes byte limit",
+    )
 
 class DuplicateFeedException : IllegalArgumentException("This feed has already been added")
 
@@ -244,10 +240,7 @@ private fun RssChannel.toParseResult(feedUrl: String, body: String? = null): Rss
     )
 }
 
-internal data class ExplicitContent(
-    val feed: Boolean?,
-    val items: List<Boolean?>,
-)
+internal data class ExplicitContent(val feed: Boolean?, val items: List<Boolean?>)
 
 /**
  * Apple defines itunes:explicit on the channel and optionally on each item. The item value is
@@ -419,32 +412,31 @@ private val HlsMimeTypes = setOf(
     "application/x-mpegURL".lowercase(),
 )
 
-private data class RssImageCandidate(
-    val url: String?,
-    val source: RssImageSource,
-)
+private data class RssImageCandidate(val url: String?, val source: RssImageSource)
 
 private fun RssItem.normalizedImage(
     articleUrl: String,
     summaryHtml: String?,
     itunesImage: String?,
-): RssImageCandidate =
-    sequenceOf(
-        // Prefer the podcast-specific episode artwork when supplied. Some feeds,
-        // including TWiT, publish a complete image here alongside a cropped
-        // media:thumbnail intended for small list previews.
-        RssImageCandidate(itunesImage, RssImageSource.FEED),
-        // Media RSS <media:thumbnail> is exposed here by rssparser. BBC News uses that field.
-        RssImageCandidate(image.cleanText(), RssImageSource.FEED),
-        RssImageCandidate(rawMediaContent?.url.takeIfImage(rawMediaContent?.type, rawMediaContent?.medium), RssImageSource.FEED),
-        RssImageCandidate(
-            (rawEnclosure?.url ?: audio).takeIfImage(rawEnclosure?.type, null),
-            RssImageSource.FEED,
-        ),
-        RssImageCandidate(summaryHtml.firstImageFromHtml(articleUrl), RssImageSource.BODY),
-    ).firstNotNullOfOrNull { candidate ->
-        candidate.url?.absoluteUrl(articleUrl)?.let { candidate.copy(url = it) }
-    } ?: RssImageCandidate(url = null, source = RssImageSource.NONE)
+): RssImageCandidate = sequenceOf(
+    // Prefer the podcast-specific episode artwork when supplied. Some feeds,
+    // including TWiT, publish a complete image here alongside a cropped
+    // media:thumbnail intended for small list previews.
+    RssImageCandidate(itunesImage, RssImageSource.FEED),
+    // Media RSS <media:thumbnail> is exposed here by rssparser. BBC News uses that field.
+    RssImageCandidate(image.cleanText(), RssImageSource.FEED),
+    RssImageCandidate(
+        rawMediaContent?.url.takeIfImage(rawMediaContent?.type, rawMediaContent?.medium),
+        RssImageSource.FEED,
+    ),
+    RssImageCandidate(
+        (rawEnclosure?.url ?: audio).takeIfImage(rawEnclosure?.type, null),
+        RssImageSource.FEED,
+    ),
+    RssImageCandidate(summaryHtml.firstImageFromHtml(articleUrl), RssImageSource.BODY),
+).firstNotNullOfOrNull { candidate ->
+    candidate.url?.absoluteUrl(articleUrl)?.let { candidate.copy(url = it) }
+} ?: RssImageCandidate(url = null, source = RssImageSource.NONE)
 
 private fun String?.takeIfImage(type: String?, medium: String?): String? {
     val cleaned = cleanText() ?: return null
@@ -481,12 +473,11 @@ private fun String.isHttpUrl(): Boolean = toHttpUrlOrNull()?.scheme in setOf("ht
 
 internal fun String?.cleanText(): String? = this?.trim()?.takeIf(String::isNotBlank)
 
-internal fun String.parseFeedDateMillis(): Long? =
-    sequenceOf(
-        { ZonedDateTime.parse(this, DateTimeFormatter.RFC_1123_DATE_TIME).toInstant().toEpochMilli() },
-        { ZonedDateTime.parse(this, RssDateTimeWithZoneName).toInstant().toEpochMilli() },
-        { OffsetDateTime.parse(this, DateTimeFormatter.ISO_OFFSET_DATE_TIME).toInstant().toEpochMilli() },
-    ).firstNotNullOfOrNull { parser -> runCatching(parser).getOrNull() }
+internal fun String.parseFeedDateMillis(): Long? = sequenceOf(
+    { ZonedDateTime.parse(this, DateTimeFormatter.RFC_1123_DATE_TIME).toInstant().toEpochMilli() },
+    { ZonedDateTime.parse(this, RssDateTimeWithZoneName).toInstant().toEpochMilli() },
+    { OffsetDateTime.parse(this, DateTimeFormatter.ISO_OFFSET_DATE_TIME).toInstant().toEpochMilli() },
+).firstNotNullOfOrNull { parser -> runCatching(parser).getOrNull() }
 
 private val RssDateTimeWithZoneName: DateTimeFormatter = DateTimeFormatterBuilder()
     .parseCaseInsensitive()
@@ -496,7 +487,15 @@ private val RssDateTimeWithZoneName: DateTimeFormatter = DateTimeFormatterBuilde
 fun stableFeedId(value: String): Long = stableId(canonicalFeedUrl(value))
 
 fun canonicalFeedUrl(value: String): String {
-    val normalized = value.trim().let { if (it.startsWith("http://") || it.startsWith("https://")) it else "https://$it" }
+    val normalized = value.trim().let {
+        if (it.startsWith("http://") ||
+            it.startsWith("https://")
+        ) {
+            it
+        } else {
+            "https://$it"
+        }
+    }
     return normalized.toHttpUrlOrNull()
         ?.newBuilder()
         ?.fragment(null)

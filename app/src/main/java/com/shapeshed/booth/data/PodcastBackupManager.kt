@@ -9,17 +9,17 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.shapeshed.booth.BuildConfig
-import java.util.Locale
-import kotlinx.coroutines.flow.first
-import org.json.JSONArray
-import org.json.JSONObject
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
-import kotlinx.coroutines.CancellationException
+import java.util.Locale
+import java.util.concurrent.TimeUnit
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
-import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.first
+import org.json.JSONArray
+import org.json.JSONObject
 
 /** Portable, schema-independent export of subscriptions and listening state. */
 class PodcastBackupManager(
@@ -59,7 +59,13 @@ class PodcastBackupManager(
         val downloadedEpisodeIds = repository.downloadAssets.first()
             .filter {
                 it.assetType == DownloadAssetType.AUDIO &&
-                    it.status in setOf(DownloadAssetStatus.QUEUED, DownloadAssetStatus.DOWNLOADING, DownloadAssetStatus.RETRYING, DownloadAssetStatus.COMPLETED)
+                    it.status in
+                    setOf(
+                        DownloadAssetStatus.QUEUED,
+                        DownloadAssetStatus.DOWNLOADING,
+                        DownloadAssetStatus.RETRYING,
+                        DownloadAssetStatus.COMPLETED,
+                    )
             }
             .mapTo(HashSet(), DownloadAssetEntity::episodeId)
         val episodeIndex = JSONArray()
@@ -89,7 +95,15 @@ class PodcastBackupManager(
         repository.queue.first().forEach { queueItem ->
             episodes.firstOrNull { it.id == queueItem.episodeId }?.let { episode ->
                 podcastsById[episode.podcastId]?.let { podcast ->
-                    queueJson.put(JSONObject().put("feedUrl", podcast.feedUrl).put("guid", episode.guid).put("audioUrl", episode.audioUrl).put("position", queueItem.position))
+                    queueJson.put(
+                        JSONObject().put(
+                            "feedUrl",
+                            podcast.feedUrl,
+                        ).put(
+                            "guid",
+                            episode.guid,
+                        ).put("audioUrl", episode.audioUrl).put("position", queueItem.position),
+                    )
                 }
             }
         }
@@ -218,14 +232,24 @@ class PodcastBackupManager(
                     skipEndSeconds = item.optInt("skipEndSeconds", existing?.skipEndSeconds ?: 0),
                     playbackSpeed = item.optionalDouble("playbackSpeed")?.toFloat() ?: existing?.playbackSpeed,
                     skipSilence = item.optionalBoolean("skipSilence") ?: existing?.skipSilence,
-                    includeInAutoRefresh = item.optBoolean("includeInAutoRefresh", existing?.includeInAutoRefresh ?: true),
+                    includeInAutoRefresh = item.optBoolean(
+                        "includeInAutoRefresh",
+                        existing?.includeInAutoRefresh ?: true,
+                    ),
                     // Backups created before the episode index was added cannot tell which feed
                     // items were already known. Keep those subscriptions safe from downloading
                     // the entire historical feed until the user explicitly enables this again.
-                    includeInAutoDownload = item.optBoolean("includeInAutoDownload", existing?.includeInAutoDownload ?: false) &&
-                        (hasEpisodeIndex || existing != null),
-                    includeInVideoDownload = item.optBoolean("includeInVideoDownload", existing?.includeInVideoDownload ?: true),
-                    includeInNotifications = item.optBoolean("includeInNotifications", existing?.includeInNotifications ?: false),
+                    includeInAutoDownload =
+                        item.optBoolean("includeInAutoDownload", existing?.includeInAutoDownload ?: false) &&
+                            (hasEpisodeIndex || existing != null),
+                    includeInVideoDownload = item.optBoolean(
+                        "includeInVideoDownload",
+                        existing?.includeInVideoDownload ?: true,
+                    ),
+                    includeInNotifications = item.optBoolean(
+                        "includeInNotifications",
+                        existing?.includeInNotifications ?: false,
+                    ),
                     includeInAutoQueue = item.optBoolean("includeInAutoQueue", existing?.includeInAutoQueue ?: false),
                     isSubscribed = true,
                     subscribedAtMillis = existing?.subscribedAtMillis ?: System.currentTimeMillis(),
@@ -272,8 +296,16 @@ class PodcastBackupManager(
                     ),
                 )
             }
-            val restored = repository.episodes(podcastId).first().firstOrNull { it.guid == guid || it.audioUrl == audioUrl }
-            if (restored != null && (item.optLong("positionMs", 0L) > 0L || item.optBoolean("completed", false) || item.optBoolean("favorite", false))) {
+            val restored = repository.episodes(podcastId).first().firstOrNull {
+                it.guid == guid ||
+                    it.audioUrl == audioUrl
+            }
+            if (restored != null &&
+                (
+                    item.optLong("positionMs", 0L) > 0L || item.optBoolean("completed", false) ||
+                        item.optBoolean("favorite", false)
+                    )
+            ) {
                 repository.restoreBackupPlayback(
                     restored.id,
                     item.optLong("positionMs", 0L).coerceAtLeast(0L),
@@ -294,8 +326,9 @@ class PodcastBackupManager(
             val podcastId = importedIds[item.optString("feedUrl").trim()] ?: continue
             val guid = item.optString("guid").trim()
             val audioUrl = item.optString("audioUrl").trim()
-            val episode = repository.episodes(podcastId).first().firstOrNull { it.guid == guid || it.audioUrl == audioUrl }
-                ?: continue
+            val episode =
+                repository.episodes(podcastId).first().firstOrNull { it.guid == guid || it.audioUrl == audioUrl }
+                    ?: continue
             downloadCandidates += episode
         }
 
@@ -358,18 +391,30 @@ class PodcastBackupManager(
             playbackSettings.optBooleanOrNull("skipSilence")?.let { settings.setPodcastSkipSilence(it) }
         }
         document.optJSONObject("globalSettings")?.let { global ->
-            global.optionalString("subscriptionsViewMode")?.toEnum<PodcastSubscriptionsViewMode>()?.let { settings.setPodcastSubscriptionsViewMode(it) }
+            global.optionalString("subscriptionsViewMode")?.toEnum<PodcastSubscriptionsViewMode>()?.let {
+                settings.setPodcastSubscriptionsViewMode(it)
+            }
             global.optionalString("selectedTab")?.let { settings.setPodcastSelectedTab(it) }
-            global.optionalString("refreshInterval")?.toEnum<PodcastRefreshInterval>()?.let { settings.setPodcastRefreshInterval(it) }
-            global.optionalString("refreshNetwork")?.toEnum<PodcastRefreshNetwork>()?.let { settings.setPodcastRefreshNetwork(it) }
+            global.optionalString("refreshInterval")?.toEnum<PodcastRefreshInterval>()?.let {
+                settings.setPodcastRefreshInterval(it)
+            }
+            global.optionalString("refreshNetwork")?.toEnum<PodcastRefreshNetwork>()?.let {
+                settings.setPodcastRefreshNetwork(it)
+            }
             global.optionalBoolean("notificationsEnabled")?.let { settings.setPodcastNotificationsEnabled(it) }
             global.optionalBoolean("autoQueueEnabled")?.let { settings.setPodcastAutoQueueEnabled(it) }
             global.optionalBoolean("downloadEpisodesAddedToUpNext")?.let {
                 settings.setPodcastDownloadEpisodesAddedToUpNext(it)
             }
-            global.optionalString("downloadNetwork")?.toEnum<PodcastDownloadNetwork>()?.let { settings.setPodcastDownloadNetwork(it) }
-            global.optionalString("downloadLimit")?.toEnum<PodcastDownloadLimit>()?.let { settings.setPodcastDownloadLimit(it) }
-            global.optionalString("deleteBeforeAutoDownload")?.toEnum<PodcastDeleteBeforeAutoDownload>()?.let { settings.setPodcastDeleteBeforeAutoDownload(it) }
+            global.optionalString("downloadNetwork")?.toEnum<PodcastDownloadNetwork>()?.let {
+                settings.setPodcastDownloadNetwork(it)
+            }
+            global.optionalString("downloadLimit")?.toEnum<PodcastDownloadLimit>()?.let {
+                settings.setPodcastDownloadLimit(it)
+            }
+            global.optionalString("deleteBeforeAutoDownload")?.toEnum<PodcastDeleteBeforeAutoDownload>()?.let {
+                settings.setPodcastDeleteBeforeAutoDownload(it)
+            }
             global.optionalBoolean("removePlayedDownloads")?.let { settings.setPodcastRemovePlayedDownloads(it) }
             global.optionalBoolean("downloadVideos")?.let { settings.setPodcastDownloadVideos(it) }
             global.optionalString("searchProvider")?.let { settings.setPodcastSearchProvider(it) }
@@ -410,7 +455,13 @@ class PodcastBackupManager(
     }
 }
 
-private fun JSONObject.optionalString(key: String): String? = if (isNull(key)) null else optString(key).takeIf { it.isNotBlank() }
+private fun JSONObject.optionalString(key: String): String? = if (isNull(key)) {
+    null
+} else {
+    optString(key).takeIf {
+        it.isNotBlank()
+    }
+}
 private fun JSONObject.optionalDouble(key: String): Double? = if (isNull(key) || !has(key)) null else optDouble(key)
 private fun JSONObject.optionalBoolean(key: String): Boolean? = if (isNull(key) || !has(key)) null else optBoolean(key)
 private fun JSONObject.optLongOrNull(key: String): Long? = if (isNull(key) || !has(key)) null else optLong(key)

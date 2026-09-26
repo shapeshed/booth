@@ -13,5 +13,7 @@ data class SleepTimerState(val totalMs: Long, val remainingMs: Long)
 object SleepTimerStore {
     private val _state = MutableStateFlow<SleepTimerState?>(null)
     val state: StateFlow<SleepTimerState?> = _state.asStateFlow()
-    fun set(value: SleepTimerState?) { _state.value = value }
+    fun set(value: SleepTimerState?) {
+        _state.value = value
+    }
 }

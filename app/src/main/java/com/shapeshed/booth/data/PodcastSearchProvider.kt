@@ -1,16 +1,16 @@
 package com.shapeshed.booth.data
 
 import android.util.Log
+import java.security.MessageDigest
+import java.text.Normalizer
+import java.time.Instant
+import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
-import java.security.MessageDigest
-import java.time.Instant
-import java.text.Normalizer
-import java.util.Locale
 
 class PodcastIndexSearchProvider(
     private val client: OkHttpClient,
@@ -18,10 +18,13 @@ class PodcastIndexSearchProvider(
     private val localeProvider: () -> Locale = { Locale.getDefault() },
     // This public search endpoint does not require credentials.
     private val baseUrl: String = "https://api.podcastindex.org/search",
-) : PodcastSearchProvider, PodcastDiscoveryProvider {
+) : PodcastSearchProvider,
+    PodcastDiscoveryProvider {
     override val supportsCategoryPaging: Boolean = true
+
     @Volatile
     private var categoryIdsByName: Map<String, String>? = null
+
     @Volatile
     private var categoryNamesById: Map<String, String>? = null
     override val id: String = "podcast-index"
@@ -83,53 +86,76 @@ class PodcastIndexSearchProvider(
         client.newCall(request(url).build()).execute().use { response ->
             if (!response.isSuccessful) error("Podcast discovery failed with HTTP ${response.code}")
             val feeds = JSONObject(response.body.string()).optJSONArray("feeds") ?: return@use emptyList()
-            buildList { for (index in 0 until feeds.length()) feeds.optJSONObject(index)?.let { add(parseResult(it, it.optString("url"))) } }
+            buildList {
+                for (index in 0 until feeds.length()) {
+                    feeds.optJSONObject(index)?.let {
+                        add(parseResult(it, it.optString("url")))
+                    }
+                }
+            }
         }
     }
 
-    override suspend fun browse(category: PodcastDiscoveryCategory): List<PodcastSearchResult> = withContext(Dispatchers.IO) {
-        if (!supportsPopularPodcasts) return@withContext emptyList()
-        runCatching { loadCategoryIds() }
-        val categoryId = resolveCategoryId(category)
-            ?: run {
-                Log.w(TAG, "Skipping category request; no Podcast Index ID for id=${category.id} title=${category.title}")
-                return@withContext emptyList()
+    override suspend fun browse(category: PodcastDiscoveryCategory): List<PodcastSearchResult> =
+        withContext(Dispatchers.IO) {
+            if (!supportsPopularPodcasts) return@withContext emptyList()
+            runCatching { loadCategoryIds() }
+            val categoryId = resolveCategoryId(category)
+                ?: run {
+                    Log.w(
+                        TAG,
+                        "Skipping category request; no Podcast Index ID for id=${category.id} title=${category.title}",
+                    )
+                    return@withContext emptyList()
+                }
+            val url = "https://api.podcastindex.org/api/1.0/recent/feeds".toHttpUrl()
+                .newBuilder()
+                .addQueryParameter("max", "100")
+                .addQueryParameter("cat", categoryId)
+                .addQueryParameter("lang", podcastIndexLanguageFilter(localeProvider()))
+                .build()
+            client.newCall(request(url).build()).execute().use { response ->
+                Log.d(TAG, "category request url=$url status=${response.code}")
+                if (!response.isSuccessful) {
+                    Log.e(TAG, "category request failed status=${response.code}")
+                    error("Podcast category request failed with HTTP ${response.code}")
+                }
+                val feeds = JSONObject(response.body.string()).optJSONArray("feeds") ?: return@use emptyList()
+                buildList {
+                    for (index in 0 until feeds.length()) {
+                        feeds.optJSONObject(index)?.let {
+                            add(parseResult(it, it.optString("url")))
+                        }
+                    }
+                }
             }
-        val url = "https://api.podcastindex.org/api/1.0/recent/feeds".toHttpUrl()
-            .newBuilder()
-            .addQueryParameter("max", "100")
-            .addQueryParameter("cat", categoryId)
-            .addQueryParameter("lang", podcastIndexLanguageFilter(localeProvider()))
-            .build()
-        client.newCall(request(url).build()).execute().use { response ->
-            Log.d(TAG, "category request url=$url status=${response.code}")
-            if (!response.isSuccessful) {
-                Log.e(TAG, "category request failed status=${response.code}")
-                error("Podcast category request failed with HTTP ${response.code}")
-            }
-            val feeds = JSONObject(response.body.string()).optJSONArray("feeds") ?: return@use emptyList()
-            buildList { for (index in 0 until feeds.length()) feeds.optJSONObject(index)?.let { add(parseResult(it, it.optString("url"))) } }
         }
-    }
 
-    override suspend fun browse(category: PodcastDiscoveryCategory, offset: Int): List<PodcastSearchResult> = withContext(Dispatchers.IO) {
-        if (!supportsPopularPodcasts) return@withContext emptyList()
-        runCatching { loadCategoryIds() }
-        val categoryId = resolveCategoryId(category)
-            ?: return@withContext emptyList()
-        val url = "https://api.podcastindex.org/api/1.0/recent/feeds".toHttpUrl()
-            .newBuilder()
-            .addQueryParameter("max", "100")
-            .addQueryParameter("cat", categoryId)
-            .addQueryParameter("offset", offset.toString())
-            .addQueryParameter("lang", podcastIndexLanguageFilter(localeProvider()))
-            .build()
-        client.newCall(request(url).build()).execute().use { response ->
-            if (!response.isSuccessful) error("Podcast category request failed with HTTP ${response.code}")
-            val feeds = JSONObject(response.body.string()).optJSONArray("feeds") ?: return@use emptyList()
-            buildList { for (index in 0 until feeds.length()) feeds.optJSONObject(index)?.let { add(parseResult(it, it.optString("url"))) } }
+    override suspend fun browse(category: PodcastDiscoveryCategory, offset: Int): List<PodcastSearchResult> =
+        withContext(Dispatchers.IO) {
+            if (!supportsPopularPodcasts) return@withContext emptyList()
+            runCatching { loadCategoryIds() }
+            val categoryId = resolveCategoryId(category)
+                ?: return@withContext emptyList()
+            val url = "https://api.podcastindex.org/api/1.0/recent/feeds".toHttpUrl()
+                .newBuilder()
+                .addQueryParameter("max", "100")
+                .addQueryParameter("cat", categoryId)
+                .addQueryParameter("offset", offset.toString())
+                .addQueryParameter("lang", podcastIndexLanguageFilter(localeProvider()))
+                .build()
+            client.newCall(request(url).build()).execute().use { response ->
+                if (!response.isSuccessful) error("Podcast category request failed with HTTP ${response.code}")
+                val feeds = JSONObject(response.body.string()).optJSONArray("feeds") ?: return@use emptyList()
+                buildList {
+                    for (index in 0 until feeds.length()) {
+                        feeds.optJSONObject(index)?.let {
+                            add(parseResult(it, it.optString("url")))
+                        }
+                    }
+                }
+            }
         }
-    }
 
     private fun resolveCategoryId(category: PodcastDiscoveryCategory): String? {
         category.id.toIntOrNull()?.let { return category.id }
@@ -170,7 +196,6 @@ class PodcastIndexSearchProvider(
         .lowercase(Locale.ROOT)
         .replace("&", "and")
         .replace(Regex("\\s+"), " ")
-
 
     private fun request(url: okhttp3.HttpUrl): Request.Builder {
         val builder = Request.Builder()

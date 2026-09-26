@@ -23,13 +23,9 @@ class PodcastDiscoveryCatalogTest {
 
         override suspend fun browse(shelf: PodcastDiscoveryShelf): List<PodcastSearchResult> = emptyList()
 
-        override suspend fun browse(category: PodcastDiscoveryCategory): List<PodcastSearchResult> =
-            browse(category, 0)
+        override suspend fun browse(category: PodcastDiscoveryCategory): List<PodcastSearchResult> = browse(category, 0)
 
-        override suspend fun browse(
-            category: PodcastDiscoveryCategory,
-            offset: Int,
-        ): List<PodcastSearchResult> {
+        override suspend fun browse(category: PodcastDiscoveryCategory, offset: Int): List<PodcastSearchResult> {
             lastOffset = offset
             return listOf(
                 PodcastSearchResult(

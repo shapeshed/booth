@@ -55,17 +55,23 @@ internal fun PodcastManagementScreen(
                 PodcastManagementCategory.AUTO_REFRESH -> PodcastToggleItem(
                     podcast = podcast,
                     checked = podcast.includeInAutoRefresh,
-                    onCheckedChange = { onPodcastFlagsChange(podcast, it, podcast.includeInAutoDownload, podcast.includeInNotifications) },
+                    onCheckedChange = {
+                        onPodcastFlagsChange(podcast, it, podcast.includeInAutoDownload, podcast.includeInNotifications)
+                    },
                 )
+
                 PodcastManagementCategory.AUTO_QUEUE -> PodcastToggleItem(
                     podcast = podcast,
                     checked = podcast.includeInAutoQueue,
                     onCheckedChange = { onPodcastAutoQueueChange(podcast, it) },
                 )
+
                 PodcastManagementCategory.NOTIFICATIONS -> PodcastToggleItem(
                     podcast = podcast,
                     checked = podcast.includeInNotifications,
-                    onCheckedChange = { onPodcastFlagsChange(podcast, podcast.includeInAutoRefresh, podcast.includeInAutoDownload, it) },
+                    onCheckedChange = {
+                        onPodcastFlagsChange(podcast, podcast.includeInAutoRefresh, podcast.includeInAutoDownload, it)
+                    },
                 )
             }
         }
@@ -73,11 +79,7 @@ internal fun PodcastManagementScreen(
 }
 
 @Composable
-private fun PodcastToggleItem(
-    podcast: PodcastEntity,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-) {
+private fun PodcastToggleItem(podcast: PodcastEntity, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     ListItem(
         trailingContent = { Switch(checked = checked, onCheckedChange = onCheckedChange) },
     ) { Text(podcast.title, maxLines = 2) }

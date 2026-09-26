@@ -48,7 +48,9 @@ internal fun PodcastHomeEpisodeActionsOverlay(
                     routeState.pendingEpisodeAction.value = null
                     routeState.queueReorderMode.value = true
                 }
-            } else null,
+            } else {
+                null
+            },
             onShare = {
                 action.linkUrl?.let { shareLink(context, action.episodeTitle, it) }
                 routeState.pendingEpisodeAction.value = null
@@ -60,14 +62,23 @@ internal fun PodcastHomeEpisodeActionsOverlay(
             onDownload = {
                 when (action) {
                     is PodcastEpisodeAction.Subscribed -> viewModel.download(context, action.episode.id)
-                    is PodcastEpisodeAction.Preview -> viewModel.downloadPreview(context, action.episode, action.podcast)
+
+                    is PodcastEpisodeAction.Preview -> viewModel.downloadPreview(
+                        context,
+                        action.episode,
+                        action.podcast,
+                    )
                 }
                 routeState.pendingEpisodeAction.value = null
             },
             onRemoveDownload = {
                 when (action) {
                     is PodcastEpisodeAction.Subscribed -> viewModel.removeDownload(context, action.episode.id)
-                    is PodcastEpisodeAction.Preview -> viewModel.preparePreviewEpisode(action.episode, action.podcast) { savedEpisode ->
+
+                    is PodcastEpisodeAction.Preview -> viewModel.preparePreviewEpisode(
+                        action.episode,
+                        action.podcast,
+                    ) { savedEpisode ->
                         viewModel.removeDownload(context, savedEpisode.id)
                     }
                 }
@@ -80,7 +91,12 @@ internal fun PodcastHomeEpisodeActionsOverlay(
                         is PodcastEpisodeAction.Subscribed -> viewModel.removeFromQueue(action.episode.id)
                         is PodcastEpisodeAction.Preview -> viewModel.removeFromQueue(action.episode.id)
                     }
-                    scope.launch { snackbarHostState.showSnackbar(context.getString(com.shapeshed.booth.R.string.removed_from_up_next), duration = SnackbarDuration.Short) }
+                    scope.launch {
+                        snackbarHostState.showSnackbar(
+                            context.getString(com.shapeshed.booth.R.string.removed_from_up_next),
+                            duration = SnackbarDuration.Short,
+                        )
+                    }
                 } else {
                     val showAddError = {
                         scope.launch {
@@ -88,7 +104,10 @@ internal fun PodcastHomeEpisodeActionsOverlay(
                         }
                     }
                     when (action) {
-                        is PodcastEpisodeAction.Subscribed -> viewModel.addToQueueFromInbox(action.episode.id, onError = { showAddError() })
+                        is PodcastEpisodeAction.Subscribed -> viewModel.addToQueueFromInbox(action.episode.id, onError = {
+                            showAddError()
+                        })
+
                         is PodcastEpisodeAction.Preview -> viewModel.addPreviewToQueue(
                             episode = action.episode,
                             podcast = action.podcast,
@@ -102,8 +121,14 @@ internal fun PodcastHomeEpisodeActionsOverlay(
                 when (action) {
                     is PodcastEpisodeAction.Subscribed -> if (played) {
                         viewModel.markPlayed(action.episode.id)
-                    } else viewModel.markUnplayed(action.episode.id)
-                    is PodcastEpisodeAction.Preview -> viewModel.preparePreviewEpisode(action.episode, action.podcast) { savedEpisode ->
+                    } else {
+                        viewModel.markUnplayed(action.episode.id)
+                    }
+
+                    is PodcastEpisodeAction.Preview -> viewModel.preparePreviewEpisode(
+                        action.episode,
+                        action.podcast,
+                    ) { savedEpisode ->
                         if (played) viewModel.markPlayed(savedEpisode.id) else viewModel.markUnplayed(savedEpisode.id)
                     }
                 }
@@ -115,7 +140,11 @@ internal fun PodcastHomeEpisodeActionsOverlay(
                         viewModel.markUnplayed(action.episode.id)
                         playbackViewModel.resetPositionIfCurrent(action.episode.id)
                     }
-                    is PodcastEpisodeAction.Preview -> viewModel.preparePreviewEpisode(action.episode, action.podcast) { savedEpisode ->
+
+                    is PodcastEpisodeAction.Preview -> viewModel.preparePreviewEpisode(
+                        action.episode,
+                        action.podcast,
+                    ) { savedEpisode ->
                         viewModel.markUnplayed(savedEpisode.id)
                         playbackViewModel.resetPositionIfCurrent(savedEpisode.id)
                     }

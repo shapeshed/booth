@@ -52,8 +52,11 @@ internal val AppLanguages = listOf(
 )
 
 private fun setAppLanguage(tag: String) {
-    val locales = if (tag.isBlank()) LocaleListCompat.getEmptyLocaleList()
-    else LocaleListCompat.forLanguageTags(tag)
+    val locales = if (tag.isBlank()) {
+        LocaleListCompat.getEmptyLocaleList()
+    } else {
+        LocaleListCompat.forLanguageTags(tag)
+    }
     AppCompatDelegate.setApplicationLocales(locales)
 }
 
@@ -81,13 +84,19 @@ internal fun LanguageSettingRow(modifier: Modifier = Modifier) {
                     LanguageOption(
                         label = stringResource(R.string.language_system_default),
                         selected = currentTag.isBlank(),
-                        onClick = { setAppLanguage(""); showDialog = false },
+                        onClick = {
+                            setAppLanguage("")
+                            showDialog = false
+                        },
                     )
                     AppLanguages.forEach { language ->
                         LanguageOption(
                             label = language.autonym,
                             selected = currentTag.equals(language.tag, ignoreCase = true),
-                            onClick = { setAppLanguage(language.tag); showDialog = false },
+                            onClick = {
+                                setAppLanguage(language.tag)
+                                showDialog = false
+                            },
                         )
                     }
                 }

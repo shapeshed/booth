@@ -2,49 +2,49 @@ package com.shapeshed.booth
 
 import android.app.PendingIntent
 import android.content.Intent
-import android.util.Log
-import java.io.File
-import androidx.core.net.toUri
 import android.os.Bundle
+import android.util.Log
+import androidx.concurrent.futures.CallbackToFutureAdapter
+import androidx.core.net.toUri
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
-import androidx.media3.common.ForwardingPlayer
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.session.MediaLibraryService
-import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.CommandButton
+import androidx.media3.session.DefaultMediaNotificationProvider
+import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
-import androidx.concurrent.futures.CallbackToFutureAdapter
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
-import com.shapeshed.booth.data.PodcastRepository
-import com.shapeshed.booth.data.PlaybackSkipPolicy
-import com.shapeshed.booth.data.orderedResumptionIds
+import com.shapeshed.booth.data.ACTION_SKIP_SILENCE_SET
 import com.shapeshed.booth.data.ACTION_SLEEP_TIMER_CANCEL
 import com.shapeshed.booth.data.ACTION_SLEEP_TIMER_SET
-import com.shapeshed.booth.data.ACTION_SKIP_SILENCE_SET
+import com.shapeshed.booth.data.PlaybackSkipPolicy
+import com.shapeshed.booth.data.PodcastRepository
 import com.shapeshed.booth.data.SKIP_SILENCE_ENABLED
 import com.shapeshed.booth.data.SLEEP_TIMER_DURATION_MS
 import com.shapeshed.booth.data.SleepTimerState
 import com.shapeshed.booth.data.SleepTimerStore
+import com.shapeshed.booth.data.orderedResumptionIds
 import com.shapeshed.booth.di.boothPlaybackEntryPoint
-import androidx.media3.common.util.UnstableApi
+import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 @UnstableApi
 class PodcastPlaybackService : MediaLibraryService() {
@@ -134,14 +134,10 @@ class PodcastPlaybackService : MediaLibraryService() {
         }
     }
 
-    private suspend fun mediaItem(episode: com.shapeshed.booth.data.EpisodeEntity): MediaItem {
-        return mediaItem(episode, preferRemote = false)
-    }
+    private suspend fun mediaItem(episode: com.shapeshed.booth.data.EpisodeEntity): MediaItem =
+        mediaItem(episode, preferRemote = false)
 
-    private suspend fun mediaItem(
-        episode: com.shapeshed.booth.data.EpisodeEntity,
-        preferRemote: Boolean,
-    ): MediaItem {
+    private suspend fun mediaItem(episode: com.shapeshed.booth.data.EpisodeEntity, preferRemote: Boolean): MediaItem {
         val podcast = repository.podcast(episode.podcastId)
         val podcastTitle = podcast?.title
         val downloadedAudio = repository.downloadAsset(
@@ -241,9 +237,14 @@ class PodcastPlaybackService : MediaLibraryService() {
                     Player.EVENT_PLAYBACK_STATE_CHANGED,
                     Player.EVENT_IS_PLAYING_CHANGED,
                 )
-            ) return
+            ) {
+                return
+            }
             if (events.contains(Player.EVENT_POSITION_DISCONTINUITY)) {
-                Log.d(TAG, "position discontinuity episode=${player.currentMediaItem?.mediaId} position=${player.currentPosition}")
+                Log.d(
+                    TAG,
+                    "position discontinuity episode=${player.currentMediaItem?.mediaId} position=${player.currentPosition}",
+                )
                 if (player.currentPosition <= 0L && currentMediaId != null) {
                     introAppliedMediaId = null
                     Log.d(TAG, "cleared intro skip guard after reset episode=$currentMediaId")
@@ -263,7 +264,10 @@ class PodcastPlaybackService : MediaLibraryService() {
             val duration = player.duration
             val position = player.currentPosition
             val target = PlaybackSkipPolicy.introPosition(position, skipMs, duration)
-            Log.d(TAG, "intro check episode=$episodeId position=$position skipMs=$skipMs duration=$duration target=$target")
+            Log.d(
+                TAG,
+                "intro check episode=$episodeId position=$position skipMs=$skipMs duration=$duration target=$target",
+            )
             if (target != position) {
                 player.seekTo(target)
             }
@@ -372,38 +376,37 @@ class PodcastPlaybackService : MediaLibraryService() {
             session: MediaSession,
             controller: MediaSession.ControllerInfo,
             isForPlayback: Boolean,
-        ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> =
-            CallbackToFutureAdapter.getFuture { completer ->
-                service.serviceScope.launch(Dispatchers.IO) {
-                    runCatching {
-                        val episodeId = boothPlaybackEntryPoint(service.application)
-                            .settings.podcastLastEpisodeId.first()
-                        val episode = episodeId?.let { service.repository.episode(it) }
-                        if (episode == null) {
-                            completer.set(
-                                MediaSession.MediaItemsWithStartPosition(emptyList(), 0, C.TIME_UNSET),
-                            )
-                        } else {
-                            val queuedEpisodes = service.repository.queue.first()
-                                .mapNotNull { service.repository.episode(it.episodeId) }
-                            val resumedEpisodeIds = orderedResumptionIds(
-                                activeEpisodeId = episode.id,
-                                queuedEpisodeIds = queuedEpisodes.map { it.id },
-                            )
-                            val episodesById = (queuedEpisodes + episode).associateBy { it.id }
-                            val resumedEpisodes = resumedEpisodeIds.mapNotNull(episodesById::get)
-                            completer.set(
-                                MediaSession.MediaItemsWithStartPosition(
-                                    resumedEpisodes.map { service.mediaItem(it) },
-                                    resumedEpisodes.indexOfFirst { it.id == episode.id },
-                                    episode.positionMs,
-                                ),
-                            )
-                        }
-                    }.onFailure(completer::setException)
-                }
-                "podcast-playback-resumption"
+        ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> = CallbackToFutureAdapter.getFuture { completer ->
+            service.serviceScope.launch(Dispatchers.IO) {
+                runCatching {
+                    val episodeId = boothPlaybackEntryPoint(service.application)
+                        .settings.podcastLastEpisodeId.first()
+                    val episode = episodeId?.let { service.repository.episode(it) }
+                    if (episode == null) {
+                        completer.set(
+                            MediaSession.MediaItemsWithStartPosition(emptyList(), 0, C.TIME_UNSET),
+                        )
+                    } else {
+                        val queuedEpisodes = service.repository.queue.first()
+                            .mapNotNull { service.repository.episode(it.episodeId) }
+                        val resumedEpisodeIds = orderedResumptionIds(
+                            activeEpisodeId = episode.id,
+                            queuedEpisodeIds = queuedEpisodes.map { it.id },
+                        )
+                        val episodesById = (queuedEpisodes + episode).associateBy { it.id }
+                        val resumedEpisodes = resumedEpisodeIds.mapNotNull(episodesById::get)
+                        completer.set(
+                            MediaSession.MediaItemsWithStartPosition(
+                                resumedEpisodes.map { service.mediaItem(it) },
+                                resumedEpisodes.indexOfFirst { it.id == episode.id },
+                                episode.positionMs,
+                            ),
+                        )
+                    }
+                }.onFailure(completer::setException)
             }
+            "podcast-playback-resumption"
+        }
 
         override fun onCustomCommand(
             session: MediaSession,
@@ -416,7 +419,9 @@ class PodcastPlaybackService : MediaLibraryService() {
                     val duration = args.getLong(SLEEP_TIMER_DURATION_MS).coerceAtLeast(1_000L)
                     service.startSleepTimer(duration)
                 }
+
                 ACTION_SLEEP_TIMER_CANCEL -> service.cancelSleepTimer()
+
                 ACTION_SKIP_SILENCE_SET -> service.player.setSkipSilenceEnabled(args.getBoolean(SKIP_SILENCE_ENABLED))
             }
             return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))

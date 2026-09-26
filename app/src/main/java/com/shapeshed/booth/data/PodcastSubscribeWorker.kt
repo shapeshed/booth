@@ -8,10 +8,10 @@ import androidx.work.CoroutineWorker
 import androidx.work.NetworkType
 import androidx.work.WorkerParameters
 import com.shapeshed.booth.BoothApp
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.util.concurrent.TimeUnit
 
 const val SUBSCRIBE_FEED_URL_INPUT = "feedUrl"
 const val SUBSCRIBE_TITLE_INPUT = "title"
@@ -21,10 +21,8 @@ const val SUBSCRIBE_APPLE_CATEGORY_IDS_INPUT = "appleCategoryIds"
 const val SUBSCRIBE_CATEGORY_PROVIDER_ID_INPUT = "categoryProviderId"
 
 /** Parses and persists one subscription away from the search/UI coroutine. */
-class PodcastSubscribeWorker(
-    appContext: Context,
-    workerParams: WorkerParameters,
-) : CoroutineWorker(appContext, workerParams) {
+class PodcastSubscribeWorker(appContext: Context, workerParams: WorkerParameters) :
+    CoroutineWorker(appContext, workerParams) {
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val feedUrl = inputData.getString(SUBSCRIBE_FEED_URL_INPUT)
             ?.takeIf(String::isNotBlank)

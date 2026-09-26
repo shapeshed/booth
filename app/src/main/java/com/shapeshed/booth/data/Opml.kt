@@ -5,23 +5,18 @@ import org.jsoup.parser.Parser
 
 private const val OpmlVersion = "2.0"
 
-data class OpmlFeed(
-    val title: String,
-    val url: String,
-    val tags: String?,
-)
+data class OpmlFeed(val title: String, val url: String, val tags: String?)
 
-fun parseOpmlFeeds(body: String): List<OpmlFeed> =
-    Jsoup.parse(body, "", Parser.xmlParser())
-        .select("outline[xmlUrl]")
-        .mapNotNull { outline ->
-            val url = outline.attr("xmlUrl").trim().takeIf { it.isNotBlank() } ?: return@mapNotNull null
-            OpmlFeed(
-                title = outline.attr("text").ifBlank { outline.attr("title") }.ifBlank { url },
-                url = url,
-                tags = outline.inheritedTags(),
-            )
-        }
+fun parseOpmlFeeds(body: String): List<OpmlFeed> = Jsoup.parse(body, "", Parser.xmlParser())
+    .select("outline[xmlUrl]")
+    .mapNotNull { outline ->
+        val url = outline.attr("xmlUrl").trim().takeIf { it.isNotBlank() } ?: return@mapNotNull null
+        OpmlFeed(
+            title = outline.attr("text").ifBlank { outline.attr("title") }.ifBlank { url },
+            url = url,
+            tags = outline.inheritedTags(),
+        )
+    }
 
 private fun org.jsoup.nodes.Element.inheritedTags(): String? {
     val parentTags = parents()
@@ -69,8 +64,7 @@ fun buildPodcastOpml(podcasts: List<PodcastEntity>): String = buildString {
     appendLine("</opml>")
 }
 
-private fun String.xmlEscaped(): String =
-    replace("&", "&amp;")
-        .replace("\"", "&quot;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
+private fun String.xmlEscaped(): String = replace("&", "&amp;")
+    .replace("\"", "&quot;")
+    .replace("<", "&lt;")
+    .replace(">", "&gt;")

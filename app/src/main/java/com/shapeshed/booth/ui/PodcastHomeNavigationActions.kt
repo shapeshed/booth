@@ -4,11 +4,7 @@ import com.shapeshed.booth.data.DownloadProgress
 import com.shapeshed.booth.data.EpisodeEntity
 import com.shapeshed.booth.data.PodcastEntity
 
-internal fun selectPodcastTab(
-    routeState: PodcastHomeRouteState,
-    viewModel: PodcastViewModel,
-    tab: PodcastTab,
-) {
+internal fun selectPodcastTab(routeState: PodcastHomeRouteState, viewModel: PodcastViewModel, tab: PodcastTab) {
     routeState.selectedTab.value = tab
     routeState.queueReorderMode.value = false
     viewModel.setPodcastSelectedTab(tab.name)
@@ -19,9 +15,7 @@ internal fun selectPodcastTab(
     routeState.selectedInboxIds.value = emptySet()
 }
 
-internal fun showSubscriptionsAfterImport(
-    routeState: PodcastHomeRouteState,
-) {
+internal fun showSubscriptionsAfterImport(routeState: PodcastHomeRouteState) {
     routeState.selectedTab.value = PodcastTab.SUBSCRIPTIONS
     routeState.selectedPodcastId.value = null
     routeState.selectedEpisodeId.value = null

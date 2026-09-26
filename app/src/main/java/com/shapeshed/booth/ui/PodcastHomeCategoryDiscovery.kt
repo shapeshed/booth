@@ -3,16 +3,10 @@ package com.shapeshed.booth.ui
 import com.shapeshed.booth.data.PodcastDiscoveryCategory
 import com.shapeshed.booth.data.PodcastEntity
 
-internal data class ResolvedLocalDiscoveryCategory(
-    val providerId: String,
-    val category: PodcastDiscoveryCategory,
-)
+internal data class ResolvedLocalDiscoveryCategory(val providerId: String, val category: PodcastDiscoveryCategory)
 
 /** Resolves a local category label to the directory category used for discovery. */
-internal fun localTagDiscoveryCategory(
-    title: String,
-    podcasts: List<PodcastEntity>,
-): ResolvedLocalDiscoveryCategory? {
+internal fun localTagDiscoveryCategory(title: String, podcasts: List<PodcastEntity>): ResolvedLocalDiscoveryCategory? {
     val normalizedTitle = title.trim()
     if (normalizedTitle.isBlank()) return null
 

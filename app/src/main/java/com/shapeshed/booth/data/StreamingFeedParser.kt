@@ -1,12 +1,17 @@
 package com.shapeshed.booth.data
 
+import java.io.IOException
+import java.io.InputStream
+import java.io.StringReader
+import java.util.Locale
+import javax.xml.parsers.SAXParserFactory
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.channelFlow
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.xml.sax.Attributes
@@ -15,11 +20,6 @@ import org.xml.sax.InputSource
 import org.xml.sax.SAXException
 import org.xml.sax.SAXParseException
 import org.xml.sax.ext.DefaultHandler2
-import java.io.IOException
-import java.io.InputStream
-import java.io.StringReader
-import java.util.Locale
-import javax.xml.parsers.SAXParserFactory
 
 private const val AtomNamespace = "http://www.w3.org/2005/Atom"
 private const val RdfNamespace = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -37,10 +37,23 @@ private val BasicItemFields = setOf(
 )
 private val RssItemFields = setOf("title", "link", "description", "date")
 private val AtomItemFields = setOf(
-    "id", "title", "link", "summary", "content", "published", "updated", "name",
+    "id",
+    "title",
+    "link",
+    "summary",
+    "content",
+    "published",
+    "updated",
+    "name",
 )
 private val ItunesItemFields = setOf(
-    "title", "summary", "subtitle", "author", "image", "duration", "explicit",
+    "title",
+    "summary",
+    "subtitle",
+    "author",
+    "image",
+    "duration",
+    "explicit",
 )
 private val DublinCoreItemFields = setOf("identifier", "creator", "date")
 private val BasicFeedFields = setOf("title", "link", "description", "summary", "image", "url", "explicit")
@@ -70,12 +83,20 @@ class SaxStreamingFeedParser(
 
     override fun parse(input: InputStream, feedUrl: String): Flow<FeedParseEvent> = channelFlow {
         val parsingContext = currentCoroutineContext()
-        val handler = Handler(feedUrl, maxItems, maxText, maxDepth, firstChunkSize, chunkSize,
-            { parsingContext.ensureActive() }, { event ->
+        val handler = Handler(
+            feedUrl,
+            maxItems,
+            maxText,
+            maxDepth,
+            firstChunkSize,
+            chunkSize,
+            { parsingContext.ensureActive() },
+            { event ->
                 if (!trySend(event).isSuccess) {
                     throw kotlinx.coroutines.CancellationException("Streaming feed consumer was cancelled")
                 }
-            })
+            },
+        )
         try {
             withContext(Dispatchers.IO) {
                 val factory = SAXParserFactory.newInstance().apply {
@@ -110,7 +131,13 @@ class SaxStreamingFeedParser(
 
     private class LimitedInputStream(private val delegate: InputStream, private val limit: Long) : InputStream() {
         private var count = 0L
-        override fun read(): Int = delegate.read().also { if (it >= 0 && ++count > limit) throw FeedResponseTooLargeException(limit) }
+        override fun read(): Int = delegate.read().also {
+            if (it >= 0 &&
+                ++count > limit
+            ) {
+                throw FeedResponseTooLargeException(limit)
+            }
+        }
         override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
             val read = delegate.read(buffer, offset, length)
             if (read > 0 && (count + read) > limit) throw FeedResponseTooLargeException(limit)
@@ -182,11 +209,13 @@ class SaxStreamingFeedParser(
                 if (name == "enclosure" ||
                     (name == "link" && attrs.getValue("rel").equals("enclosure", ignoreCase = true))
                 ) {
-                    current!!.chooseEnclosure(Enclosure(
-                        (attrs.getValue("url") ?: attrs.getValue("href"))?.absoluteUrl(elementBaseUrl),
-                        attrs.getValue("type"),
-                        attrs.getValue("length")?.toLongOrNull(),
-                    ))
+                    current!!.chooseEnclosure(
+                        Enclosure(
+                            (attrs.getValue("url") ?: attrs.getValue("href"))?.absoluteUrl(elementBaseUrl),
+                            attrs.getValue("type"),
+                            attrs.getValue("length")?.toLongOrNull(),
+                        ),
+                    )
                 }
                 if (isItemField(uri.orEmpty(), name) &&
                     !(uri == MediaRssNamespace && name == "content" && !isMediaImageElement(name, attrs)) &&
@@ -251,7 +280,11 @@ class SaxStreamingFeedParser(
                         entries += entry
                         pending += entry
                         if (!feedEventSent) emitFeed()
-                        if (pending.size >= if (entries.size <= firstChunkSize) firstChunkSize else chunkSize) emitChunk()
+                        if (pending.size >=
+                            if (entries.size <= firstChunkSize) firstChunkSize else chunkSize
+                        ) {
+                            emitChunk()
+                        }
                     } ?: publish(FeedParseEvent.Warning("Skipped item without a usable URL"))
                     current = null
                     clearField()
@@ -320,10 +353,9 @@ class SaxStreamingFeedParser(
             else -> false
         }
 
-        private fun isMediaImageElement(name: String, attrs: Attributes): Boolean =
-            name == "thumbnail" ||
-                attrs.getValue("medium").equals("image", ignoreCase = true) ||
-                attrs.getValue("type").orEmpty().startsWith("image/", ignoreCase = true)
+        private fun isMediaImageElement(name: String, attrs: Attributes): Boolean = name == "thumbnail" ||
+            attrs.getValue("medium").equals("image", ignoreCase = true) ||
+            attrs.getValue("type").orEmpty().startsWith("image/", ignoreCase = true)
 
         private fun emitFeed() {
             feedEventSent = true
@@ -337,7 +369,10 @@ class SaxStreamingFeedParser(
             }
         }
 
-        fun flush() { if (!feedEventSent) emitFeed(); emitChunk() }
+        fun flush() {
+            if (!feedEventSent) emitFeed()
+            emitChunk()
+        }
 
         private fun feed() = RssFeed(
             id = stableFeedId(url),
@@ -352,13 +387,14 @@ class SaxStreamingFeedParser(
 
         fun result() = RssParseResult(feed = feed(), entries = entries.toList())
 
-        override fun warning(exception: SAXParseException?) { publish(FeedParseEvent.Warning(exception?.message ?: "XML warning")) }
-
-        override fun startDTD(name: String?, publicId: String?, systemId: String?) {
-            throw SAXException("DOCTYPE is not supported")
+        override fun warning(exception: SAXParseException?) {
+            publish(FeedParseEvent.Warning(exception?.message ?: "XML warning"))
         }
-        override fun error(exception: SAXParseException?) { throw exception ?: SAXException("XML error") }
-        override fun fatalError(exception: SAXParseException?) { throw exception ?: SAXException("Malformed XML") }
+
+        override fun startDTD(name: String?, publicId: String?, systemId: String?): Unit =
+            throw SAXException("DOCTYPE is not supported")
+        override fun error(exception: SAXParseException?): Unit = throw exception ?: SAXException("XML error")
+        override fun fatalError(exception: SAXParseException?): Unit = throw exception ?: SAXException("Malformed XML")
     }
 
     private data class Enclosure(val url: String?, val type: String?, val length: Long?)
@@ -383,8 +419,7 @@ class SaxStreamingFeedParser(
             val currentType = enclosure?.type.orEmpty()
             val candidateType = candidate.type.orEmpty()
             if (currentUrl == null ||
-                (!currentType.startsWith("audio/") && candidateType.startsWith("audio/")
-                    )
+                (!currentType.startsWith("audio/") && candidateType.startsWith("audio/"))
             ) {
                 enclosure = candidate
             }
@@ -406,32 +441,50 @@ class SaxStreamingFeedParser(
         fun set(name: String, value: String, namespace: String, elementBaseUrl: String) {
             when (namespace to name) {
                 "" to "guid", "" to "id", "http://www.w3.org/2005/Atom" to "id",
-                "http://purl.org/dc/elements/1.1/" to "identifier" -> guid = value
+                "http://purl.org/dc/elements/1.1/" to "identifier",
+                -> guid = value
+
                 "" to "title", "http://purl.org/rss/1.0/" to "title",
-                "http://www.w3.org/2005/Atom" to "title" -> title = value
+                "http://www.w3.org/2005/Atom" to "title",
+                -> title = value
+
                 "" to "link", "http://purl.org/rss/1.0/" to "link" ->
                     if (value.isNotBlank()) link = value.absoluteUrl(elementBaseUrl) ?: value
+
                 "" to "description",
                 "http://purl.org/rss/1.0/" to "description",
                 "http://www.w3.org/2005/Atom" to "summary",
                 "http://www.w3.org/2005/Atom" to "content",
-                "http://purl.org/rss/1.0/modules/content/" to "encoded" -> if (value.isNotBlank()) summary = value
+                "http://purl.org/rss/1.0/modules/content/" to "encoded",
+                -> if (value.isNotBlank()) summary = value
+
                 "" to "pubdate", "" to "published", "" to "updated",
                 "http://purl.org/rss/1.0/" to "date",
                 "http://www.w3.org/2005/Atom" to "published", "http://www.w3.org/2005/Atom" to "updated",
-                "http://purl.org/dc/elements/1.1/" to "date" -> date = value
+                "http://purl.org/dc/elements/1.1/" to "date",
+                -> date = value
+
                 "" to "author", "" to "name", AtomNamespace to "name",
-                "http://purl.org/dc/elements/1.1/" to "creator" -> author = value
+                "http://purl.org/dc/elements/1.1/" to "creator",
+                -> author = value
+
                 ItunesNamespace to "title" -> if (title.isNullOrBlank() && value.isNotBlank()) title = value
+
                 ItunesNamespace to "summary",
-                ItunesNamespace to "subtitle" -> if (summary.isNullOrBlank() && value.isNotBlank()) summary = value
+                ItunesNamespace to "subtitle",
+                -> if (summary.isNullOrBlank() && value.isNotBlank()) summary = value
+
                 ItunesNamespace to "author" -> if (author.isNullOrBlank() && value.isNotBlank()) author = value
+
                 ItunesNamespace to "image",
                 MediaRssNamespace to "content",
-                MediaRssNamespace to "thumbnail" -> {
+                MediaRssNamespace to "thumbnail",
+                -> {
                     setImage(value, namespace)
                 }
+
                 ItunesNamespace to "duration" -> duration = value
+
                 ItunesNamespace to "explicit" -> explicit = parseFeedBoolean(value)
             }
         }
@@ -467,15 +520,11 @@ class SaxStreamingFeedParser(
                 explicit = explicit,
             )
         }
-
     }
-
 }
 
-private class ParserLimitException(
-    val limitName: String,
-    val limit: Long,
-) : IllegalArgumentException("Parser limit exceeded: $limitName ($limit)")
+private class ParserLimitException(val limitName: String, val limit: Long) :
+    IllegalArgumentException("Parser limit exceeded: $limitName ($limit)")
 
 private fun parseFeedBoolean(value: String): Boolean? = when (value.lowercase(Locale.ROOT)) {
     "true", "yes", "1", "explicit" -> true

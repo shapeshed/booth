@@ -1,9 +1,9 @@
 package com.shapeshed.booth.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -32,7 +32,7 @@ import com.shapeshed.booth.ui.theme.BoothAppTheme
 @Preview(name = "Medium", device = "spec:width=610dp,height=800dp,dpi=420")
 @Preview(name = "Expanded", device = "spec:width=900dp,height=800dp,dpi=420")
 @Composable
-fun BoothAdaptiveLayoutScreenshot() {
+private fun BoothAdaptiveLayoutScreenshot() {
     BoothAppTheme(dynamicColor = false) {
         Surface(modifier = Modifier.fillMaxSize()) {
             Column(

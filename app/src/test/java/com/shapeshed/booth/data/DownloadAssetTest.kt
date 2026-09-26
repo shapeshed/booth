@@ -52,5 +52,4 @@ class DownloadAssetTest {
             ).containsKey(42L),
         )
     }
-
 }

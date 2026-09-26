@@ -53,8 +53,11 @@ internal fun PodcastHomeInboxContent(
             selectedEpisodeIds = selectedInboxIds,
             onToggleSelection = { episodeId ->
                 onSelectedInboxIdsChange(
-                    if (episodeId in selectedInboxIds) selectedInboxIds - episodeId
-                    else selectedInboxIds + episodeId,
+                    if (episodeId in selectedInboxIds) {
+                        selectedInboxIds - episodeId
+                    } else {
+                        selectedInboxIds + episodeId
+                    },
                 )
             },
             onRefresh = onRefresh,

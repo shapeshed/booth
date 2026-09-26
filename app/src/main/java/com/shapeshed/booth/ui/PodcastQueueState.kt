@@ -1,9 +1,6 @@
 package com.shapeshed.booth.ui
 
-internal data class QueueRemoval<T>(
-    val item: T,
-    val originalIndex: Int,
-)
+internal data class QueueRemoval<T>(val item: T, val originalIndex: Int)
 
 internal fun <T> removeQueueItem(items: List<T>, item: T): Pair<List<T>, QueueRemoval<T>>? {
     val index = items.indexOf(item)
@@ -11,10 +8,9 @@ internal fun <T> removeQueueItem(items: List<T>, item: T): Pair<List<T>, QueueRe
     return items.filterIndexed { itemIndex, _ -> itemIndex != index } to QueueRemoval(item, index)
 }
 
-internal fun <T> restoreQueueItem(items: List<T>, removal: QueueRemoval<T>): List<T> =
-    items.toMutableList().apply {
-        add(removal.originalIndex.coerceIn(0, size), removal.item)
-    }
+internal fun <T> restoreQueueItem(items: List<T>, removal: QueueRemoval<T>): List<T> = items.toMutableList().apply {
+    add(removal.originalIndex.coerceIn(0, size), removal.item)
+}
 
 internal fun <T> reorderQueueItem(items: List<T>, item: T, target: T): List<T> {
     val itemIndex = items.indexOf(item)

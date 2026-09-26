@@ -6,287 +6,285 @@ import android.os.Build
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.StartOffset
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.consumeWindowInsets
-import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
-import androidx.compose.foundation.background
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.FileDownload
-import androidx.compose.material.icons.rounded.FastForward
-import androidx.compose.material.icons.rounded.Label
-import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.Pause
-import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.rounded.KeyboardArrowUp
-import androidx.compose.material.icons.rounded.Replay10
-import androidx.compose.material.icons.rounded.Replay
-import androidx.compose.material.icons.rounded.Forward30
-import androidx.compose.material.icons.rounded.Notifications
-import androidx.compose.material.icons.rounded.OfflinePin
+import androidx.compose.material.icons.automirrored.rounded.ViewList
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Speed
-import androidx.compose.material.icons.rounded.Schedule
-import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.rounded.Sync
-import androidx.compose.material.icons.rounded.Wifi
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.OpenInBrowser
-import androidx.compose.material.icons.rounded.Share
-import androidx.compose.material.icons.rounded.Stop
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.ErrorOutline
+import androidx.compose.material.icons.rounded.FastForward
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.ErrorOutline
-import androidx.compose.material.icons.rounded.Block
-import androidx.compose.material.icons.rounded.VideoLibrary
+import androidx.compose.material.icons.rounded.FileDownload
+import androidx.compose.material.icons.rounded.Forward30
 import androidx.compose.material.icons.rounded.Fullscreen
 import androidx.compose.material.icons.rounded.FullscreenExit
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.Inbox
-import androidx.compose.material.icons.automirrored.rounded.ViewList
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.Label
 import androidx.compose.material.icons.rounded.MoreHoriz
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.RssFeed
+import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.OfflinePin
+import androidx.compose.material.icons.rounded.OpenInBrowser
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Replay
+import androidx.compose.material.icons.rounded.Replay10
+import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.Stop
+import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.UploadFile
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.AssistChip
+import androidx.compose.material.icons.rounded.VideoLibrary
+import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.BottomSheetScaffold
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ButtonGroup
+import androidx.compose.material3.ButtonGroupDefaults
+import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingToolbarDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.InputChip
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.SearchBarValue
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.Switch
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.FilledIconButton
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.ButtonGroup
-import androidx.compose.material3.ButtonGroupDefaults
-import androidx.compose.material3.ToggleButton
-import androidx.compose.material3.FloatingToolbarDefaults
-import androidx.compose.material3.HorizontalFloatingToolbar
-import androidx.compose.material3.BottomSheetScaffold
-import androidx.compose.material3.rememberBottomSheetScaffoldState
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.NavigationRail
-import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.ShortNavigationBar
 import androidx.compose.material3.ShortNavigationBarItem
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.material3.adaptive.navigation3.ListDetailSceneStrategy
 import androidx.compose.material3.adaptive.navigation3.rememberListDetailSceneStrategy
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.navigation3.runtime.entryProvider
-import androidx.navigation3.runtime.NavKey
-import androidx.navigation3.runtime.rememberNavBackStack
-import androidx.navigation3.ui.NavDisplay
-import androidx.compose.foundation.text.input.rememberTextFieldState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.StartOffset
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.zIndex
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.media3.ui.AspectRatioFrameLayout
-import androidx.media3.ui.PlayerView
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.ui.AspectRatioFrameLayout
+import androidx.media3.ui.PlayerView
+import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.runtime.rememberNavBackStack
+import androidx.navigation3.ui.NavDisplay
+import androidx.paging.compose.collectAsLazyPagingItems
 import coil3.compose.AsyncImage
-import com.shapeshed.booth.data.EpisodeEntity
-import com.shapeshed.booth.data.Episode
+import com.shapeshed.booth.R
+import com.shapeshed.booth.data.APPLE_DIRECTORY_PROVIDER_ID
 import com.shapeshed.booth.data.DownloadAssetEntity
 import com.shapeshed.booth.data.DownloadAssetStatus
 import com.shapeshed.booth.data.DownloadAssetType
 import com.shapeshed.booth.data.DownloadProgress
+import com.shapeshed.booth.data.Episode
+import com.shapeshed.booth.data.EpisodeEntity
+import com.shapeshed.booth.data.PodcastDiscoveryCategories
+import com.shapeshed.booth.data.PodcastDiscoveryCategory
 import com.shapeshed.booth.data.PodcastDownloadManager
 import com.shapeshed.booth.data.PodcastEntity
-import com.shapeshed.booth.data.searchableCategories
-import com.shapeshed.booth.data.displayCategories
-import com.shapeshed.booth.data.podcastTags
-import com.shapeshed.booth.data.APPLE_DIRECTORY_PROVIDER_ID
+import com.shapeshed.booth.data.PodcastEpisodeSearchResult
 import com.shapeshed.booth.data.PodcastRefreshInterval
 import com.shapeshed.booth.data.PodcastRefreshNetwork
-import com.shapeshed.booth.data.PodcastSubscriptionsViewMode
+import com.shapeshed.booth.data.PodcastRefreshWorker
 import com.shapeshed.booth.data.PodcastSearchProvider
 import com.shapeshed.booth.data.PodcastSearchResult
-import com.shapeshed.booth.data.PodcastEpisodeSearchResult
-import com.shapeshed.booth.data.PodcastDiscoveryCategory
-import com.shapeshed.booth.data.PodcastDiscoveryCategories
 import com.shapeshed.booth.data.PodcastSubscriptionProgressStore
-import com.shapeshed.booth.data.isInProgress
-import com.shapeshed.booth.data.isAdded
 import com.shapeshed.booth.data.PodcastSubscriptionStage
+import com.shapeshed.booth.data.PodcastSubscriptionsViewMode
 import com.shapeshed.booth.data.canonicalFeedUrl
+import com.shapeshed.booth.data.displayCategories
+import com.shapeshed.booth.data.isAdded
+import com.shapeshed.booth.data.isInProgress
+import com.shapeshed.booth.data.podcastTags
 import com.shapeshed.booth.data.relativeTime
-import com.shapeshed.booth.data.PodcastRefreshWorker
+import com.shapeshed.booth.data.searchableCategories
 import com.shapeshed.booth.data.shouldSyncDownloads
-import kotlinx.coroutines.flow.emptyFlow
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import org.jsoup.nodes.Node
 import org.jsoup.nodes.TextNode
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
-import androidx.compose.ui.res.stringResource
-import com.shapeshed.booth.R
 
 internal enum class PodcastSortOrder { LAST_UPDATED, A_TO_Z }
 
@@ -377,6 +375,7 @@ internal val PodcastEpisodeAction.hasPlaybackPosition: Boolean
 // Material's 8dp spacing rhythm for adjacent card-like list items.
 internal val PodcastListItemSpacing = 8.dp
 internal val PodcastEpisodeArtworkSize = 80.dp
+
 // Require an intentional horizontal gesture so vertical list scrolling does not dismiss rows.
 internal const val SwipeToDismissThresholdFraction = 0.5f
 internal val LocalPodcastMiniPlayerInset = compositionLocalOf { 0.dp }
@@ -466,6 +465,7 @@ fun PodcastHomeScreen(
                     viewModel.loadCategory(category)
                 }
             }
+
             else -> Unit
         }
     }
@@ -726,12 +726,16 @@ fun PodcastHomeScreen(
         val popped = topLevelBackStack.removeLastOrNull() ?: return
         when (popped) {
             is PodcastNavigationKey.DiscoveryEpisode -> viewModel.closePreviewEpisode()
+
             is PodcastNavigationKey.DiscoveryCategory -> viewModel.closeCategory()
+
             is PodcastNavigationKey.DiscoveryPodcast -> viewModel.closePreview()
+
             PodcastNavigationKey.GlobalSearch -> {
                 viewModel.clearGlobalSearch()
                 scope.launch { globalSearchBarState.animateToCollapsed() }
             }
+
             else -> Unit
         }
         if (topLevelBackStack.lastOrNull() == PodcastNavigationKey.GlobalSearch) {
@@ -741,11 +745,13 @@ fun PodcastHomeScreen(
             is PodcastNavigationKey.EpisodeDetail -> {
                 selectedEpisodeId = destination.episodeId
             }
+
             is PodcastNavigationKey.PodcastDetail -> {
                 selectedEpisodeId = null
                 selectedPodcastId = destination.podcastId
                 podcastDetailPageId = destination.podcastId
             }
+
             else -> {
                 selectedEpisodeId = null
                 selectedPodcastId = null
@@ -782,7 +788,9 @@ fun PodcastHomeScreen(
         viewModel.backupEvents.collect { event ->
             val message = when (event) {
                 PodcastBackupEvent.ImportStarted -> resources.getString(R.string.backup_import_started)
+
                 PodcastBackupEvent.Exported -> resources.getString(R.string.backup_export_completed)
+
                 is PodcastBackupEvent.Imported -> resources.getString(
                     R.string.backup_import_completed,
                     event.subscriptions,
@@ -837,15 +845,16 @@ fun PodcastHomeScreen(
     LaunchedEffect(subscriptionProgress) {
         subscriptionProgress.forEach { (feedUrl, result) ->
             if (result.stage != PodcastSubscriptionStage.FAILED ||
-                feedUrl in notifiedSubscriptionFailures) {
+                feedUrl in notifiedSubscriptionFailures
+            ) {
                 return@forEach
             }
             notifiedSubscriptionFailures = notifiedSubscriptionFailures + feedUrl
             val title = result.title
                 ?: pendingGlobalSubscriptions
-                .firstOrNull { it.podcast.feedUrl == feedUrl }
-                ?.podcast
-                ?.title
+                    .firstOrNull { it.podcast.feedUrl == feedUrl }
+                    ?.podcast
+                    ?.title
                 ?: podcastFallback
             val message = String.format(Locale.getDefault(), couldNotAddPodcastFormat, title)
             if (result.stage == PodcastSubscriptionStage.FAILED) {
@@ -989,6 +998,7 @@ fun PodcastHomeScreen(
             modifier = Modifier.fillMaxSize(),
         )
     }
+
     @Composable
     fun SettingsContent() {
         PodcastHomeSettingsDestination(
@@ -1035,939 +1045,1052 @@ fun PodcastHomeScreen(
             modifier = when {
                 (atRoot && selectedTab == PodcastTab.SUBSCRIPTIONS) || showAllEpisodes ->
                     Modifier.nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
+
                 atRoot || showAllEpisodes || showScrollableDetail ->
                     Modifier.nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
+
                 else -> Modifier
             },
             navigationRailStartPadding = navigationRailStartPadding,
-        snackbarHost = {
-            SnackbarHost(
-                hostState = snackbarHostState,
-                modifier = Modifier.zIndex(10f),
-            )
-        },
-        topBar = {
-            AnimatedContent(
-                targetState = inboxSelectionMode,
-                transitionSpec = {
-                    fadeIn(
-                        animationSpec = toolbarMotionScheme.defaultEffectsSpec(),
-                    ) togetherWith fadeOut(
-                        animationSpec = toolbarMotionScheme.defaultEffectsSpec(),
-                    )
-                },
-                label = "inbox selection toolbar",
-            ) { selectionMode ->
-            Column {
-            if (atRoot && selectedTab == PodcastTab.SUBSCRIPTIONS && !selectionMode) {
-                TopAppBar(
-                    title = {
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = SearchBarDefaults.inputFieldShape,
-                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        ) {
-                            SearchBarDefaults.InputField(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .focusRequester(globalSearchFocusRequester),
-                                textFieldState = globalSearchTextFieldState,
-                                searchBarState = globalSearchBarState,
-                                onSearch = { scope.launch { globalSearchBarState.animateToCollapsed() } },
-                                keyboardOptions = KeyboardOptions(
-                                    imeAction = ImeAction.Search,
-                                    showKeyboardOnFocus = true,
-                                ),
-                                placeholder = {
-                                    Text(
-                                        if (selectedTab == PodcastTab.SUBSCRIPTIONS) {
-                                            stringResource(R.string.search_podcasts)
+            snackbarHost = {
+                SnackbarHost(
+                    hostState = snackbarHostState,
+                    modifier = Modifier.zIndex(10f),
+                )
+            },
+            topBar = {
+                AnimatedContent(
+                    targetState = inboxSelectionMode,
+                    transitionSpec = {
+                        fadeIn(
+                            animationSpec = toolbarMotionScheme.defaultEffectsSpec(),
+                        ) togetherWith fadeOut(
+                            animationSpec = toolbarMotionScheme.defaultEffectsSpec(),
+                        )
+                    },
+                    label = "inbox selection toolbar",
+                ) { selectionMode ->
+                    Column {
+                        if (atRoot && selectedTab == PodcastTab.SUBSCRIPTIONS && !selectionMode) {
+                            TopAppBar(
+                                title = {
+                                    Surface(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = SearchBarDefaults.inputFieldShape,
+                                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                    ) {
+                                        SearchBarDefaults.InputField(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .focusRequester(globalSearchFocusRequester),
+                                            textFieldState = globalSearchTextFieldState,
+                                            searchBarState = globalSearchBarState,
+                                            onSearch = { scope.launch { globalSearchBarState.animateToCollapsed() } },
+                                            keyboardOptions = KeyboardOptions(
+                                                imeAction = ImeAction.Search,
+                                                showKeyboardOnFocus = true,
+                                            ),
+                                            placeholder = {
+                                                Text(
+                                                    if (selectedTab == PodcastTab.SUBSCRIPTIONS) {
+                                                        stringResource(R.string.search_podcasts)
+                                                    } else {
+                                                        stringResource(R.string.search_episodes)
+                                                    },
+                                                )
+                                            },
+                                            trailingIcon = {
+                                                if (globalSearchText.isNotEmpty()) {
+                                                    IconButton(onClick = { viewModel.clearGlobalSearch() }) {
+                                                        Icon(
+                                                            Icons.Rounded.Close,
+                                                            contentDescription = stringResource(R.string.clear_search),
+                                                        )
+                                                    }
+                                                }
+                                            },
+                                        )
+                                    }
+                                },
+                                navigationIcon = {
+                                    if (globalSearchExpanded) {
+                                        IconButton(onClick = {
+                                            scope.launch { globalSearchBarState.animateToCollapsed() }
+                                        }) {
+                                            Icon(
+                                                Icons.AutoMirrored.Rounded.ArrowBack,
+                                                contentDescription = stringResource(R.string.back),
+                                            )
+                                        }
+                                    }
+                                },
+                                colors = TopAppBarDefaults.topAppBarColors(),
+                                actions = {
+                                    PodcastHomeRootActions(
+                                        selectedTab = selectedTab,
+                                        queueReorderMode = queueReorderMode,
+                                        queueHasItems = queueEntries.isNotEmpty(),
+                                        menuExpanded = rootMenuExpanded,
+                                        showSearchAction = false,
+                                        onClearInbox = viewModel::clearInbox,
+                                        onClearQueue = viewModel::clearQueue,
+                                        onQueueReorderDone = { queueReorderMode = false },
+                                        onOpenDiscoverySearch = ::openGlobalSearch,
+                                        onOpenAddPodcast = { routeState.showAddPodcast.value = true },
+                                        onMenuExpandedChange = { rootMenuExpanded = it },
+                                        onOpenDownloads = { openSpecialRoot(PodcastNavigationKey.Downloads) },
+                                        onOpenAllEpisodes = { openSpecialRoot(PodcastNavigationKey.AllEpisodes) },
+                                        onOpenSettings = ::openSettings,
+                                    )
+                                },
+                                scrollBehavior = topAppBarScrollBehavior,
+                            )
+                        } else if (showAllEpisodes && !selectionMode) {
+                            TopAppBar(
+                                title = {
+                                    Surface(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = SearchBarDefaults.inputFieldShape,
+                                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                    ) {
+                                        SearchBarDefaults.InputField(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .focusRequester(globalSearchFocusRequester),
+                                            textFieldState = globalSearchTextFieldState,
+                                            searchBarState = globalSearchBarState,
+                                            onSearch = { scope.launch { globalSearchBarState.animateToCollapsed() } },
+                                            keyboardOptions = KeyboardOptions(
+                                                imeAction = ImeAction.Search,
+                                                showKeyboardOnFocus = true,
+                                            ),
+                                            placeholder = { Text(stringResource(R.string.search_episodes)) },
+                                            trailingIcon = {
+                                                if (globalSearchText.isNotEmpty()) {
+                                                    IconButton(onClick = { viewModel.clearGlobalSearch() }) {
+                                                        Icon(
+                                                            Icons.Rounded.Close,
+                                                            contentDescription = stringResource(R.string.clear_search),
+                                                        )
+                                                    }
+                                                }
+                                            },
+                                        )
+                                    }
+                                },
+                                navigationIcon = {
+                                    IconButton(onClick = {
+                                        if (globalSearchExpanded) {
+                                            scope.launch { globalSearchBarState.animateToCollapsed() }
                                         } else {
-                                            stringResource(R.string.search_episodes)
+                                            popTopLevelRoute()
+                                        }
+                                    }) {
+                                        Icon(
+                                            Icons.AutoMirrored.Rounded.ArrowBack,
+                                            contentDescription = stringResource(R.string.back),
+                                        )
+                                    }
+                                },
+                                colors = TopAppBarDefaults.topAppBarColors(),
+                                scrollBehavior = topAppBarScrollBehavior,
+                            )
+                        } else {
+                            TopAppBar(
+                                title = {
+                                    PodcastHomeTopBarTitle(
+                                        inboxSelectionMode = selectionMode,
+                                        selectedInboxCount = selectedInboxIds.size,
+                                        showPodcastAppSettings = showPodcastAppSettings,
+                                        podcastManagementCategory = (currentDestination as? PodcastNavigationKey.PodcastManagement)?.category,
+                                        showDownloads = showDownloads,
+                                        showAllEpisodes = showAllEpisodes,
+                                        showPodcastSettings = showPodcastSettings,
+                                        podcastSettingsTitle = selectedPodcast?.title,
+                                        showDiscovery = showDiscovery,
+                                        discoveryTitle = state.categoryDiscovery?.title,
+                                        hasSelectedPodcast = selectedPodcast != null,
+                                        hasSelectedEpisode = selectedEpisode != null,
+                                        selectedTab = selectedTab,
+                                    )
+                                },
+                                colors = TopAppBarDefaults.topAppBarColors(),
+                                scrollBehavior = if (atRoot || showAllEpisodes || showScrollableDetail) {
+                                    topAppBarScrollBehavior
+                                } else {
+                                    null
+                                },
+                                navigationIcon = {
+                                    PodcastHomeTopBarNavigationIcon(
+                                        inboxSelectionMode = selectionMode,
+                                        showPodcastAppSettings = showPodcastAppSettings,
+                                        showDownloads = showDownloads,
+                                        showAllEpisodes = showAllEpisodes,
+                                        showDiscovery = showDiscovery,
+                                        hasSelectedPodcast = selectedPodcast != null,
+                                        hasSelectedEpisode = selectedEpisode != null,
+                                        onCloseSelection = { selectedInboxIds = emptySet() },
+                                        onBack = {
+                                            when {
+                                                showPodcastAppSettings || showDiscovery -> popTopLevelRoute()
+
+                                                showDownloads || showAllEpisodes || showPodcastSettings ->
+                                                    popTopLevelRoute()
+
+                                                selectedEpisode != null -> {
+                                                    popTopLevelRoute()
+                                                }
+
+                                                else -> {
+                                                    popTopLevelRoute()
+                                                }
+                                            }
                                         },
                                     )
                                 },
-                                trailingIcon = {
-                                    if (globalSearchText.isNotEmpty()) {
-                                        IconButton(onClick = { viewModel.clearGlobalSearch() }) {
-                                            Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.clear_search))
-                                        }
-                                    }
-                                },
-                            )
-                        }
-                    },
-                    navigationIcon = {
-                        if (globalSearchExpanded) {
-                            IconButton(onClick = {
-                                scope.launch { globalSearchBarState.animateToCollapsed() }
-                            }) {
-                                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back))
-                            }
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(),
-                    actions = {
-                        PodcastHomeRootActions(
-                            selectedTab = selectedTab,
-                            queueReorderMode = queueReorderMode,
-                            queueHasItems = queueEntries.isNotEmpty(),
-                            menuExpanded = rootMenuExpanded,
-                            showSearchAction = false,
-                            onClearInbox = viewModel::clearInbox,
-                            onClearQueue = viewModel::clearQueue,
-                            onQueueReorderDone = { queueReorderMode = false },
-                            onOpenDiscoverySearch = ::openGlobalSearch,
-                            onOpenAddPodcast = { routeState.showAddPodcast.value = true },
-                            onMenuExpandedChange = { rootMenuExpanded = it },
-                            onOpenDownloads = { openSpecialRoot(PodcastNavigationKey.Downloads) },
-                            onOpenAllEpisodes = { openSpecialRoot(PodcastNavigationKey.AllEpisodes) },
-                            onOpenSettings = ::openSettings,
-                        )
-                    },
-                    scrollBehavior = topAppBarScrollBehavior,
-                )
-            } else if (showAllEpisodes && !selectionMode) {
-                TopAppBar(
-                    title = {
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = SearchBarDefaults.inputFieldShape,
-                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        ) {
-                            SearchBarDefaults.InputField(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .focusRequester(globalSearchFocusRequester),
-                                textFieldState = globalSearchTextFieldState,
-                                searchBarState = globalSearchBarState,
-                                onSearch = { scope.launch { globalSearchBarState.animateToCollapsed() } },
-                                keyboardOptions = KeyboardOptions(
-                                    imeAction = ImeAction.Search,
-                                    showKeyboardOnFocus = true,
-                                ),
-                                placeholder = { Text(stringResource(R.string.search_episodes)) },
-                                trailingIcon = {
-                                    if (globalSearchText.isNotEmpty()) {
-                                        IconButton(onClick = { viewModel.clearGlobalSearch() }) {
-                                            Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.clear_search))
-                                        }
-                                    }
-                                },
-                            )
-                        }
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = {
-                            if (globalSearchExpanded) {
-                                scope.launch { globalSearchBarState.animateToCollapsed() }
-                            } else {
-                                popTopLevelRoute()
-                            }
-                        }) {
-                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back))
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(),
-                    scrollBehavior = topAppBarScrollBehavior,
-                )
-            } else TopAppBar(
-                title = {
-                    PodcastHomeTopBarTitle(
-                        inboxSelectionMode = selectionMode,
-                        selectedInboxCount = selectedInboxIds.size,
-                        showPodcastAppSettings = showPodcastAppSettings,
-                        podcastManagementCategory = (currentDestination as? PodcastNavigationKey.PodcastManagement)?.category,
-                        showDownloads = showDownloads,
-                        showAllEpisodes = showAllEpisodes,
-                        showPodcastSettings = showPodcastSettings,
-                        podcastSettingsTitle = selectedPodcast?.title,
-                        showDiscovery = showDiscovery,
-                        discoveryTitle = state.categoryDiscovery?.title,
-                        hasSelectedPodcast = selectedPodcast != null,
-                        hasSelectedEpisode = selectedEpisode != null,
-                        selectedTab = selectedTab,
-                    )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(),
-                scrollBehavior = if (atRoot || showAllEpisodes || showScrollableDetail) {
-                    topAppBarScrollBehavior
-                } else {
-                    null
-                },
-                navigationIcon = {
-                    PodcastHomeTopBarNavigationIcon(
-                        inboxSelectionMode = selectionMode,
-                        showPodcastAppSettings = showPodcastAppSettings,
-                        showDownloads = showDownloads,
-                        showAllEpisodes = showAllEpisodes,
-                        showDiscovery = showDiscovery,
-                        hasSelectedPodcast = selectedPodcast != null,
-                        hasSelectedEpisode = selectedEpisode != null,
-                        onCloseSelection = { selectedInboxIds = emptySet() },
-                        onBack = {
-                            when {
-                                showPodcastAppSettings || showDiscovery -> popTopLevelRoute()
-                                showDownloads || showAllEpisodes || showPodcastSettings ->
-                                    popTopLevelRoute()
-                                selectedEpisode != null -> {
-                                    popTopLevelRoute()
-                                }
-                                else -> {
-                                    popTopLevelRoute()
-                                }
-                            }
-                        },
-                    )
-                },
-                actions = {
-                    if (selectionMode) {
-                        PodcastHomeInboxSelectionActions(
-                            inbox = inboxSnapshot,
-                            selectedIds = selectedInboxIds,
-                            menuExpanded = inboxSelectionMenuExpanded,
-                            viewModel = viewModel,
-                            undoActions = undoActions,
-                            podcastsById = podcastsById,
-                            downloadProgress = downloadProgress,
-                            queueEpisodeIds = queueEpisodeIds,
-                            scope = scope,
-                            snackbarHostState = snackbarHostState,
-                            onMenuExpandedChange = { inboxSelectionMenuExpanded = it },
-                            onClearSelection = { selectedInboxIds = emptySet() },
-                            onPendingAction = { pendingEpisodeAction = it },
-                            context = context,
-                        )
-                    } else if (atRoot) {
-                        PodcastHomeRootActions(
-                            selectedTab = selectedTab,
-                            queueReorderMode = queueReorderMode,
-                            queueHasItems = queueEntries.isNotEmpty(),
-                            menuExpanded = rootMenuExpanded,
-                            showSearchAction = false,
-                            onClearInbox = viewModel::clearInbox,
-                            onClearQueue = viewModel::clearQueue,
-                            onQueueReorderDone = { queueReorderMode = false },
-                            onOpenDiscoverySearch = ::openGlobalSearch,
-                            onOpenAddPodcast = { routeState.showAddPodcast.value = true },
-                            onMenuExpandedChange = { rootMenuExpanded = it },
-                            onOpenDownloads = { openSpecialRoot(PodcastNavigationKey.Downloads) },
-                            onOpenAllEpisodes = { openSpecialRoot(PodcastNavigationKey.AllEpisodes) },
-                            onOpenSettings = ::openSettings,
-                        )
-                    } else {
-                        PodcastHomeContextActions(
-                            showPodcastAppSettings = showPodcastAppSettings,
-                            showPodcastSettings = showPodcastSettings,
-                            showDiscovery = showDiscovery,
-                            hasCategoryDiscovery = state.categoryDiscovery != null,
-                            isLocalCategoryDiscovery = state.categoryDiscovery != null &&
-                                state.categoryDiscoveryCategory == null &&
-                                state.previewResult == null &&
-                                localDiscoveryCategory != null,
-                            hasPreviewEpisode = state.previewEpisode != null,
-                            hasPreviewResult = state.previewResult != null,
-                            selectedEpisode = selectedEpisode,
-                            selectedPodcast = selectedPodcast,
-                            isPodcastSubscribed = selectedPodcast?.id in podcastsById ||
-                                selectedPodcast?.feedUrl
-                                    ?.let { feedUrl ->
-                                        subscriptionProgress[feedUrl]?.stage == PodcastSubscriptionStage.ADDED
-                                    } == true,
-                            isPodcastSubscriptionLoading = selectedPodcast?.feedUrl
-                                ?.let { feedUrl ->
-                                    subscriptionProgress[feedUrl]?.stage?.isInProgress == true
-                                } == true,
-                            isDiscoverySubscribed = state.previewResult?.podcast?.feedUrl
-                                ?.let(::canonicalFeedUrl)
-                                ?.let { canonicalUrl -> subscribedFeedUrls.any { canonicalFeedUrl(it) == canonicalUrl } }
-                                == true || state.previewResult?.podcast?.feedUrl
-                                ?.let { feedUrl ->
-                                    subscriptionProgress[feedUrl]?.stage == PodcastSubscriptionStage.ADDED
-                                } == true,
-                            isDiscoverySubscriptionLoading = state.previewResult?.podcast?.feedUrl
-                                ?.let { feedUrl ->
-                                    subscriptionProgress[feedUrl]?.stage?.isInProgress == true
-                                } == true,
-                            podcastMenuExpanded = podcastMenuExpanded,
-                            context = context,
-                            onShowDiscoverySearch = { showDiscoverySearch = true },
-                            onDiscoverCategory = {
-                                localDiscoveryCategory?.let {
-                                    openDiscoveryCategory(it.category, it.providerId)
-                                }
-                            },
-                            onPodcastMenuExpandedChange = { podcastMenuExpanded = it },
-                            onPodcastSettings = ::openPodcastSettings,
-                            onUnsubscribe = { showUnsubscribeConfirmation = true },
-                            onSubscribe = {
-                                selectedPodcast?.let { podcast ->
-                                    enqueueSubscription(
-                                        PodcastSearchResult(
-                                            providerId = "local",
-                                            podcast = com.shapeshed.booth.data.Podcast(
-                                                id = podcast.id,
-                                                title = podcast.title,
-                                                author = podcast.author,
-                                                feedUrl = podcast.feedUrl,
-                                                siteUrl = podcast.siteUrl,
-                                        descriptionHtml = podcast.descriptionHtml,
-                                        artworkUrl = podcast.artworkUrl,
-                                        explicit = podcast.explicit,
-                                        categories = podcast.categories.map { it.name },
-                                        categoryIds = podcast.categories.mapNotNull { category ->
-                                            category.externalId?.let { category.name to it }
-                                        }.toMap(),
-                                            ),
-                                        ),
-                                    )
-                                }
-                            },
-                            onDiscoverySubscription = {
-                                state.previewResult?.let { result ->
-                                    val resultFeedUrl = canonicalFeedUrl(result.podcast.feedUrl)
-                                    if (subscribedFeedUrls.any { canonicalFeedUrl(it) == resultFeedUrl }) {
-                                        podcasts.firstOrNull { canonicalFeedUrl(it.feedUrl) == resultFeedUrl }
-                                            ?.let(viewModel::remove)
+                                actions = {
+                                    if (selectionMode) {
+                                        PodcastHomeInboxSelectionActions(
+                                            inbox = inboxSnapshot,
+                                            selectedIds = selectedInboxIds,
+                                            menuExpanded = inboxSelectionMenuExpanded,
+                                            viewModel = viewModel,
+                                            undoActions = undoActions,
+                                            podcastsById = podcastsById,
+                                            downloadProgress = downloadProgress,
+                                            queueEpisodeIds = queueEpisodeIds,
+                                            scope = scope,
+                                            snackbarHostState = snackbarHostState,
+                                            onMenuExpandedChange = { inboxSelectionMenuExpanded = it },
+                                            onClearSelection = { selectedInboxIds = emptySet() },
+                                            onPendingAction = { pendingEpisodeAction = it },
+                                            context = context,
+                                        )
+                                    } else if (atRoot) {
+                                        PodcastHomeRootActions(
+                                            selectedTab = selectedTab,
+                                            queueReorderMode = queueReorderMode,
+                                            queueHasItems = queueEntries.isNotEmpty(),
+                                            menuExpanded = rootMenuExpanded,
+                                            showSearchAction = false,
+                                            onClearInbox = viewModel::clearInbox,
+                                            onClearQueue = viewModel::clearQueue,
+                                            onQueueReorderDone = { queueReorderMode = false },
+                                            onOpenDiscoverySearch = ::openGlobalSearch,
+                                            onOpenAddPodcast = { routeState.showAddPodcast.value = true },
+                                            onMenuExpandedChange = { rootMenuExpanded = it },
+                                            onOpenDownloads = { openSpecialRoot(PodcastNavigationKey.Downloads) },
+                                            onOpenAllEpisodes = { openSpecialRoot(PodcastNavigationKey.AllEpisodes) },
+                                            onOpenSettings = ::openSettings,
+                                        )
                                     } else {
-                                        enqueueSubscription(result)
-                                    }
-                                }
-                            },
-                            onDiscoverySettings = {
-                                state.previewResult?.let { result ->
-                                    podcasts.firstOrNull {
-                                        canonicalFeedUrl(it.feedUrl) == canonicalFeedUrl(result.podcast.feedUrl)
-                                    }?.let { podcast ->
-                                        selectedPodcastId = podcast.id
-                                        if (topLevelBackStack.lastOrNull() !is PodcastNavigationKey.PodcastSettings) {
-                                            topLevelBackStack.add(PodcastNavigationKey.PodcastSettings(podcast.id))
-                                        }
-                                    }
-                                }
-                            },
-                            onDiscoveryShare = {
-                                state.previewResult?.let { result ->
-                                    shareLink(
-                                        context,
-                                        result.podcast.title,
-                                        result.podcast.siteUrl ?: result.podcast.feedUrl,
-                                    )
-                                }
-                            },
-                            onDiscoveryOpenInBrowser = {
-                                state.previewResult?.let { result ->
-                                    openExternally(
-                                        context,
-                                        result.podcast.siteUrl ?: result.podcast.feedUrl,
-                                    )
-                                }
-                            },
-                        )
-                    }
-                },
-            )
-            if (refreshing) {
-                val progress = homeUiState.refreshProgress
-                if (progress.isDeterminate) {
-                    LinearProgressIndicator(
-                        progress = { progress.fraction },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                } else {
-                    LinearProgressIndicator(
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-            }
-            }
-            }
-        },
-        bottomBar = {
-            PodcastHomeBottomNavigation(
-                visible = !useNavigationRail && atRoot,
-                selectedTab = selectedTab,
-                inboxCount = inbox.itemCount,
-                onTabSelected = ::selectTabFromHome,
-            )
-        },
-    ) { padding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize(),
-        ) {
-        Row(
-            Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .consumeWindowInsets(padding),
-        ) {
-        PodcastHomeNavigationRail(
-            visible = false,
-            selectedTab = selectedTab,
-            inboxCount = inbox.itemCount,
-            onTabSelected = ::selectTabFromHome,
-        )
-        Box(
-            Modifier
-                .fillMaxSize()
-                .weight(1f),
-        ) {
-        androidx.compose.runtime.CompositionLocalProvider(
-            LocalPodcastMiniPlayerInset provides miniPlayerBottomInset,
-        ) {
-        if ((atRoot || showAllEpisodes) && globalSearchExpanded) {
-            globalSearchResults()
-        } else if (useNavigationDetails || showAllEpisodes) {
-            @Composable
-            fun RootTabContent(tab: PodcastTab) {
-                if (tab == PodcastTab.HOME) {
-                    PodcastHomeInboxDestination(
-                inbox = inbox,
-                podcastsById = podcastsById,
-                playback = playback,
-                selectionMode = inboxSelectionMode,
-                selectedEpisodeIds = selectedInboxIds,
-                onSelectedEpisodeIdsChange = { selectedInboxIds = it },
-                onOpen = { episode ->
-                    episodeOrigin = EpisodeOrigin.INBOX
-                    selectedPodcastId = episode.podcastId
-                    viewModel.resolveMediaSizes(episode)
-                    selectedEpisodeId = episode.id
-                    topLevelBackStack.clear()
-                    topLevelBackStack.add(PodcastNavigationKey.Inbox)
-                    topLevelBackStack.add(
-                        PodcastNavigationKey.EpisodeDetail(
-                            episode.id,
-                            EpisodeNavigationOrigin.Inbox,
-                        ),
-                    )
-                },
-                onAddToQueue = { undoActions.requestInboxAction(it, addToQueue = true) },
-                onDismiss = { undoActions.requestInboxAction(it, addToQueue = false) },
-                onActions = { episode ->
-                    pendingEpisodeAction = createSubscribedEpisodeAction(
-                        episode = episode,
-                        podcastsById = podcastsById,
-                        downloadProgress = downloadProgress,
-                        queueEpisodeIds = queueEpisodeIds,
-                    )
-                },
-                onPlay = { episode ->
-                    if (playback.episode?.id == episode.id) playbackViewModel.togglePlayPause()
-                    else playbackViewModel.play(episode, podcastsById[episode.podcastId]?.title.orEmpty())
-                },
-                onDownload = { viewModel.download(context, it.id) },
-                onRefresh = { viewModel.refreshSubscriptions(context) },
-                refreshing = refreshing,
-                downloadProgress = downloadProgress,
-                modifier = Modifier.fillMaxSize(),
-                    )
-                } else if (tab == PodcastTab.UP_NEXT) {
-                    PodcastHomeUpNextDestination(
-                        episodes = queueEpisodes,
-                        podcastsById = allPodcastsById,
-                        playback = playback,
-                        downloadProgress = downloadProgress,
-                        viewModel = viewModel,
-                        context = context,
-                        reorderMode = queueReorderMode,
-                        filter = queueFilter,
-                        onFilterChange = { queueFilter = it },
-                        onOpen = { episode ->
-                            episodeOrigin = EpisodeOrigin.UP_NEXT
-                            selectedPodcastId = episode.podcastId
-                            viewModel.resolveMediaSizes(episode)
-                            selectedEpisodeId = episode.id
-                            topLevelBackStack.clear()
-                            topLevelBackStack.add(PodcastNavigationKey.UpNext)
-                            topLevelBackStack.add(
-                                PodcastNavigationKey.EpisodeDetail(
-                                    episode.id,
-                                    EpisodeNavigationOrigin.UpNext,
-                                ),
-                            )
-                        },
-                        onLongPress = { episode ->
-                            pendingEpisodeAction = createSubscribedEpisodeAction(
-                                episode = episode,
-                                podcastsById = podcastsById,
-                                downloadProgress = downloadProgress,
-                                queueEpisodeIds = queueEpisodeIds,
-                            )
-                        },
-                        onRemoveFailed = { scope.launch { snackbarHostState.showSnackbar(removeUpNextFailed) } },
-                        onReorder = viewModel::reorderQueue,
-                        onPlay = { episode ->
-                            if (playback.episode?.id == episode.id) playbackViewModel.togglePlayPause()
-                            else playbackViewModel.playQueue(
-                                episodes = queueEpisodes,
-                                selectedEpisode = episode,
-                                podcastTitles = allPodcastsById.mapValues { (_, podcast) -> podcast.title },
-                                useVideo = (episode.preferVideo || (!episode.videoPreferenceSet && episode.isVideoOnlySource())) &&
-                                    !episode.videoUrl.isNullOrBlank(),
-                            )
-                        },
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                } else {
-                    PodcastSubscriptionsContent(
-                podcasts = if (forceGettingStarted && !showSearch) {
-                    emptyList()
-                } else {
-                    podcasts
-                },
-                latestEpisodePublishedAt = latestEpisodePublishedAt,
-                viewMode = subscriptionsViewMode,
-                onViewModeChange = viewModel::setSubscriptionsViewMode,
-                sortOrder = podcastSortOrder,
-                onSortOrderChange = { podcastSortOrder = it },
-                state = state,
-                showSearch = showSearch,
-                directFeedUrl = directFeedUrl,
-                onDirectFeedUrlChange = { directFeedUrl = it },
-                onSubscribeDirect = {
-                    enqueueFeedSubscription(directFeedUrl)
-                    directFeedUrl = ""
-                },
-                onQueryChange = viewModel::setQuery,
-                onSearch = viewModel::search,
-                onPodcastClick = {
-                    podcastDetailFromSubscriptions = true
-                    podcastDetailPageId = it
-                    selectedPodcastId = it
-                    topLevelBackStack.clear()
-                    topLevelBackStack.add(PodcastNavigationKey.Subscriptions)
-                    topLevelBackStack.add(PodcastNavigationKey.PodcastDetail(it))
-                },
-                onRemovePodcast = undoActions::requestPodcastRemoval,
-                onSearchResultClick = { feedUrl -> enqueueFeedSubscription(feedUrl) },
-                onOpenSearch = ::openGlobalSearch,
-                onImportOpml = platformActions.importOpml,
-                importProgress = state.importProgress,
-                popularPodcasts = if (selectedSearchProvider?.supportsPopularPodcasts == true) {
-                    state.discovery.firstOrNull()?.results.orEmpty()
-                } else {
-                    emptyList()
-                },
-                isLoadingPopular = selectedSearchProvider?.supportsPopularPodcasts == true && state.isLoadingDiscovery,
-                onOpenPopularPodcast = { result -> openDiscoveryPodcast(result) },
-                selectedCategory = gettingStartedCategoryId?.let { id ->
-                    PodcastDiscoveryCategories.firstOrNull { it.id == id }
-                },
-                categoryResults = if (gettingStartedCategoryId != null &&
-                    state.categoryDiscovery?.title == PodcastDiscoveryCategories
-                        .firstOrNull { it.id == gettingStartedCategoryId }
-                        ?.title
-                ) {
-                    state.categoryDiscovery?.results.orEmpty()
-                } else {
-                    emptyList()
-                },
-                categoryResultsById = state.categoryDiscoveryCache.mapValues { (_, shelf) -> shelf.results },
-                isLoadingCategory = gettingStartedCategoryId != null && state.isLoadingCategory,
-                onCategorySelected = { category ->
-                    gettingStartedCategoryId = category?.id
-                    category?.let(viewModel::loadCategory)
-                },
-                onPreloadCategory = viewModel::preloadCategory,
-                categories = if (selectedSearchProvider?.id == "apple") {
-                    PodcastDiscoveryCategories
-                } else {
-                    emptyList()
-                },
-                onRefresh = { viewModel.refreshSubscriptions(context) },
-                refreshing = refreshing,
-                modifier = Modifier.fillMaxSize(),
-                    )
-                }
-            }
-            @Composable
-            fun DetailContent(destination: PodcastNavigationKey) {
-                when (destination) {
-                    is PodcastNavigationKey.EpisodeDetail -> {
-                        val episode = selectedEpisode ?: return
-                        // Keep the pager's source stable while this detail destination is open.
-                        // Adding an Inbox episode to Up Next also removes it from Inbox; rebuilding
-                        // the pager from that changed source would change its page count during
-                        // interaction and interrupt scrolling.
-                        val swipeEpisodes = remember(destination.origin, episode.id) {
-                            val source = when (destination.origin) {
-                                EpisodeNavigationOrigin.Inbox -> inboxSnapshot
-                                EpisodeNavigationOrigin.UpNext -> queueEpisodes
-                                EpisodeNavigationOrigin.Podcast -> visibleSelectedEpisodes
-                                else -> emptyList()
-                            }
-                            source
-                                .map { sourceEpisode -> if (sourceEpisode.id == episode.id) episode else sourceEpisode }
-                                .takeIf { items -> items.any { it.id == episode.id } }
-                                ?: listOf(episode)
-                        }
-                        PodcastEpisodeSwipePager(
-                            episodes = swipeEpisodes,
-                            selectedEpisodeId = episode.id,
-                            onEpisodeSelected = { nextEpisode ->
-                                viewModel.resolveMediaSizes(nextEpisode)
-                            },
-                            modifier = Modifier.fillMaxSize(),
-                        ) { pageEpisode ->
-                            var hydratedEpisode by remember(pageEpisode.id) { mutableStateOf(pageEpisode) }
-                            LaunchedEffect(pageEpisode.id) {
-                                viewModel.episode(pageEpisode.id)?.let { hydratedEpisode = it }
-                            }
-                            val persistedEpisode by viewModel.observeEpisode(pageEpisode.id)
-                                .collectAsStateWithLifecycle(null)
-                            val displayEpisode = persistedEpisode ?: hydratedEpisode
-                            val searchResult = selectedSearchResult?.takeIf { it.episode.id == displayEpisode.id }
-                                ?: globalSearchEpisodes.firstOrNull { it.episode.id == displayEpisode.id }
-                            // Downloads can remain after a podcast is unsubscribed, so use the
-                            // complete local catalogue for episode metadata and podcast navigation.
-                            val pagePodcast = allPodcastsById[displayEpisode.podcastId]
-                                ?: podcastsById[displayEpisode.podcastId]
-                                ?: selectedPodcast
-                            val podcastTitle = pagePodcast?.title ?: searchResult?.podcastTitle.orEmpty()
-                            val pagePodcastSubscriptionStage = pagePodcast?.feedUrl
-                                ?.let { feedUrl -> subscriptionProgress[feedUrl]?.stage }
-                            val pagePodcastIsSubscribed = pagePodcast?.id in podcastsById ||
-                                pagePodcastSubscriptionStage?.isAdded == true
-                            val pagePodcastSubscriptionLoading = pagePodcastSubscriptionStage?.isInProgress == true
-                            PodcastEpisodeContent(
-                                episode = displayEpisode,
-                                podcastTitle = podcastTitle,
-                                podcastArtworkUrl = pagePodcast?.artworkUrl ?: searchResult?.podcastArtworkUrl,
-                                isPlaying = playback.episode?.id == displayEpisode.id && playback.isPlaying,
-                                isBuffering = playback.episode?.id == displayEpisode.id && playback.isBuffering,
-                                onPlay = {
-                                    if (playback.episode?.id == displayEpisode.id) playbackViewModel.togglePlayPause()
-                                    else playbackViewModel.play(displayEpisode, podcastTitle)
-                                },
-                                onWatch = displayEpisode.videoUrl?.let {
-                                    {
-                                        playbackViewModel.watch(displayEpisode, podcastTitle)
-                                        showNowPlaying = true
-                                    }
-                                },
-                                onDownload = { viewModel.download(context, displayEpisode.id) },
-                                onRemoveDownload = { viewModel.removeDownload(context, displayEpisode.id) },
-                                downloadProgress = downloadProgress[displayEpisode.id],
-                                isInQueue = displayEpisode.id in queueEpisodeIds,
-                                onToggleQueue = {
-                                    if (displayEpisode.id in queueEpisodeIds) {
-                                        viewModel.removeFromQueue(displayEpisode.id)
-                                    } else {
-                                        viewModel.addToQueueFromInbox(
-                                            displayEpisode.id,
-                                            onError = {
-                                                scope.launch {
-                                                    snackbarHostState.showSnackbar(
-                                                        addUpNextFailed,
+                                        PodcastHomeContextActions(
+                                            showPodcastAppSettings = showPodcastAppSettings,
+                                            showPodcastSettings = showPodcastSettings,
+                                            showDiscovery = showDiscovery,
+                                            hasCategoryDiscovery = state.categoryDiscovery != null,
+                                            isLocalCategoryDiscovery = state.categoryDiscovery != null &&
+                                                state.categoryDiscoveryCategory == null &&
+                                                state.previewResult == null &&
+                                                localDiscoveryCategory != null,
+                                            hasPreviewEpisode = state.previewEpisode != null,
+                                            hasPreviewResult = state.previewResult != null,
+                                            selectedEpisode = selectedEpisode,
+                                            selectedPodcast = selectedPodcast,
+                                            isPodcastSubscribed = selectedPodcast?.id in podcastsById ||
+                                                selectedPodcast?.feedUrl
+                                                    ?.let { feedUrl ->
+                                                        subscriptionProgress[feedUrl]?.stage ==
+                                                            PodcastSubscriptionStage.ADDED
+                                                    } == true,
+                                            isPodcastSubscriptionLoading = selectedPodcast?.feedUrl
+                                                ?.let { feedUrl ->
+                                                    subscriptionProgress[feedUrl]?.stage?.isInProgress == true
+                                                } == true,
+                                            isDiscoverySubscribed = state.previewResult?.podcast?.feedUrl
+                                                ?.let(::canonicalFeedUrl)
+                                                ?.let { canonicalUrl ->
+                                                    subscribedFeedUrls.any { canonicalFeedUrl(it) == canonicalUrl }
+                                                }
+                                                == true || state.previewResult?.podcast?.feedUrl
+                                                    ?.let { feedUrl ->
+                                                        subscriptionProgress[feedUrl]?.stage ==
+                                                            PodcastSubscriptionStage.ADDED
+                                                    } == true,
+                                            isDiscoverySubscriptionLoading = state.previewResult?.podcast?.feedUrl
+                                                ?.let { feedUrl ->
+                                                    subscriptionProgress[feedUrl]?.stage?.isInProgress == true
+                                                } == true,
+                                            podcastMenuExpanded = podcastMenuExpanded,
+                                            context = context,
+                                            onShowDiscoverySearch = { showDiscoverySearch = true },
+                                            onDiscoverCategory = {
+                                                localDiscoveryCategory?.let {
+                                                    openDiscoveryCategory(it.category, it.providerId)
+                                                }
+                                            },
+                                            onPodcastMenuExpandedChange = { podcastMenuExpanded = it },
+                                            onPodcastSettings = ::openPodcastSettings,
+                                            onUnsubscribe = { showUnsubscribeConfirmation = true },
+                                            onSubscribe = {
+                                                selectedPodcast?.let { podcast ->
+                                                    enqueueSubscription(
+                                                        PodcastSearchResult(
+                                                            providerId = "local",
+                                                            podcast = com.shapeshed.booth.data.Podcast(
+                                                                id = podcast.id,
+                                                                title = podcast.title,
+                                                                author = podcast.author,
+                                                                feedUrl = podcast.feedUrl,
+                                                                siteUrl = podcast.siteUrl,
+                                                                descriptionHtml = podcast.descriptionHtml,
+                                                                artworkUrl = podcast.artworkUrl,
+                                                                explicit = podcast.explicit,
+                                                                categories = podcast.categories.map { it.name },
+                                                                categoryIds = podcast.categories.mapNotNull {
+                                                                        category,
+                                                                    ->
+                                                                    category.externalId?.let { category.name to it }
+                                                                }.toMap(),
+                                                            ),
+                                                        ),
+                                                    )
+                                                }
+                                            },
+                                            onDiscoverySubscription = {
+                                                state.previewResult?.let { result ->
+                                                    val resultFeedUrl = canonicalFeedUrl(result.podcast.feedUrl)
+                                                    if (subscribedFeedUrls.any {
+                                                            canonicalFeedUrl(it) == resultFeedUrl
+                                                        }
+                                                    ) {
+                                                        podcasts.firstOrNull {
+                                                            canonicalFeedUrl(it.feedUrl) ==
+                                                                resultFeedUrl
+                                                        }
+                                                            ?.let(viewModel::remove)
+                                                    } else {
+                                                        enqueueSubscription(result)
+                                                    }
+                                                }
+                                            },
+                                            onDiscoverySettings = {
+                                                state.previewResult?.let { result ->
+                                                    podcasts.firstOrNull {
+                                                        canonicalFeedUrl(it.feedUrl) ==
+                                                            canonicalFeedUrl(result.podcast.feedUrl)
+                                                    }?.let { podcast ->
+                                                        selectedPodcastId = podcast.id
+                                                        if (topLevelBackStack.lastOrNull() !is PodcastNavigationKey.PodcastSettings) {
+                                                            topLevelBackStack.add(
+                                                                PodcastNavigationKey.PodcastSettings(podcast.id),
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            onDiscoveryShare = {
+                                                state.previewResult?.let { result ->
+                                                    shareLink(
+                                                        context,
+                                                        result.podcast.title,
+                                                        result.podcast.siteUrl ?: result.podcast.feedUrl,
+                                                    )
+                                                }
+                                            },
+                                            onDiscoveryOpenInBrowser = {
+                                                state.previewResult?.let { result ->
+                                                    openExternally(
+                                                        context,
+                                                        result.podcast.siteUrl ?: result.podcast.feedUrl,
                                                     )
                                                 }
                                             },
                                         )
                                     }
                                 },
-                                isFavorite = displayEpisode.favorite,
-                                onToggleFavorite = { viewModel.toggleFavorite(displayEpisode.id) },
-                                onOpenPodcast = {
-                                    selectedEpisodeId = null
-                                    selectedPodcastId = displayEpisode.podcastId
-                                    if (topLevelBackStack.lastOrNull() !is PodcastNavigationKey.PodcastDetail) {
-                                        topLevelBackStack.add(
-                                            PodcastNavigationKey.PodcastDetail(displayEpisode.podcastId),
-                                        )
-                                    }
-                                },
-                                isSubscribed = pagePodcastIsSubscribed,
-                                isSubscriptionLoading = pagePodcastSubscriptionLoading,
-                                onSubscribe = pagePodcast?.takeIf { !pagePodcastIsSubscribed }?.let { podcast ->
-                                    {
-                                        enqueueSubscription(
-                                            PodcastSearchResult(
-                                                providerId = "local",
-                                                podcast = com.shapeshed.booth.data.Podcast(
-                                                    id = podcast.id,
-                                                    title = podcast.title,
-                                                    author = podcast.author,
-                                                    feedUrl = podcast.feedUrl,
-                                                    siteUrl = podcast.siteUrl,
-                                                    descriptionHtml = podcast.descriptionHtml,
-                                                    artworkUrl = podcast.artworkUrl,
-                                                    explicit = podcast.explicit,
-                                                ),
-                                            ),
-                                        )
-                                    }
-                                },
-                                twoPane = useTwoPaneEpisodeLayout,
-                                modifier = Modifier.fillMaxSize(),
                             )
                         }
-                    }
-                    is PodcastNavigationKey.PodcastDetail -> {
-                        val podcast = selectedPodcast ?: return
-                        val podcastPages = remember(podcastDetailFromSubscriptions, podcast.id) {
-                            if (!podcastDetailFromSubscriptions) {
-                                listOf(podcast)
-                            } else {
-                                val ordered = orderPodcasts(
-                                    podcasts,
-                                    podcastSortOrder,
-                                    latestEpisodePublishedAt,
+                        if (refreshing) {
+                            val progress = homeUiState.refreshProgress
+                            if (progress.isDeterminate) {
+                                LinearProgressIndicator(
+                                    progress = { progress.fraction },
+                                    modifier = Modifier.fillMaxWidth(),
                                 )
-                                if (ordered.any { it.id == podcast.id }) ordered else ordered + podcast
+                            } else {
+                                LinearProgressIndicator(
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
                             }
                         }
-                        PodcastDetailSwipePager(
-                            podcasts = podcastPages,
-                            selectedPodcastId = podcast.id,
-                            onPodcastSelected = { podcastDetailPageId = it.id },
-                            modifier = Modifier.fillMaxSize(),
-                        ) { pagePodcast ->
-                            val pageEpisodes by remember(pagePodcast.id) {
-                                viewModel.episodes(pagePodcast.id)
-                            }.collectAsStateWithLifecycle(emptyList())
-                            LaunchedEffect(pagePodcast.id) {
-                                if (!pagePodcast.isSubscribed) viewModel.refreshUnsubscribedPodcast(pagePodcast)
+                    }
+                }
+            },
+            bottomBar = {
+                PodcastHomeBottomNavigation(
+                    visible = !useNavigationRail && atRoot,
+                    selectedTab = selectedTab,
+                    inboxCount = inbox.itemCount,
+                    onTabSelected = ::selectTabFromHome,
+                )
+            },
+        ) { padding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize(),
+            ) {
+                Row(
+                    Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .consumeWindowInsets(padding),
+                ) {
+                    PodcastHomeNavigationRail(
+                        visible = false,
+                        selectedTab = selectedTab,
+                        inboxCount = inbox.itemCount,
+                        onTabSelected = ::selectTabFromHome,
+                    )
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .weight(1f),
+                    ) {
+                        androidx.compose.runtime.CompositionLocalProvider(
+                            LocalPodcastMiniPlayerInset provides miniPlayerBottomInset,
+                        ) {
+                            if ((atRoot || showAllEpisodes) && globalSearchExpanded) {
+                                globalSearchResults()
+                            } else if (useNavigationDetails || showAllEpisodes) {
+                                @Composable
+                                fun RootTabContent(tab: PodcastTab) {
+                                    if (tab == PodcastTab.HOME) {
+                                        PodcastHomeInboxDestination(
+                                            inbox = inbox,
+                                            podcastsById = podcastsById,
+                                            playback = playback,
+                                            selectionMode = inboxSelectionMode,
+                                            selectedEpisodeIds = selectedInboxIds,
+                                            onSelectedEpisodeIdsChange = { selectedInboxIds = it },
+                                            onOpen = { episode ->
+                                                episodeOrigin = EpisodeOrigin.INBOX
+                                                selectedPodcastId = episode.podcastId
+                                                viewModel.resolveMediaSizes(episode)
+                                                selectedEpisodeId = episode.id
+                                                topLevelBackStack.clear()
+                                                topLevelBackStack.add(PodcastNavigationKey.Inbox)
+                                                topLevelBackStack.add(
+                                                    PodcastNavigationKey.EpisodeDetail(
+                                                        episode.id,
+                                                        EpisodeNavigationOrigin.Inbox,
+                                                    ),
+                                                )
+                                            },
+                                            onAddToQueue = { undoActions.requestInboxAction(it, addToQueue = true) },
+                                            onDismiss = { undoActions.requestInboxAction(it, addToQueue = false) },
+                                            onActions = { episode ->
+                                                pendingEpisodeAction = createSubscribedEpisodeAction(
+                                                    episode = episode,
+                                                    podcastsById = podcastsById,
+                                                    downloadProgress = downloadProgress,
+                                                    queueEpisodeIds = queueEpisodeIds,
+                                                )
+                                            },
+                                            onPlay = { episode ->
+                                                if (playback.episode?.id == episode.id) {
+                                                    playbackViewModel.togglePlayPause()
+                                                } else {
+                                                    playbackViewModel.play(
+                                                        episode,
+                                                        podcastsById[episode.podcastId]?.title.orEmpty(),
+                                                    )
+                                                }
+                                            },
+                                            onDownload = { viewModel.download(context, it.id) },
+                                            onRefresh = { viewModel.refreshSubscriptions(context) },
+                                            refreshing = refreshing,
+                                            downloadProgress = downloadProgress,
+                                            modifier = Modifier.fillMaxSize(),
+                                        )
+                                    } else if (tab == PodcastTab.UP_NEXT) {
+                                        PodcastHomeUpNextDestination(
+                                            episodes = queueEpisodes,
+                                            podcastsById = allPodcastsById,
+                                            playback = playback,
+                                            downloadProgress = downloadProgress,
+                                            viewModel = viewModel,
+                                            context = context,
+                                            reorderMode = queueReorderMode,
+                                            filter = queueFilter,
+                                            onFilterChange = { queueFilter = it },
+                                            onOpen = { episode ->
+                                                episodeOrigin = EpisodeOrigin.UP_NEXT
+                                                selectedPodcastId = episode.podcastId
+                                                viewModel.resolveMediaSizes(episode)
+                                                selectedEpisodeId = episode.id
+                                                topLevelBackStack.clear()
+                                                topLevelBackStack.add(PodcastNavigationKey.UpNext)
+                                                topLevelBackStack.add(
+                                                    PodcastNavigationKey.EpisodeDetail(
+                                                        episode.id,
+                                                        EpisodeNavigationOrigin.UpNext,
+                                                    ),
+                                                )
+                                            },
+                                            onLongPress = { episode ->
+                                                pendingEpisodeAction = createSubscribedEpisodeAction(
+                                                    episode = episode,
+                                                    podcastsById = podcastsById,
+                                                    downloadProgress = downloadProgress,
+                                                    queueEpisodeIds = queueEpisodeIds,
+                                                )
+                                            },
+                                            onRemoveFailed = {
+                                                scope.launch { snackbarHostState.showSnackbar(removeUpNextFailed) }
+                                            },
+                                            onReorder = viewModel::reorderQueue,
+                                            onPlay = { episode ->
+                                                if (playback.episode?.id == episode.id) {
+                                                    playbackViewModel.togglePlayPause()
+                                                } else {
+                                                    playbackViewModel.playQueue(
+                                                        episodes = queueEpisodes,
+                                                        selectedEpisode = episode,
+                                                        podcastTitles = allPodcastsById.mapValues { (_, podcast) ->
+                                                            podcast.title
+                                                        },
+                                                        useVideo =
+                                                            (
+                                                                episode.preferVideo ||
+                                                                    (
+                                                                        !episode.videoPreferenceSet &&
+                                                                            episode.isVideoOnlySource()
+                                                                        )
+                                                                ) &&
+                                                                !episode.videoUrl.isNullOrBlank(),
+                                                    )
+                                                }
+                                            },
+                                            modifier = Modifier.fillMaxSize(),
+                                        )
+                                    } else {
+                                        PodcastSubscriptionsContent(
+                                            podcasts = if (forceGettingStarted && !showSearch) {
+                                                emptyList()
+                                            } else {
+                                                podcasts
+                                            },
+                                            latestEpisodePublishedAt = latestEpisodePublishedAt,
+                                            viewMode = subscriptionsViewMode,
+                                            onViewModeChange = viewModel::setSubscriptionsViewMode,
+                                            sortOrder = podcastSortOrder,
+                                            onSortOrderChange = { podcastSortOrder = it },
+                                            state = state,
+                                            showSearch = showSearch,
+                                            directFeedUrl = directFeedUrl,
+                                            onDirectFeedUrlChange = { directFeedUrl = it },
+                                            onSubscribeDirect = {
+                                                enqueueFeedSubscription(directFeedUrl)
+                                                directFeedUrl = ""
+                                            },
+                                            onQueryChange = viewModel::setQuery,
+                                            onSearch = viewModel::search,
+                                            onPodcastClick = {
+                                                podcastDetailFromSubscriptions = true
+                                                podcastDetailPageId = it
+                                                selectedPodcastId = it
+                                                topLevelBackStack.clear()
+                                                topLevelBackStack.add(PodcastNavigationKey.Subscriptions)
+                                                topLevelBackStack.add(PodcastNavigationKey.PodcastDetail(it))
+                                            },
+                                            onRemovePodcast = undoActions::requestPodcastRemoval,
+                                            onSearchResultClick = { feedUrl -> enqueueFeedSubscription(feedUrl) },
+                                            onOpenSearch = ::openGlobalSearch,
+                                            onImportOpml = platformActions.importOpml,
+                                            importProgress = state.importProgress,
+                                            popularPodcasts = if (selectedSearchProvider?.supportsPopularPodcasts ==
+                                                true
+                                            ) {
+                                                state.discovery.firstOrNull()?.results.orEmpty()
+                                            } else {
+                                                emptyList()
+                                            },
+                                            isLoadingPopular =
+                                                selectedSearchProvider?.supportsPopularPodcasts == true &&
+                                                    state.isLoadingDiscovery,
+                                            onOpenPopularPodcast = { result -> openDiscoveryPodcast(result) },
+                                            selectedCategory = gettingStartedCategoryId?.let { id ->
+                                                PodcastDiscoveryCategories.firstOrNull { it.id == id }
+                                            },
+                                            categoryResults = if (gettingStartedCategoryId != null &&
+                                                state.categoryDiscovery?.title == PodcastDiscoveryCategories
+                                                    .firstOrNull { it.id == gettingStartedCategoryId }
+                                                    ?.title
+                                            ) {
+                                                state.categoryDiscovery?.results.orEmpty()
+                                            } else {
+                                                emptyList()
+                                            },
+                                            categoryResultsById = state.categoryDiscoveryCache.mapValues { (_, shelf) ->
+                                                shelf.results
+                                            },
+                                            isLoadingCategory =
+                                                gettingStartedCategoryId != null && state.isLoadingCategory,
+                                            onCategorySelected = { category ->
+                                                gettingStartedCategoryId = category?.id
+                                                category?.let(viewModel::loadCategory)
+                                            },
+                                            onPreloadCategory = viewModel::preloadCategory,
+                                            categories = if (selectedSearchProvider?.id == "apple") {
+                                                PodcastDiscoveryCategories
+                                            } else {
+                                                emptyList()
+                                            },
+                                            onRefresh = { viewModel.refreshSubscriptions(context) },
+                                            refreshing = refreshing,
+                                            modifier = Modifier.fillMaxSize(),
+                                        )
+                                    }
+                                }
+
+                                @Composable
+                                fun DetailContent(destination: PodcastNavigationKey) {
+                                    when (destination) {
+                                        is PodcastNavigationKey.EpisodeDetail -> {
+                                            val episode = selectedEpisode ?: return
+                                            // Keep the pager's source stable while this detail destination is open.
+                                            // Adding an Inbox episode to Up Next also removes it from Inbox; rebuilding
+                                            // the pager from that changed source would change its page count during
+                                            // interaction and interrupt scrolling.
+                                            val swipeEpisodes = remember(destination.origin, episode.id) {
+                                                val source = when (destination.origin) {
+                                                    EpisodeNavigationOrigin.Inbox -> inboxSnapshot
+                                                    EpisodeNavigationOrigin.UpNext -> queueEpisodes
+                                                    EpisodeNavigationOrigin.Podcast -> visibleSelectedEpisodes
+                                                    else -> emptyList()
+                                                }
+                                                source
+                                                    .map { sourceEpisode ->
+                                                        if (sourceEpisode.id ==
+                                                            episode.id
+                                                        ) {
+                                                            episode
+                                                        } else {
+                                                            sourceEpisode
+                                                        }
+                                                    }
+                                                    .takeIf { items -> items.any { it.id == episode.id } }
+                                                    ?: listOf(episode)
+                                            }
+                                            PodcastEpisodeSwipePager(
+                                                episodes = swipeEpisodes,
+                                                selectedEpisodeId = episode.id,
+                                                onEpisodeSelected = { nextEpisode ->
+                                                    viewModel.resolveMediaSizes(nextEpisode)
+                                                },
+                                                modifier = Modifier.fillMaxSize(),
+                                            ) { pageEpisode ->
+                                                var hydratedEpisode by remember(pageEpisode.id) {
+                                                    mutableStateOf(pageEpisode)
+                                                }
+                                                LaunchedEffect(pageEpisode.id) {
+                                                    viewModel.episode(pageEpisode.id)?.let { hydratedEpisode = it }
+                                                }
+                                                val persistedEpisode by viewModel.observeEpisode(pageEpisode.id)
+                                                    .collectAsStateWithLifecycle(null)
+                                                val displayEpisode = persistedEpisode ?: hydratedEpisode
+                                                val searchResult =
+                                                    selectedSearchResult?.takeIf { it.episode.id == displayEpisode.id }
+                                                        ?: globalSearchEpisodes.firstOrNull {
+                                                            it.episode.id ==
+                                                                displayEpisode.id
+                                                        }
+                                                // Downloads can remain after a podcast is unsubscribed, so use the
+                                                // complete local catalogue for episode metadata and podcast navigation.
+                                                val pagePodcast = allPodcastsById[displayEpisode.podcastId]
+                                                    ?: podcastsById[displayEpisode.podcastId]
+                                                    ?: selectedPodcast
+                                                val podcastTitle =
+                                                    pagePodcast?.title ?: searchResult?.podcastTitle.orEmpty()
+                                                val pagePodcastSubscriptionStage = pagePodcast?.feedUrl
+                                                    ?.let { feedUrl -> subscriptionProgress[feedUrl]?.stage }
+                                                val pagePodcastIsSubscribed = pagePodcast?.id in podcastsById ||
+                                                    pagePodcastSubscriptionStage?.isAdded == true
+                                                val pagePodcastSubscriptionLoading =
+                                                    pagePodcastSubscriptionStage?.isInProgress == true
+                                                PodcastEpisodeContent(
+                                                    episode = displayEpisode,
+                                                    podcastTitle = podcastTitle,
+                                                    podcastArtworkUrl =
+                                                        pagePodcast?.artworkUrl ?: searchResult?.podcastArtworkUrl,
+                                                    isPlaying =
+                                                        playback.episode?.id == displayEpisode.id && playback.isPlaying,
+                                                    isBuffering =
+                                                        playback.episode?.id == displayEpisode.id &&
+                                                            playback.isBuffering,
+                                                    onPlay = {
+                                                        if (playback.episode?.id == displayEpisode.id) {
+                                                            playbackViewModel.togglePlayPause()
+                                                        } else {
+                                                            playbackViewModel.play(displayEpisode, podcastTitle)
+                                                        }
+                                                    },
+                                                    onWatch = displayEpisode.videoUrl?.let {
+                                                        {
+                                                            playbackViewModel.watch(displayEpisode, podcastTitle)
+                                                            showNowPlaying = true
+                                                        }
+                                                    },
+                                                    onDownload = { viewModel.download(context, displayEpisode.id) },
+                                                    onRemoveDownload = {
+                                                        viewModel.removeDownload(context, displayEpisode.id)
+                                                    },
+                                                    downloadProgress = downloadProgress[displayEpisode.id],
+                                                    isInQueue = displayEpisode.id in queueEpisodeIds,
+                                                    onToggleQueue = {
+                                                        if (displayEpisode.id in queueEpisodeIds) {
+                                                            viewModel.removeFromQueue(displayEpisode.id)
+                                                        } else {
+                                                            viewModel.addToQueueFromInbox(
+                                                                displayEpisode.id,
+                                                                onError = {
+                                                                    scope.launch {
+                                                                        snackbarHostState.showSnackbar(
+                                                                            addUpNextFailed,
+                                                                        )
+                                                                    }
+                                                                },
+                                                            )
+                                                        }
+                                                    },
+                                                    isFavorite = displayEpisode.favorite,
+                                                    onToggleFavorite = { viewModel.toggleFavorite(displayEpisode.id) },
+                                                    onOpenPodcast = {
+                                                        selectedEpisodeId = null
+                                                        selectedPodcastId = displayEpisode.podcastId
+                                                        if (topLevelBackStack.lastOrNull() !is PodcastNavigationKey.PodcastDetail) {
+                                                            topLevelBackStack.add(
+                                                                PodcastNavigationKey.PodcastDetail(
+                                                                    displayEpisode.podcastId,
+                                                                ),
+                                                            )
+                                                        }
+                                                    },
+                                                    isSubscribed = pagePodcastIsSubscribed,
+                                                    isSubscriptionLoading = pagePodcastSubscriptionLoading,
+                                                    onSubscribe = pagePodcast?.takeIf {
+                                                        !pagePodcastIsSubscribed
+                                                    }?.let { podcast ->
+                                                        {
+                                                            enqueueSubscription(
+                                                                PodcastSearchResult(
+                                                                    providerId = "local",
+                                                                    podcast = com.shapeshed.booth.data.Podcast(
+                                                                        id = podcast.id,
+                                                                        title = podcast.title,
+                                                                        author = podcast.author,
+                                                                        feedUrl = podcast.feedUrl,
+                                                                        siteUrl = podcast.siteUrl,
+                                                                        descriptionHtml = podcast.descriptionHtml,
+                                                                        artworkUrl = podcast.artworkUrl,
+                                                                        explicit = podcast.explicit,
+                                                                    ),
+                                                                ),
+                                                            )
+                                                        }
+                                                    },
+                                                    twoPane = useTwoPaneEpisodeLayout,
+                                                    modifier = Modifier.fillMaxSize(),
+                                                )
+                                            }
+                                        }
+
+                                        is PodcastNavigationKey.PodcastDetail -> {
+                                            val podcast = selectedPodcast ?: return
+                                            val podcastPages = remember(podcastDetailFromSubscriptions, podcast.id) {
+                                                if (!podcastDetailFromSubscriptions) {
+                                                    listOf(podcast)
+                                                } else {
+                                                    val ordered = orderPodcasts(
+                                                        podcasts,
+                                                        podcastSortOrder,
+                                                        latestEpisodePublishedAt,
+                                                    )
+                                                    if (ordered.any { it.id == podcast.id }) {
+                                                        ordered
+                                                    } else {
+                                                        ordered +
+                                                            podcast
+                                                    }
+                                                }
+                                            }
+                                            PodcastDetailSwipePager(
+                                                podcasts = podcastPages,
+                                                selectedPodcastId = podcast.id,
+                                                onPodcastSelected = { podcastDetailPageId = it.id },
+                                                modifier = Modifier.fillMaxSize(),
+                                            ) { pagePodcast ->
+                                                val pageEpisodes by remember(pagePodcast.id) {
+                                                    viewModel.episodes(pagePodcast.id)
+                                                }.collectAsStateWithLifecycle(emptyList())
+                                                LaunchedEffect(pagePodcast.id) {
+                                                    if (!pagePodcast.isSubscribed) {
+                                                        viewModel.refreshUnsubscribedPodcast(
+                                                            pagePodcast,
+                                                        )
+                                                    }
+                                                }
+                                                PodcastDetailContent(
+                                                    podcast = pagePodcast,
+                                                    episodes = pageEpisodes,
+                                                    modifier = Modifier.fillMaxSize(),
+                                                    onRefresh = { viewModel.refresh(context, pagePodcast) },
+                                                    // Discovery downloads refresh their retained feed in the
+                                                    // background on entry; do not present that as a user pull.
+                                                    refreshing = refreshing && pagePodcast.isSubscribed,
+                                                    onPlay = { playbackViewModel.play(it, pagePodcast.title) },
+                                                    activeEpisodeId = playback.episode?.id,
+                                                    isPlaying = playback.isPlaying,
+                                                    isBuffering = playback.isBuffering,
+                                                    positionMs = playback.positionMs,
+                                                    onTogglePlayPause = playbackViewModel::togglePlayPause,
+                                                    showDescription = showPodcastDescription,
+                                                    onShowDescriptionChange = { showPodcastDescription = it },
+                                                    onDownload = { viewModel.download(context, it.id) },
+                                                    isSubscribed = pagePodcast.id in podcastsById,
+                                                    onUnsubscribe = { showUnsubscribeConfirmation = true },
+                                                    onSubscribe = { result -> enqueueSubscription(result) },
+                                                    onTag = { tag ->
+                                                        podcastDetailFromSubscriptions = false
+                                                        selectedPodcastId = null
+                                                        topLevelBackStack.add(
+                                                            PodcastNavigationKey.DiscoveryCategory(
+                                                                providerId = "local",
+                                                                categoryId = tag,
+                                                                title = tag,
+                                                            ),
+                                                        )
+                                                    },
+                                                    downloadProgress = downloadProgress,
+                                                    onEpisodeClick = {
+                                                        viewModel.resolveMediaSizes(it)
+                                                        episodeOrigin = EpisodeOrigin.PODCAST
+                                                        podcastDetailPageId = pagePodcast.id
+                                                        selectedPodcastId = pagePodcast.id
+                                                        selectedEpisodeId = it.id
+                                                        topLevelBackStack.add(
+                                                            PodcastNavigationKey.EpisodeDetail(
+                                                                episodeId = it.id,
+                                                                origin = EpisodeNavigationOrigin.Podcast,
+                                                            ),
+                                                        )
+                                                    },
+                                                    onEpisodeLongPress = { episode ->
+                                                        pendingEpisodeAction = createSubscribedEpisodeAction(
+                                                            episode = episode,
+                                                            podcastsById = podcastsById,
+                                                            downloadProgress = downloadProgress,
+                                                            queueEpisodeIds = queueEpisodeIds,
+                                                        )
+                                                    },
+                                                )
+                                            }
+                                        }
+
+                                        else -> Unit
+                                    }
+                                }
+
+                                @Composable
+                                fun SpecialRootContent(destination: PodcastNavigationKey) {
+                                    PodcastHomeSecondaryDestination(
+                                        destination = destination,
+                                        podcasts = podcasts,
+                                        allPodcastsById = allPodcastsById,
+                                        downloadAssets = downloadAssets,
+                                        downloadedEpisodes = downloadedEpisodes,
+                                        playback = playback,
+                                        downloadProgress = downloadProgress,
+                                        viewModel = viewModel,
+                                        playbackViewModel = playbackViewModel,
+                                        context = context,
+                                        refreshing = refreshing,
+                                        onOpen = { episode, origin ->
+                                            episodeOrigin = when (origin) {
+                                                EpisodeNavigationOrigin.Downloads -> EpisodeOrigin.DOWNLOADS
+                                                EpisodeNavigationOrigin.AllEpisodes -> EpisodeOrigin.ALL_EPISODES
+                                                else -> EpisodeOrigin.PODCAST
+                                            }
+                                            selectedPodcastId = episode.podcastId
+                                            viewModel.resolveMediaSizes(episode)
+                                            selectedEpisodeId = episode.id
+                                            topLevelBackStack.add(
+                                                PodcastNavigationKey.EpisodeDetail(episode.id, origin),
+                                            )
+                                        },
+                                        onAction = { episode ->
+                                            pendingEpisodeAction = createSubscribedEpisodeAction(
+                                                episode = episode,
+                                                podcastsById = podcastsById,
+                                                downloadProgress = downloadProgress,
+                                                queueEpisodeIds = queueEpisodeIds,
+                                            )
+                                        },
+                                        modifier = Modifier.fillMaxSize(),
+                                    )
+                                }
+                                // Navigation 3 retains root entries while their back-stack key is unchanged. Keep
+                                // the entry itself stable, but have it read the current content rather than the
+                                // empty-library content it captured when the app first opened.
+                                val currentRootTabContent = rememberUpdatedState<@Composable (PodcastTab) -> Unit>(
+                                    newValue = { tab -> RootTabContent(tab) },
+                                )
+                                NavDisplay(
+                                    backStack = topLevelBackStack,
+                                    onBack = {
+                                        if (topLevelBackStack.size > 1) {
+                                            popTopLevelRoute()
+                                            showPodcastDescription = false
+                                        }
+                                    },
+                                    sceneStrategies = listOf(listDetailStrategy),
+                                    entryProvider = entryProvider {
+                                        entry<PodcastNavigationKey.GlobalSearch> { globalSearchResults() }
+                                        entry<PodcastNavigationKey.Settings> { SettingsContent() }
+                                        entry<PodcastNavigationKey.PodcastManagement> { destination ->
+                                            PodcastHomeManagementDestination(
+                                                destination = destination,
+                                                podcasts = allPodcasts,
+                                                viewModel = viewModel,
+                                                modifier = Modifier.fillMaxSize(),
+                                            )
+                                        }
+                                        entry<PodcastNavigationKey.Discovery> { DiscoveryContent() }
+                                        entry<PodcastNavigationKey.DiscoveryPodcast> { DiscoveryContent() }
+                                        entry<PodcastNavigationKey.DiscoveryCategory> { DiscoveryContent() }
+                                        entry<PodcastNavigationKey.DiscoveryEpisode> { DiscoveryContent() }
+                                        entry<PodcastNavigationKey.Inbox>(
+                                            metadata = ListDetailSceneStrategy.listPane(
+                                                detailPlaceholder = { PodcastEmptyDetailPlaceholder() },
+                                            ),
+                                        ) { currentRootTabContent.value(PodcastTab.HOME) }
+                                        entry<PodcastNavigationKey.UpNext>(
+                                            metadata = ListDetailSceneStrategy.listPane(
+                                                detailPlaceholder = { PodcastEmptyDetailPlaceholder() },
+                                            ),
+                                        ) { currentRootTabContent.value(PodcastTab.UP_NEXT) }
+                                        entry<PodcastNavigationKey.Subscriptions>(
+                                            metadata = if ((podcasts.isEmpty() || forceGettingStarted) && !showSearch) {
+                                                emptyMap()
+                                            } else {
+                                                ListDetailSceneStrategy.listPane(
+                                                    detailPlaceholder = { PodcastEmptyDetailPlaceholder() },
+                                                )
+                                            },
+                                        ) { currentRootTabContent.value(PodcastTab.SUBSCRIPTIONS) }
+                                        entry<PodcastNavigationKey.Downloads>(
+                                            metadata = ListDetailSceneStrategy.listPane(
+                                                detailPlaceholder = { PodcastEmptyDetailPlaceholder() },
+                                            ),
+                                        ) { SpecialRootContent(PodcastNavigationKey.Downloads) }
+                                        entry<PodcastNavigationKey.AllEpisodes>(
+                                            metadata = ListDetailSceneStrategy.listPane(
+                                                detailPlaceholder = { PodcastEmptyDetailPlaceholder() },
+                                            ),
+                                        ) { SpecialRootContent(PodcastNavigationKey.AllEpisodes) }
+                                        entry<PodcastNavigationKey.PodcastDetail>(
+                                            metadata = ListDetailSceneStrategy.detailPane(),
+                                        ) { destination -> DetailContent(destination) }
+                                        entry<PodcastNavigationKey.PodcastSettings>(
+                                            metadata = ListDetailSceneStrategy.detailPane(),
+                                        ) { destination ->
+                                            allPodcastsById[destination.podcastId]?.let { podcast ->
+                                                PodcastSettingsContent(
+                                                    podcast = podcast,
+                                                    globalPlaybackSpeed = globalPlaybackSpeed,
+                                                    globalSkipSilence = homeUiState.playback.skipSilence,
+                                                    onPlaybackSpeedChange = { speed ->
+                                                        viewModel.setPodcastPlaybackSpeed(podcast.id, speed)
+                                                    },
+                                                    onSkipSilenceChange = { enabled ->
+                                                        playbackViewModel.setPodcastSkipSilence(podcast.id, enabled)
+                                                    },
+                                                    globalAutoQueueEnabled = podcastAutoQueueEnabled,
+                                                    globalNotificationsEnabled = podcastNotificationsEnabled &&
+                                                        platformActions.notificationsPermissionGranted,
+                                                    availableTags = availablePodcastTags,
+                                                    onSaveSettings = {
+                                                            tags,
+                                                            start,
+                                                            end,
+                                                            refresh,
+                                                            download,
+                                                            queue,
+                                                            notify,
+                                                        ->
+                                                        viewModel.updatePodcastSettings(
+                                                            podcast.id,
+                                                            tags,
+                                                            start,
+                                                            end,
+                                                            refresh,
+                                                            download,
+                                                            queue,
+                                                            notify,
+                                                        )
+                                                    },
+                                                    modifier = Modifier.fillMaxSize(),
+                                                )
+                                            }
+                                        }
+                                        entry<PodcastNavigationKey.EpisodeDetail>(
+                                            metadata = ListDetailSceneStrategy.detailPane(),
+                                        ) { destination -> DetailContent(destination) }
+                                    },
+                                )
                             }
-                            PodcastDetailContent(
-                                podcast = pagePodcast,
-                                episodes = pageEpisodes,
-                                modifier = Modifier.fillMaxSize(),
-                                onRefresh = { viewModel.refresh(context, pagePodcast) },
-                                // Discovery downloads refresh their retained feed in the
-                                // background on entry; do not present that as a user pull.
-                                refreshing = refreshing && pagePodcast.isSubscribed,
-                                onPlay = { playbackViewModel.play(it, pagePodcast.title) },
-                                activeEpisodeId = playback.episode?.id,
+                            PodcastHomeMiniPlayerOverlay(
+                                visible = miniPlayerVisible && !showPodcastAppSettings,
+                                episode = playback.episode,
+                                podcastTitle = playingPodcastTitle,
                                 isPlaying = playback.isPlaying,
                                 isBuffering = playback.isBuffering,
-                                positionMs = playback.positionMs,
-                                onTogglePlayPause = playbackViewModel::togglePlayPause,
-                                showDescription = showPodcastDescription,
-                                onShowDescriptionChange = { showPodcastDescription = it },
-                                onDownload = { viewModel.download(context, it.id) },
-                                isSubscribed = pagePodcast.id in podcastsById,
-                                onUnsubscribe = { showUnsubscribeConfirmation = true },
-                                onSubscribe = { result -> enqueueSubscription(result) },
-                                onTag = { tag ->
-                                    podcastDetailFromSubscriptions = false
-                                    selectedPodcastId = null
-                                    topLevelBackStack.add(
-                                        PodcastNavigationKey.DiscoveryCategory(
-                                            providerId = "local",
-                                            categoryId = tag,
-                                            title = tag,
-                                        ),
-                                    )
+                                playbackViewModel = playbackViewModel,
+                                onOpen = { showNowPlaying = true },
+                                onDismiss = ::dismissNowPlaying,
+                                onHeightChanged = { miniPlayerHeightPx = it },
+                            )
+                            PodcastHomeSecondaryOverlays(
+                                routeState = routeState,
+                                homeState = state,
+                                selectedPodcast = selectedPodcast,
+                                discoveryDescriptionBlocks = discoveryDescriptionBlocks,
+                                viewModel = viewModel,
+                                undoActions = undoActions,
+                                onUnsubscribeConfirmed = { retainedPodcastAfterUnsubscribe = it },
+                                directFeedUrl = directFeedUrl,
+                                onDirectFeedUrlChange = { directFeedUrl = it },
+                                onAddPodcast = {
+                                    enqueueFeedSubscription(directFeedUrl)
+                                    directFeedUrl = ""
+                                    routeState.showAddPodcast.value = false
                                 },
-                                downloadProgress = downloadProgress,
-                                onEpisodeClick = {
-                                    viewModel.resolveMediaSizes(it)
-                                    episodeOrigin = EpisodeOrigin.PODCAST
-                                    podcastDetailPageId = pagePodcast.id
-                                    selectedPodcastId = pagePodcast.id
-                                    selectedEpisodeId = it.id
-                                    topLevelBackStack.add(
-                                        PodcastNavigationKey.EpisodeDetail(
-                                            episodeId = it.id,
-                                            origin = EpisodeNavigationOrigin.Podcast,
-                                        ),
-                                    )
-                                },
-                                onEpisodeLongPress = { episode ->
-                                    pendingEpisodeAction = createSubscribedEpisodeAction(
-                                        episode = episode,
-                                        podcastsById = podcastsById,
-                                        downloadProgress = downloadProgress,
-                                        queueEpisodeIds = queueEpisodeIds,
-                                    )
-                                },
+                            )
+                            PodcastHomeEpisodeActionsOverlay(
+                                routeState = routeState,
+                                selectedTab = selectedTab,
+                                context = context,
+                                viewModel = viewModel,
+                                playbackViewModel = playbackViewModel,
+                                scope = scope,
+                                snackbarHostState = snackbarHostState,
                             )
                         }
                     }
-                    else -> Unit
                 }
             }
-            @Composable
-            fun SpecialRootContent(destination: PodcastNavigationKey) {
-                PodcastHomeSecondaryDestination(
-                    destination = destination,
-                    podcasts = podcasts,
-                    allPodcastsById = allPodcastsById,
-                    downloadAssets = downloadAssets,
-                    downloadedEpisodes = downloadedEpisodes,
-                    playback = playback,
-                    downloadProgress = downloadProgress,
-                    viewModel = viewModel,
-                    playbackViewModel = playbackViewModel,
-                    context = context,
-                    refreshing = refreshing,
-                    onOpen = { episode, origin ->
-                        episodeOrigin = when (origin) {
-                            EpisodeNavigationOrigin.Downloads -> EpisodeOrigin.DOWNLOADS
-                            EpisodeNavigationOrigin.AllEpisodes -> EpisodeOrigin.ALL_EPISODES
-                            else -> EpisodeOrigin.PODCAST
-                        }
-                        selectedPodcastId = episode.podcastId
-                        viewModel.resolveMediaSizes(episode)
-                        selectedEpisodeId = episode.id
-                        topLevelBackStack.add(PodcastNavigationKey.EpisodeDetail(episode.id, origin))
-                    },
-                    onAction = { episode ->
-                        pendingEpisodeAction = createSubscribedEpisodeAction(
-                            episode = episode,
-                            podcastsById = podcastsById,
-                            downloadProgress = downloadProgress,
-                            queueEpisodeIds = queueEpisodeIds,
-                        )
-                    },
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
-            // Navigation 3 retains root entries while their back-stack key is unchanged. Keep
-            // the entry itself stable, but have it read the current content rather than the
-            // empty-library content it captured when the app first opened.
-            val currentRootTabContent = rememberUpdatedState<@Composable (PodcastTab) -> Unit>(
-                newValue = { tab -> RootTabContent(tab) },
-            )
-            NavDisplay(
-                    backStack = topLevelBackStack,
-                    onBack = {
-                        if (topLevelBackStack.size > 1) {
-                            popTopLevelRoute()
-                            showPodcastDescription = false
-                        }
-                    },
-                    sceneStrategies = listOf(listDetailStrategy),
-                    entryProvider = entryProvider {
-                    entry<PodcastNavigationKey.GlobalSearch> { globalSearchResults() }
-                    entry<PodcastNavigationKey.Settings> { SettingsContent() }
-                    entry<PodcastNavigationKey.PodcastManagement> { destination ->
-                        PodcastHomeManagementDestination(
-                            destination = destination,
-                            podcasts = allPodcasts,
-                            viewModel = viewModel,
-                            modifier = Modifier.fillMaxSize(),
-                        )
-                    }
-                    entry<PodcastNavigationKey.Discovery> { DiscoveryContent() }
-                    entry<PodcastNavigationKey.DiscoveryPodcast> { DiscoveryContent() }
-                    entry<PodcastNavigationKey.DiscoveryCategory> { DiscoveryContent() }
-                    entry<PodcastNavigationKey.DiscoveryEpisode> { DiscoveryContent() }
-                    entry<PodcastNavigationKey.Inbox>(
-                        metadata = ListDetailSceneStrategy.listPane(
-                            detailPlaceholder = { PodcastEmptyDetailPlaceholder() },
-                        ),
-                    ) { currentRootTabContent.value(PodcastTab.HOME) }
-                    entry<PodcastNavigationKey.UpNext>(
-                        metadata = ListDetailSceneStrategy.listPane(
-                            detailPlaceholder = { PodcastEmptyDetailPlaceholder() },
-                        ),
-                    ) { currentRootTabContent.value(PodcastTab.UP_NEXT) }
-                    entry<PodcastNavigationKey.Subscriptions>(
-                        metadata = if ((podcasts.isEmpty() || forceGettingStarted) && !showSearch) {
-                            emptyMap()
-                        } else {
-                            ListDetailSceneStrategy.listPane(
-                                detailPlaceholder = { PodcastEmptyDetailPlaceholder() },
-                            )
-                        },
-                    ) { currentRootTabContent.value(PodcastTab.SUBSCRIPTIONS) }
-                    entry<PodcastNavigationKey.Downloads>(
-                        metadata = ListDetailSceneStrategy.listPane(
-                            detailPlaceholder = { PodcastEmptyDetailPlaceholder() },
-                        ),
-                    ) { SpecialRootContent(PodcastNavigationKey.Downloads) }
-                    entry<PodcastNavigationKey.AllEpisodes>(
-                        metadata = ListDetailSceneStrategy.listPane(
-                            detailPlaceholder = { PodcastEmptyDetailPlaceholder() },
-                        ),
-                    ) { SpecialRootContent(PodcastNavigationKey.AllEpisodes) }
-                    entry<PodcastNavigationKey.PodcastDetail>(
-                        metadata = ListDetailSceneStrategy.detailPane(),
-                    ) { destination -> DetailContent(destination) }
-                    entry<PodcastNavigationKey.PodcastSettings>(
-                        metadata = ListDetailSceneStrategy.detailPane(),
-                    ) { destination ->
-                        allPodcastsById[destination.podcastId]?.let { podcast ->
-                            PodcastSettingsContent(
-                                podcast = podcast,
-                                globalPlaybackSpeed = globalPlaybackSpeed,
-                                globalSkipSilence = homeUiState.playback.skipSilence,
-                                onPlaybackSpeedChange = { speed ->
-                                    viewModel.setPodcastPlaybackSpeed(podcast.id, speed)
-                                },
-                                onSkipSilenceChange = { enabled ->
-                                    playbackViewModel.setPodcastSkipSilence(podcast.id, enabled)
-                                },
-                                globalAutoQueueEnabled = podcastAutoQueueEnabled,
-                                globalNotificationsEnabled = podcastNotificationsEnabled &&
-                                    platformActions.notificationsPermissionGranted,
-                                availableTags = availablePodcastTags,
-                                onSaveSettings = { tags, start, end, refresh, download, queue, notify ->
-                                    viewModel.updatePodcastSettings(
-                                        podcast.id,
-                                        tags,
-                                        start,
-                                        end,
-                                        refresh,
-                                        download,
-                                        queue,
-                                        notify,
-                                    )
-                                },
-                                modifier = Modifier.fillMaxSize(),
-                            )
-                        }
-                    }
-                    entry<PodcastNavigationKey.EpisodeDetail>(
-                        metadata = ListDetailSceneStrategy.detailPane(),
-                    ) { destination -> DetailContent(destination) }
-                    },
-            )
         }
-        PodcastHomeMiniPlayerOverlay(
-            visible = miniPlayerVisible && !showPodcastAppSettings,
-            episode = playback.episode,
-            podcastTitle = playingPodcastTitle,
-            isPlaying = playback.isPlaying,
-            isBuffering = playback.isBuffering,
-            playbackViewModel = playbackViewModel,
-            onOpen = { showNowPlaying = true },
-            onDismiss = ::dismissNowPlaying,
-            onHeightChanged = { miniPlayerHeightPx = it },
-        )
-        PodcastHomeSecondaryOverlays(
-            routeState = routeState,
-            homeState = state,
-            selectedPodcast = selectedPodcast,
-            discoveryDescriptionBlocks = discoveryDescriptionBlocks,
-            viewModel = viewModel,
-            undoActions = undoActions,
-            onUnsubscribeConfirmed = { retainedPodcastAfterUnsubscribe = it },
-            directFeedUrl = directFeedUrl,
-            onDirectFeedUrlChange = { directFeedUrl = it },
-            onAddPodcast = {
-                enqueueFeedSubscription(directFeedUrl)
-                directFeedUrl = ""
-                routeState.showAddPodcast.value = false
-            },
-        )
-        PodcastHomeEpisodeActionsOverlay(
-            routeState = routeState,
-            selectedTab = selectedTab,
-            context = context,
-            viewModel = viewModel,
-            playbackViewModel = playbackViewModel,
-            scope = scope,
-            snackbarHostState = snackbarHostState,
-        )
-    }
-}
-}
-}
-}
         PodcastHomeNavigationRail(
             visible = useNavigationRail,
             selectedTab = selectedTab,
@@ -1996,5 +2119,5 @@ fun PodcastHomeScreen(
             podcastTitlesById = podcastTitlesById,
             onDismiss = ::dismissNowPlaying,
         )
-}
+    }
 }

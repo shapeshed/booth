@@ -24,19 +24,19 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.WavyProgressIndicatorDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import kotlin.math.roundToInt
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.shapeshed.booth.R
 import com.shapeshed.booth.BuildConfig
+import com.shapeshed.booth.R
 import com.shapeshed.booth.data.SleepTimerState
+import kotlin.math.roundToInt
 
 private const val MINUTE_MS = 60_000L
 private val SleepTimerPresets = buildList {
@@ -58,11 +58,7 @@ internal fun formatSleepRemaining(ms: Long): String {
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-internal fun SleepTimerAction(
-    active: SleepTimerState?,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
+internal fun SleepTimerAction(active: SleepTimerState?, onClick: () -> Unit, modifier: Modifier = Modifier) {
     if (active == null) {
         FilledTonalIconButton(
             onClick = onClick,
@@ -123,7 +119,11 @@ internal fun SleepTimerSheet(
         ) {
             Text(stringResource(R.string.sleep_timer), style = MaterialTheme.typography.titleLarge)
             if (active != null) {
-                Text(formatSleepRemaining(active.remainingMs), style = MaterialTheme.typography.displaySmall, color = MaterialTheme.colorScheme.primary)
+                Text(
+                    formatSleepRemaining(active.remainingMs),
+                    style = MaterialTheme.typography.displaySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
                 val progress = (1f - active.remainingMs.toFloat() / active.totalMs.coerceAtLeast(1L)).coerceIn(0f, 1f)
                 LinearWavyProgressIndicator(
                     progress = { progress },
@@ -132,14 +132,23 @@ internal fun SleepTimerSheet(
                     modifier = Modifier.fillMaxWidth().height(WavyProgressIndicatorDefaults.LinearContainerHeight),
                 )
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedButton(onClick = { onCancel(); onDismiss() }, modifier = Modifier.weight(1f)) {
+                    OutlinedButton(onClick = {
+                        onCancel()
+                        onDismiss()
+                    }, modifier = Modifier.weight(1f)) {
                         Text(stringResource(R.string.cancel))
                     }
-                    FilledTonalButton(onClick = { onSet(active.remainingMs + 15 * MINUTE_MS) }, modifier = Modifier.weight(1f)) {
+                    FilledTonalButton(onClick = {
+                        onSet(active.remainingMs + 15 * MINUTE_MS)
+                    }, modifier = Modifier.weight(1f)) {
                         Text(stringResource(R.string.sleep_add_15))
                     }
                 }
-                Text(stringResource(R.string.sleep_set_new_duration), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    stringResource(R.string.sleep_set_new_duration),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
             FlowRow(
                 modifier = Modifier.fillMaxWidth(),
@@ -163,7 +172,10 @@ internal fun SleepTimerSheet(
                     PlaybackPresetButton(
                         label = label,
                         selected = active?.totalMs == durationMs,
-                        onClick = { onSet(durationMs); onDismiss() },
+                        onClick = {
+                            onSet(durationMs)
+                            onDismiss()
+                        },
                     )
                 }
             }

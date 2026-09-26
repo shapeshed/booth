@@ -24,7 +24,14 @@ enum class PodcastRefreshNetwork { ANY_CONNECTION, WIFI_ONLY }
 
 enum class PodcastDownloadNetwork { ANY_CONNECTION, WIFI_ONLY }
 
-enum class PodcastDownloadLimit(val episodeCount: Int?) { TWENTY_FIVE(25), FIFTY(50), ONE_HUNDRED(100), UNLIMITED(null) }
+enum class PodcastDownloadLimit(val episodeCount: Int?) {
+    TWENTY_FIVE(
+        25,
+    ),
+    FIFTY(50),
+    ONE_HUNDRED(100),
+    UNLIMITED(null),
+}
 
 enum class PodcastDeleteBeforeAutoDownload { OFF, PLAYED, ALL_ELIGIBLE }
 
@@ -172,7 +179,10 @@ class SettingsStore(private val context: Context) {
         context.dataStore.edit { it[downloadVideosKey] = enabled }
     }
 
-    val podcastSearchProvider: Flow<String> = context.dataStore.data.map { it[searchProviderKey] ?: DEFAULT_SEARCH_PROVIDER }
+    val podcastSearchProvider: Flow<String> = context.dataStore.data.map {
+        it[searchProviderKey]
+            ?: DEFAULT_SEARCH_PROVIDER
+    }
 
     suspend fun setPodcastSearchProvider(providerId: String) {
         context.dataStore.edit { it[searchProviderKey] = providerId }

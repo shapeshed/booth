@@ -1,13 +1,13 @@
 package com.shapeshed.booth.data
 
 import android.os.Trace
+import java.io.IOException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import java.io.IOException
 
 /**
  * Complete-feed adapter for the SAX parser. The legacy parser remains the compatibility
@@ -162,8 +162,7 @@ class StreamingCompletePodcastFeedProvider(
         runCatching { metrics.record(metric) }
     }
 
-    private fun elapsedMs(startedAt: Long): Long =
-        ((System.nanoTime() - startedAt) / 1_000_000L).coerceAtLeast(0L)
+    private fun elapsedMs(startedAt: Long): Long = ((System.nanoTime() - startedAt) / 1_000_000L).coerceAtLeast(0L)
 }
 
 private class StreamingParserFailureException(
