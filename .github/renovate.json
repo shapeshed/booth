@@ -4,12 +4,19 @@
     "config:recommended",
     ":dependencyDashboard",
     ":rebaseStalePrs",
-    ":prConcurrentLimit10"
+    ":prConcurrentLimit10",
+    ":automergeRequireAllStatusChecks",
+    "helpers:pinGitHubActionDigests"
   ],
   "labels": [
     "dependencies",
     "renovate"
   ],
+  "automerge": true,
+  "platformAutomerge": false,
+  "major": {
+    "automerge": false
+  },
   "enabledManagers": [
     "gradle",
     "github-actions"
