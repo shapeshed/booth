@@ -57,5 +57,4 @@ class PodcastSwipeRowTest {
         subscribedAtMillis = 1L,
         lastRefreshMillis = null,
     )
-
 }

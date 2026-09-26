@@ -1,11 +1,11 @@
 package com.shapeshed.booth.ui
 
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.encodeToString
+import androidx.compose.runtime.mutableStateOf
 import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import androidx.compose.runtime.mutableStateOf
 
 class PodcastNavigationKeyTest {
     private val json = Json { encodeDefaults = true }

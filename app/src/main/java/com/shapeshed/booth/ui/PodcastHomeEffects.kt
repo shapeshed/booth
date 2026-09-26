@@ -50,6 +50,7 @@ internal fun PodcastHomeEffects(
                 onOpenInitialEpisode(episode)
                 when (initialNotificationAction) {
                     PodcastNotificationActionAddToQueue -> viewModel.addToQueueFromInbox(episode.id)
+
                     PodcastNotificationActionPlay -> {
                         val podcastTitle = viewModel.podcast(episode.podcastId)?.title.orEmpty()
                         playbackViewModel.playFromNotification(episode, podcastTitle)

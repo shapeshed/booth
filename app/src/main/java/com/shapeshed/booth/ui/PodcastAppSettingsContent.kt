@@ -2,13 +2,13 @@ package com.shapeshed.booth.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.shapeshed.booth.data.PodcastDeleteBeforeAutoDownload
+import com.shapeshed.booth.data.PodcastDownloadLimit
+import com.shapeshed.booth.data.PodcastDownloadNetwork
+import com.shapeshed.booth.data.PodcastIndexCredentials
 import com.shapeshed.booth.data.PodcastRefreshInterval
 import com.shapeshed.booth.data.PodcastRefreshNetwork
-import com.shapeshed.booth.data.PodcastDownloadNetwork
-import com.shapeshed.booth.data.PodcastDownloadLimit
-import com.shapeshed.booth.data.PodcastDeleteBeforeAutoDownload
 import com.shapeshed.booth.data.PodcastSearchProvider
-import com.shapeshed.booth.data.PodcastIndexCredentials
 
 internal data class PodcastManagementCounts(
     val total: Int,

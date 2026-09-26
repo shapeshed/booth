@@ -1,13 +1,13 @@
 package com.shapeshed.booth.data
 
+import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
-import java.util.Locale
-import java.util.concurrent.ConcurrentHashMap
 
 /** Apple’s public podcast catalogue search. It requires no secret in the app. */
 class ApplePodcastSearchProvider(
@@ -15,7 +15,8 @@ class ApplePodcastSearchProvider(
     private val localeProvider: () -> Locale = { Locale.getDefault() },
     private val apiBaseUrl: String = "https://itunes.apple.com",
     private val rssBaseUrl: String = "https://itunes.apple.com",
-) : PodcastSearchProvider, PodcastDiscoveryProvider {
+) : PodcastSearchProvider,
+    PodcastDiscoveryProvider {
     private val country: String
         get() = localeProvider().country.lowercase(Locale.ROOT).ifBlank { "us" }
     override val id: String = "apple"
@@ -24,16 +25,14 @@ class ApplePodcastSearchProvider(
     override val supportsPopularPodcasts: Boolean = true
     private val categoryCharts = ConcurrentHashMap<String, List<PodcastSearchResult>>()
 
-    override suspend fun browse(shelf: PodcastDiscoveryShelf): List<PodcastSearchResult> =
-        withContext(Dispatchers.IO) {
-            val path = when (shelf) {
-                PodcastDiscoveryShelf.TOP_SHOWS -> "toppodcasts/limit=25/explicit=true/json"
-            }
-            loadChart(path)
+    override suspend fun browse(shelf: PodcastDiscoveryShelf): List<PodcastSearchResult> = withContext(Dispatchers.IO) {
+        val path = when (shelf) {
+            PodcastDiscoveryShelf.TOP_SHOWS -> "toppodcasts/limit=25/explicit=true/json"
         }
+        loadChart(path)
+    }
 
-    override suspend fun browse(category: PodcastDiscoveryCategory): List<PodcastSearchResult> =
-        browse(category, 0)
+    override suspend fun browse(category: PodcastDiscoveryCategory): List<PodcastSearchResult> = browse(category, 0)
 
     override suspend fun browse(category: PodcastDiscoveryCategory, offset: Int): List<PodcastSearchResult> =
         withContext(Dispatchers.IO) {
@@ -50,17 +49,17 @@ class ApplePodcastSearchProvider(
         val chartUrl = "$rssBaseUrl/$country/rss/$path".toHttpUrl()
         val chart = getJson(chartUrl)
         val entries = chart.optJSONObject("feed")?.optJSONArray("entry") ?: return emptyList()
-            val ids = buildList {
-                for (index in 0 until entries.length()) {
-                    entries.optJSONObject(index)
-                        ?.optJSONObject("id")
-                        ?.optJSONObject("attributes")
-                        ?.optString("im:id")
-                        ?.takeIf(String::isNotBlank)
-                        ?.let(::add)
-                }
+        val ids = buildList {
+            for (index in 0 until entries.length()) {
+                entries.optJSONObject(index)
+                    ?.optJSONObject("id")
+                    ?.optJSONObject("attributes")
+                    ?.optString("im:id")
+                    ?.takeIf(String::isNotBlank)
+                    ?.let(::add)
             }
-            if (ids.isEmpty()) return emptyList()
+        }
+        if (ids.isEmpty()) return emptyList()
         return lookup(ids)
     }
 
@@ -91,7 +90,6 @@ class ApplePodcastSearchProvider(
             }
         }
     }
-
 
     internal fun parseLookupResults(json: JSONObject): List<PodcastSearchResult> {
         val results = json.optJSONArray("results") ?: return emptyList()

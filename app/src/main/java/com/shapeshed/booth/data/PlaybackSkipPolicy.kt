@@ -8,12 +8,7 @@ object PlaybackSkipPolicy {
         return skipStartMs
     }
 
-    fun shouldSkipEnding(
-        positionMs: Long,
-        durationMs: Long,
-        skipEndMs: Long,
-        playbackSpeed: Float,
-    ): Boolean {
+    fun shouldSkipEnding(positionMs: Long, durationMs: Long, skipEndMs: Long, playbackSpeed: Float): Boolean {
         if (skipEndMs <= 0L || durationMs <= 0L) return false
         return skipEndMs < durationMs &&
             positionMs >= durationMs - skipEndMs

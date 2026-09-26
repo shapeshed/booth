@@ -50,10 +50,9 @@ internal fun PodcastEntity.displayCategories(): List<String> =
     categories.filter { it.providerId == LOCAL_DIRECTORY_PROVIDER_ID }.map(CategoryEntity::name)
         .ifEmpty { categories.filter { it.providerId != LOCAL_DIRECTORY_PROVIDER_ID }.map(CategoryEntity::name) }
 
-internal fun PodcastEntity.searchableCategories(): List<String> =
-    categories.map(CategoryEntity::name)
-        .filter(String::isNotBlank)
-        .distinct()
+internal fun PodcastEntity.searchableCategories(): List<String> = categories.map(CategoryEntity::name)
+    .filter(String::isNotBlank)
+    .distinct()
 
 fun podcastTags(podcasts: List<PodcastEntity>): List<String> = podcasts
     .flatMap { podcast ->

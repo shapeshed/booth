@@ -5,29 +5,29 @@ import android.content.Context
 import coil3.ImageLoader
 import coil3.SingletonImageLoader
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
-import com.shapeshed.booth.data.FeedParser
-import com.shapeshed.booth.data.Prof18FeedParser
-import com.shapeshed.booth.data.SettingsStore
-import com.shapeshed.booth.data.PodcastDatabase
-import com.shapeshed.booth.data.PodcastIndexSearchProvider
-import com.shapeshed.booth.data.PodcastIndexCredentialsStore
 import com.shapeshed.booth.data.ApplePodcastSearchProvider
 import com.shapeshed.booth.data.DefaultPodcastSearchCatalog
-import com.shapeshed.booth.data.PodcastSearchCatalog
+import com.shapeshed.booth.data.FeedParser
+import com.shapeshed.booth.data.PodcastDatabase
 import com.shapeshed.booth.data.PodcastDiscoveryCatalog
-import com.shapeshed.booth.data.PodcastRepository
 import com.shapeshed.booth.data.PodcastFeedProvider
+import com.shapeshed.booth.data.PodcastIndexCredentialsStore
+import com.shapeshed.booth.data.PodcastIndexSearchProvider
+import com.shapeshed.booth.data.PodcastRepository
+import com.shapeshed.booth.data.PodcastSearchCatalog
+import com.shapeshed.booth.data.Prof18FeedParser
 import com.shapeshed.booth.data.RssPodcastFeedProvider
 import com.shapeshed.booth.data.SaxStreamingFeedParser
-import com.shapeshed.booth.data.StreamingPodcastFeedProvider
+import com.shapeshed.booth.data.SettingsStore
 import com.shapeshed.booth.data.StreamingCompletePodcastFeedProvider
-import okhttp3.Cache
-import okhttp3.Dispatcher
-import okhttp3.OkHttpClient
+import com.shapeshed.booth.data.StreamingPodcastFeedProvider
+import dagger.hilt.android.HiltAndroidApp
 import java.io.File
 import java.util.Locale
 import java.util.concurrent.TimeUnit
-import dagger.hilt.android.HiltAndroidApp
+import okhttp3.Cache
+import okhttp3.Dispatcher
+import okhttp3.OkHttpClient
 
 /**
  * Owns the app's few long-lived singletons. No DI framework — the same deliberately plain wiring
@@ -35,7 +35,9 @@ import dagger.hilt.android.HiltAndroidApp
  * as Coil's image-loader factory so favicons load through the shared OkHttp client.
  */
 @HiltAndroidApp
-class BoothApp : Application(), SingletonImageLoader.Factory {
+class BoothApp :
+    Application(),
+    SingletonImageLoader.Factory {
 
     override fun onCreate() {
         super.onCreate()
@@ -116,13 +118,11 @@ class BoothApp : Application(), SingletonImageLoader.Factory {
         )
     }
 
-    override fun newImageLoader(context: Context): ImageLoader =
-        ImageLoader.Builder(context)
-            .components { add(OkHttpNetworkFetcherFactory(callFactory = { okHttpClient })) }
-            .build()
+    override fun newImageLoader(context: Context): ImageLoader = ImageLoader.Builder(context)
+        .components { add(OkHttpNetworkFetcherFactory(callFactory = { okHttpClient })) }
+        .build()
 
     private companion object {
         const val CACHE_SIZE_BYTES = 20L * 1024 * 1024
-
     }
 }

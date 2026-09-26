@@ -4,21 +4,21 @@ import android.app.DownloadManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.shapeshed.booth.BoothApp
+import androidx.core.net.toUri
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
-import androidx.work.NetworkType
 import androidx.work.workDataOf
-import androidx.core.net.toUri
+import com.shapeshed.booth.BoothApp
+import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import java.io.File
 
 class PodcastDownloadReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -46,7 +46,10 @@ class PodcastDownloadReceiver : BroadcastReceiver() {
             if (!it.moveToFirst()) return
             val status = it.getInt(it.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
             val bytes = it.getLong(it.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
-            val total = it.getLong(it.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)).takeIf { value -> value >= 0L }
+            val total = it.getLong(it.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)).takeIf { value ->
+                value >=
+                    0L
+            }
             if (status == DownloadManager.STATUS_SUCCESSFUL) {
                 val path = asset.destinationUri.toUri().path.orEmpty()
                 val file = File(path)
@@ -55,7 +58,11 @@ class PodcastDownloadReceiver : BroadcastReceiver() {
                     expectedBytes > 0L && file.length() != expectedBytes
                 if (!isValidDownloadedFile(file, expectedBytes)) {
                     app.podcastRepository.updateDownloadAsset(
-                        asset.episodeId, asset.assetType, DownloadAssetStatus.FAILED, bytes, total,
+                        asset.episodeId,
+                        asset.assetType,
+                        DownloadAssetStatus.FAILED,
+                        bytes,
+                        total,
                         if (hasExpectedSizeMismatch) {
                             "Downloaded file size did not match the expected size."
                         } else {
@@ -68,7 +75,12 @@ class PodcastDownloadReceiver : BroadcastReceiver() {
                     return
                 }
                 app.podcastRepository.updateDownloadAsset(
-                    asset.episodeId, asset.assetType, DownloadAssetStatus.COMPLETED, file.length(), total, null,
+                    asset.episodeId,
+                    asset.assetType,
+                    DownloadAssetStatus.COMPLETED,
+                    file.length(),
+                    total,
+                    null,
                     System.currentTimeMillis(),
                 )
                 if (asset.assetType == DownloadAssetType.VIDEO) {
@@ -78,7 +90,12 @@ class PodcastDownloadReceiver : BroadcastReceiver() {
                 }
                 DownloadProgressStore.update(
                     asset.episodeId,
-                    DownloadProgress(file.length(), total ?: file.length(), android.os.SystemClock.elapsedRealtime(), true),
+                    DownloadProgress(
+                        file.length(),
+                        total ?: file.length(),
+                        android.os.SystemClock.elapsedRealtime(),
+                        true,
+                    ),
                 )
             } else {
                 val reason = it.getInt(it.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON))
@@ -108,7 +125,11 @@ class PodcastDownloadReceiver : BroadcastReceiver() {
                     return
                 }
                 app.podcastRepository.updateDownloadAsset(
-                    asset.episodeId, asset.assetType, DownloadAssetStatus.FAILED, bytes, total,
+                    asset.episodeId,
+                    asset.assetType,
+                    DownloadAssetStatus.FAILED,
+                    bytes,
+                    total,
                     errorMessage,
                 )
                 clearLocalUri(app, asset)
@@ -122,9 +143,9 @@ private const val MaxDownloadRetries = 3
 
 internal fun shouldRetryDownload(reason: Int, retryCount: Int): Boolean =
     retryCount < MaxDownloadRetries && reason in setOf(
-    DownloadManager.ERROR_CANNOT_RESUME,
-    DownloadManager.ERROR_HTTP_DATA_ERROR,
-)
+        DownloadManager.ERROR_CANNOT_RESUME,
+        DownloadManager.ERROR_HTTP_DATA_ERROR,
+    )
 
 private suspend fun clearLocalUri(app: BoothApp, asset: DownloadAssetEntity) {
     if (asset.assetType == DownloadAssetType.VIDEO) {

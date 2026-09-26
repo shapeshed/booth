@@ -4,22 +4,22 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Speed
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -69,18 +69,18 @@ private fun standardSpeedIcon(speed: Float): androidx.compose.ui.graphics.vector
     else -> null
 }
 
-internal fun isStandardPlaybackSpeed(speed: Float): Boolean =
-    PlaybackSpeedPresets.any { it == speed }
+internal fun isStandardPlaybackSpeed(speed: Float): Boolean = PlaybackSpeedPresets.any { it == speed }
 
-internal fun formatPlaybackSpeed(speed: Float): String =
-    if (speed % 1f == 0f) "${speed.toInt()}×" else "${String.format(Locale.US, "%.2f", speed).trimEnd('0').trimEnd('.')}×"
+internal fun formatPlaybackSpeed(speed: Float): String = if (speed % 1f ==
+    0f
+) {
+    "${speed.toInt()}×"
+} else {
+    "${String.format(Locale.US, "%.2f", speed).trimEnd('0').trimEnd('.')}×"
+}
 
 @Composable
-internal fun PlaybackSpeedAction(
-    speed: Float,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
+internal fun PlaybackSpeedAction(speed: Float, onClick: () -> Unit, modifier: Modifier = Modifier) {
     FilledTonalIconButton(onClick = onClick, modifier = modifier) {
         standardSpeedIcon(speed)?.let { icon ->
             Icon(icon, contentDescription = stringResource(R.string.playback_speed_custom, formatPlaybackSpeed(speed)))

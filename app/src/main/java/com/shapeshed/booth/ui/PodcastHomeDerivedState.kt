@@ -3,13 +3,13 @@ package com.shapeshed.booth.ui
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.shapeshed.booth.data.EpisodeEntity
+import com.shapeshed.booth.data.PodcastCatalogIndex
 import com.shapeshed.booth.data.PodcastEntity
 import com.shapeshed.booth.data.QueueEntity
-import com.shapeshed.booth.data.PodcastCatalogIndex
 import kotlinx.coroutines.flow.emptyFlow
 
 @Immutable

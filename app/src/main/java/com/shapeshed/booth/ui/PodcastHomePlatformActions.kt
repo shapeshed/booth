@@ -49,16 +49,26 @@ internal fun rememberPodcastHomePlatformActions(
     val backupImportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let { viewModel.importBackup(context, it) }
     }
-    val backupZipExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
-        uri?.let { viewModel.exportBackupZip(context, it) }
-    }
+    val backupZipExportLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+            uri?.let { viewModel.exportBackupZip(context, it) }
+        }
     val notificationLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted ->
         notificationPermissionGranted = granted
         if (granted) viewModel.setPodcastNotificationsEnabled(true)
     }
-    return remember(importLauncher, exportLauncher, backupExportLauncher, backupImportLauncher, backupZipExportLauncher, notificationLauncher, notificationPermissionGranted, onImportSelected) {
+    return remember(
+        importLauncher,
+        exportLauncher,
+        backupExportLauncher,
+        backupImportLauncher,
+        backupZipExportLauncher,
+        notificationLauncher,
+        notificationPermissionGranted,
+        onImportSelected,
+    ) {
         PodcastHomePlatformActions(
             importOpml = { importLauncher.launch(arrayOf("text/xml", "text/x-opml", "application/xml", "*/*")) },
             importBackup = { backupImportLauncher.launch(arrayOf("application/json", "text/json", "*/*")) },
@@ -68,10 +78,13 @@ internal fun rememberPodcastHomePlatformActions(
             setNotificationsEnabled = { enabled ->
                 when {
                     !enabled -> viewModel.setPodcastNotificationsEnabled(false)
+
                     notificationPermissionGranted -> viewModel.setPodcastNotificationsEnabled(true)
+
                     Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> {
                         notificationLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
                     }
+
                     else -> viewModel.setPodcastNotificationsEnabled(true)
                 }
             },

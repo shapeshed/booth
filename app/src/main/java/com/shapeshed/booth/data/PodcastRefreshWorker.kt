@@ -1,51 +1,48 @@
 package com.shapeshed.booth.data
 
 import android.Manifest
-import android.app.PendingIntent
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Build
-import android.content.Context
-import java.io.ByteArrayOutputStream
 import androidx.core.app.NotificationCompat
 import androidx.core.graphics.scale
-import androidx.work.Constraints
 import androidx.work.BackoffPolicy
+import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import androidx.work.WorkerParameters
 import androidx.work.workDataOf
-import com.shapeshed.booth.di.boothWorkerEntryPoint
-import com.shapeshed.booth.R
 import com.shapeshed.booth.ExtraInitialPodcastEpisodeId
 import com.shapeshed.booth.ExtraInitialPodcastNotificationAction
 import com.shapeshed.booth.PodcastNotificationActionAddToQueue
 import com.shapeshed.booth.PodcastNotificationActionPlay
-import androidx.work.WorkerParameters
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.withContext
-import okhttp3.Request
-import java.io.InputStream
+import com.shapeshed.booth.R
+import com.shapeshed.booth.di.boothWorkerEntryPoint
+import java.io.ByteArrayOutputStream
 import java.io.IOException
+import java.io.InputStream
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
+import okhttp3.Request
 
-class PodcastRefreshWorker(
-    context: Context,
-    workerParams: WorkerParameters,
-) : CoroutineWorker(context, workerParams) {
+class PodcastRefreshWorker(context: Context, workerParams: WorkerParameters) : CoroutineWorker(context, workerParams) {
     override suspend fun doWork(): Result {
         val app = applicationContext as com.shapeshed.booth.BoothApp
         val entryPoint = boothWorkerEntryPoint(applicationContext)
@@ -144,11 +141,7 @@ class PodcastRefreshWorker(
     companion object {
         private const val WorkName = "podcast-auto-refresh"
 
-        fun schedule(
-            context: Context,
-            interval: PodcastRefreshInterval,
-            network: PodcastRefreshNetwork,
-        ) {
+        fun schedule(context: Context, interval: PodcastRefreshInterval, network: PodcastRefreshNetwork) {
             val workManager = WorkManager.getInstance(context.applicationContext)
             val request = PeriodicWorkRequestBuilder<PodcastRefreshWorker>(
                 interval.minutes,
@@ -215,7 +208,9 @@ private suspend fun Context.postPodcastNotifications(
 ) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
         checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-    ) return
+    ) {
+        return
+    }
 
     val manager = getSystemService(NotificationManager::class.java)
     if (manager.getNotificationChannel(PodcastNotificationChannelId) == null) {
@@ -317,27 +312,25 @@ private suspend fun Context.postPodcastNotifications(
     )
 }
 
-private suspend fun loadNotificationBitmap(
-    client: okhttp3.OkHttpClient,
-    imageUrl: String,
-): Bitmap? = withContext(Dispatchers.IO) {
-    runCatching {
-        client.newCall(Request.Builder().url(imageUrl).build()).execute().use { response ->
-            if (!response.isSuccessful) return@use null
-            val bytes = response.body.byteStream().use {
-                readBoundedBytes(it, MaxNotificationImageBytes)
+private suspend fun loadNotificationBitmap(client: okhttp3.OkHttpClient, imageUrl: String): Bitmap? =
+    withContext(Dispatchers.IO) {
+        runCatching {
+            client.newCall(Request.Builder().url(imageUrl).build()).execute().use { response ->
+                if (!response.isSuccessful) return@use null
+                val bytes = response.body.byteStream().use {
+                    readBoundedBytes(it, MaxNotificationImageBytes)
+                }
+                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+                if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@use null
+                val options = BitmapFactory.Options().apply {
+                    inSampleSize = notificationSampleSize(bounds.outWidth, bounds.outHeight)
+                    inPreferredConfig = Bitmap.Config.ARGB_8888
+                }
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)?.fitNotificationSize()
             }
-            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
-            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@use null
-            val options = BitmapFactory.Options().apply {
-                inSampleSize = notificationSampleSize(bounds.outWidth, bounds.outHeight)
-                inPreferredConfig = Bitmap.Config.ARGB_8888
-            }
-            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)?.fitNotificationSize()
-        }
-    }.getOrNull()
-}
+        }.getOrNull()
+    }
 
 internal fun readBoundedBytes(input: InputStream, maxBytes: Long): ByteArray {
     require(maxBytes > 0L)

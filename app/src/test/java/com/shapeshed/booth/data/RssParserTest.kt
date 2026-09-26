@@ -1,19 +1,19 @@
 package com.shapeshed.booth.data
 
+import java.io.ByteArrayInputStream
+import java.io.IOException
+import java.io.InputStream
+import java.nio.charset.StandardCharsets
+import kotlin.random.Random
+import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.io.ByteArrayInputStream
-import java.io.IOException
-import java.io.InputStream
-import java.nio.charset.StandardCharsets
-import kotlinx.coroutines.flow.toList
-import kotlinx.coroutines.flow.filterIsInstance
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
-import kotlin.random.Random
 
 class RssParserTest {
     @Test
@@ -39,12 +39,32 @@ class RssParserTest {
         val xml = """<?xml version="1.0"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/"><channel><title>Example</title><link>https://example.com/site</link>$items</channel></rss>"""
 
         val events = SaxStreamingFeedParser().parse(
-            ByteArrayInputStream(xml.toByteArray()), "https://example.com/feed.xml",
+            ByteArrayInputStream(xml.toByteArray()),
+            "https://example.com/feed.xml",
         ).toList()
 
-        assertEquals("Example", (events.first { it is FeedParseEvent.FeedMetadataAvailable } as FeedParseEvent.FeedMetadataAvailable).feed.title)
-        assertEquals(listOf(10, 25, 1), events.filterIsInstance<FeedParseEvent.EpisodeChunkAvailable>().map { it.entries.size })
-        assertEquals(36, (events.last { it is FeedParseEvent.Completed } as FeedParseEvent.Completed).result.entries.size)
+        assertEquals(
+            "Example",
+            (
+                events.first {
+                    it is FeedParseEvent.FeedMetadataAvailable
+                } as FeedParseEvent.FeedMetadataAvailable
+                ).feed.title,
+        )
+        assertEquals(
+            listOf(10, 25, 1),
+            events.filterIsInstance<FeedParseEvent.EpisodeChunkAvailable>().map {
+                it.entries.size
+            },
+        )
+        assertEquals(
+            36,
+            (
+                events.last {
+                    it is FeedParseEvent.Completed
+                } as FeedParseEvent.Completed
+                ).result.entries.size,
+        )
     }
 
     @Test
@@ -76,7 +96,8 @@ class RssParserTest {
     @Test
     fun streamingParserReportsMalformedXmlWithoutPersistingAResult() = runBlocking {
         val events = SaxStreamingFeedParser().parse(
-            ByteArrayInputStream("<rss><channel><title>Broken".toByteArray()), "https://example.com/feed.xml",
+            ByteArrayInputStream("<rss><channel><title>Broken".toByteArray()),
+            "https://example.com/feed.xml",
         ).toList()
 
         assertEquals(FailureCategory.STRUCTURAL, (events.last() as FeedParseEvent.Failed).category)
@@ -87,7 +108,8 @@ class RssParserTest {
     fun streamingParserHandlesAtomLinksRdfAndPodcastExtensionsByNamespace() = runBlocking {
         val atom = """<a:feed xmlns:a="http://www.w3.org/2005/Atom" xmlns:p="http://www.itunes.com/dtds/podcast-1.0.dtd"><a:title>Atom show</a:title><a:link href="https://example.com/site"/><a:entry><a:id>one</a:id><a:title><![CDATA[One & only]]></a:title><a:updated>2024-01-02T03:04:05Z</a:updated><a:link rel="enclosure" href="/one.mp3" type="audio/mpeg"/><p:duration>01:02:03</p:duration></a:entry></a:feed>"""
         val events = SaxStreamingFeedParser(firstChunkSize = 1).parse(
-            ByteArrayInputStream(atom.toByteArray()), "https://example.com/feed.xml",
+            ByteArrayInputStream(atom.toByteArray()),
+            "https://example.com/feed.xml",
         ).toList()
         val entry = (events.last { it is FeedParseEvent.Completed } as FeedParseEvent.Completed).result.entries.single()
 
@@ -236,7 +258,8 @@ class RssParserTest {
     fun streamingParserSelectsRdfItemDialect() = runBlocking {
         val rdf = """<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><channel><title>RDF show</title><link>https://example.com</link></channel><item><guid>https://example.com/one</guid><title>One</title><enclosure url="https://example.com/one.mp3" type="audio/mpeg"/></item></rdf:RDF>"""
         val result = SaxStreamingFeedParser(firstChunkSize = 1).parse(
-            ByteArrayInputStream(rdf.toByteArray()), "https://example.com/feed.rdf",
+            ByteArrayInputStream(rdf.toByteArray()),
+            "https://example.com/feed.rdf",
         ).filterIsInstance<FeedParseEvent.Completed>().toList().single().result
 
         assertEquals("One", result.entries.single().title)
@@ -258,7 +281,8 @@ class RssParserTest {
     fun unknownExtensionsDoNotBreakParsingAndLimitsAreTerminal() = runBlocking {
         val xml = """<rss xmlns:x="urn:unknown"><channel><title>Example</title><x:future><x:value>ignored</x:value></x:future><item><guid>one</guid><title>One</title><enclosure url="https://example.com/one.mp3" type="audio/mpeg"/></item></channel></rss>"""
         val valid = SaxStreamingFeedParser(maxText = 8).parse(
-            ByteArrayInputStream(xml.toByteArray()), "https://example.com/feed.xml",
+            ByteArrayInputStream(xml.toByteArray()),
+            "https://example.com/feed.xml",
         ).toList()
         assertEquals(1, valid.filterIsInstance<FeedParseEvent.Completed>().single().result.entries.size)
 
@@ -279,7 +303,8 @@ class RssParserTest {
         """.trimIndent()
 
         val events = SaxStreamingFeedParser(maxDepth = 5).parse(
-            ByteArrayInputStream(xml.toByteArray()), "https://example.com/feed.xml",
+            ByteArrayInputStream(xml.toByteArray()),
+            "https://example.com/feed.xml",
         ).toList()
 
         assertEquals(FailureCategory.LIMIT, (events.last() as FeedParseEvent.Failed).category)
@@ -290,7 +315,8 @@ class RssParserTest {
     fun parserResponseLimitIsTerminalAndDoesNotComplete() = runBlocking {
         val xml = "<rss><channel><title>Limited</title></channel></rss>"
         val events = SaxStreamingFeedParser(maxBytes = xml.toByteArray().size.toLong() - 1).parse(
-            ByteArrayInputStream(xml.toByteArray()), "https://example.com/feed.xml",
+            ByteArrayInputStream(xml.toByteArray()),
+            "https://example.com/feed.xml",
         ).toList()
 
         assertEquals(FailureCategory.LIMIT, (events.last() as FeedParseEvent.Failed).category)
@@ -308,7 +334,8 @@ class RssParserTest {
         """.trimIndent()
 
         val entry = SaxStreamingFeedParser().parse(
-            ByteArrayInputStream(xml.toByteArray()), "https://example.com/feed.xml",
+            ByteArrayInputStream(xml.toByteArray()),
+            "https://example.com/feed.xml",
         ).filterIsInstance<FeedParseEvent.Completed>().toList().single().result.entries.single()
 
         assertEquals("https://example.com/episode.mp3", entry.audioUrl)
@@ -339,7 +366,8 @@ class RssParserTest {
                     assertTrue("case $caseNumber", entry.url.startsWith("http://") || entry.url.startsWith("https://"))
                     assertTrue(
                         "case $caseNumber",
-                        entry.audioUrl == null || entry.audioUrl.startsWith("http://") || entry.audioUrl.startsWith("https://"),
+                        entry.audioUrl == null || entry.audioUrl.startsWith("http://") ||
+                            entry.audioUrl.startsWith("https://"),
                     )
                 }
             }
@@ -379,13 +407,18 @@ class RssParserTest {
             "<x:extension><x:value>ignored</x:value></x:extension></channel></rss>"
         return when (random.nextInt(6)) {
             0 -> valid.take(random.nextInt(valid.length + 1))
+
             1 -> valid.replace("<title>Fuzz feed</title>", "<title>&broken;</title>")
+
             2 -> "<!DOCTYPE rss [<!ENTITY external SYSTEM \"file:///tmp/fuzz\">]>$valid"
+
             3 -> valid.replace(
                 "<x:extension>",
                 "<x:extension><x:a><x:b><x:c><x:d><x:e>",
             ).replace("</x:extension>", "</x:e></x:d></x:c></x:b></x:a></x:extension>")
+
             4 -> valid.replace("</channel>", "<item><guid>broken")
+
             else -> valid
         }
     }
@@ -504,5 +537,4 @@ class RssParserTest {
 
         assertEquals(listOf("Editorial lead", "Older item"), entries.sortedBy { it.feedOrder }.map { it.title })
     }
-
 }

@@ -1,8 +1,8 @@
 package com.shapeshed.booth.data
 
 import androidx.test.platform.app.InstrumentationRegistry
-import java.io.InputStream
 import java.io.ByteArrayInputStream
+import java.io.InputStream
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
@@ -50,7 +50,8 @@ class RssParserFixtureDeviceTest {
         val url = "https://feeds.example.test/show/feed.xml"
         val existing = Prof18FeedParser().parse(url, body)
         val streaming = SaxStreamingFeedParser().parse(
-            ByteArrayInputStream(body.toByteArray()), url,
+            ByteArrayInputStream(body.toByteArray()),
+            url,
         ).filterIsInstance<FeedParseEvent.Completed>().toList().single().result
 
         assertEquals(existing.feed.title, streaming.feed.title)
@@ -93,7 +94,8 @@ class RssParserFixtureDeviceTest {
         val url = "https://feeds.twit.tv/twit.xml"
         val legacy = Prof18FeedParser().parse(url, body)
         val streaming = SaxStreamingFeedParser().parse(
-            ByteArrayInputStream(body.toByteArray()), url,
+            ByteArrayInputStream(body.toByteArray()),
+            url,
         ).filterIsInstance<FeedParseEvent.Completed>().toList().single().result
 
         assertEquals(legacy.feed.title, streaming.feed.title)
@@ -121,7 +123,8 @@ class RssParserFixtureDeviceTest {
             }
             val legacy = Prof18FeedParser().parse(url, body)
             val streaming = SaxStreamingFeedParser().parse(
-                ByteArrayInputStream(body.toByteArray()), url,
+                ByteArrayInputStream(body.toByteArray()),
+                url,
             ).filterIsInstance<FeedParseEvent.Completed>().toList().single().result
 
             assertEquals(path, legacy.feed.title, streaming.feed.title)
@@ -143,7 +146,8 @@ class RssParserFixtureDeviceTest {
     private suspend fun streamingFixture(path: String, feedUrl: String): RssParseResult {
         val body = openFixture(path).bufferedReader().use { it.readText() }
         val events = SaxStreamingFeedParser().parse(
-            ByteArrayInputStream(body.toByteArray()), feedUrl,
+            ByteArrayInputStream(body.toByteArray()),
+            feedUrl,
         ).toList()
         events.filterIsInstance<FeedParseEvent.Failed>().firstOrNull()?.let { failure ->
             error("Streaming parser failed: ${failure.category}: ${failure.cause}")

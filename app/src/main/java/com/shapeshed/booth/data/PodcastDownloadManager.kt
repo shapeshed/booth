@@ -3,17 +3,14 @@ package com.shapeshed.booth.data
 import android.app.DownloadManager
 import android.content.Context
 import android.os.Environment
+import androidx.core.net.toUri
 import java.io.File
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import androidx.core.net.toUri
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
-class PodcastDownloadManager(
-    private val context: Context,
-    private val repository: PodcastRepository,
-) {
+class PodcastDownloadManager(private val context: Context, private val repository: PodcastRepository) {
     private val downloadManager = context.getSystemService(DownloadManager::class.java)
     private val enqueueMutex = Mutex()
 
@@ -34,7 +31,9 @@ class PodcastDownloadManager(
         val existing = repository.downloadAsset(episode.id, assetType)
         if (existing != null && existing.status in ACTIVE_STATUSES &&
             existing.status != DownloadAssetStatus.RETRYING
-        ) return@withLock false
+        ) {
+            return@withLock false
+        }
         if (existing != null) {
             val existingFile = File(existing.destinationUri.toUri().path.orEmpty())
             if (existing.status == DownloadAssetStatus.COMPLETED &&
@@ -133,9 +132,11 @@ class PodcastDownloadManager(
                         totalBytes = total,
                         errorMessage = when {
                             invalidCompletedFile -> "Download completed but the local file was invalid."
+
                             mappedStatus == DownloadAssetStatus.FAILED -> downloadManagerFailureMessage(
                                 cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON)),
                             )
+
                             else -> null
                         },
                         completedAtMillis = if (mappedStatus == DownloadAssetStatus.COMPLETED) {
@@ -157,12 +158,12 @@ class PodcastDownloadManager(
                     DownloadProgressStore.update(
                         asset.episodeId,
                         DownloadProgress(
-                                bytesDownloaded = bytes,
-                                totalBytes = total ?: 0L,
-                                startedAtElapsedMs = DownloadProgressStore.progress.value[asset.episodeId]
-                                    ?.startedAtElapsedMs
-                                    ?: android.os.SystemClock.elapsedRealtime(),
-                                completed = mappedStatus == DownloadAssetStatus.COMPLETED,
+                            bytesDownloaded = bytes,
+                            totalBytes = total ?: 0L,
+                            startedAtElapsedMs = DownloadProgressStore.progress.value[asset.episodeId]
+                                ?.startedAtElapsedMs
+                                ?: android.os.SystemClock.elapsedRealtime(),
+                            completed = mappedStatus == DownloadAssetStatus.COMPLETED,
                         ),
                     )
                 }
