@@ -4,9 +4,12 @@ on:
   workflow_dispatch:
   pull_request:
   merge_group:
-  push:
-    branches:
-      - main
+  # No `push` trigger. Both main and release/* are pull-request only, enforced
+  # by their rulesets, so every commit reaches them through `pull_request`
+  # above. A merge commit is the same tree that event already tested, because
+  # strict_required_status_checks_policy requires the PR to be current with its
+  # base -- so re-running the gate on push would duplicate ~10 minutes of work
+  # without testing anything new.
 
 permissions:
   contents: read
