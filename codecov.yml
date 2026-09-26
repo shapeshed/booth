@@ -1,6 +1,11 @@
-# The uploaded JaCoCo report covers JVM tests only. Compose UI coverage is exercised by
-# instrumentation and screenshot tests, so Codecov's JVM-only patch percentage is not a
-# meaningful gate for UI changes.
+# Codecov is reporting-only. The enforced coverage floor lives in Gradle
+# (jacocoDeviceTestUnitTestCoverageVerification), which runs in CI, so the
+# Codecov statuses are informational rather than a second required gate.
 coverage:
   status:
-    patch: off
+    project:
+      default:
+        informational: true
+    patch:
+      default:
+        informational: true
