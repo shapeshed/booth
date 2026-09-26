@@ -80,7 +80,9 @@ class PodcastEpisodeRowTest {
             }
         }
 
-        composeRule.onNodeWithText("8 min left").assertIsDisplayed()
+        // EpisodePlaybackButton labels a partially played episode with the remaining
+        // time via formatPlaybackMinutes, so 600s - 120s renders as "8 min".
+        composeRule.onNodeWithText("8 min").assertIsDisplayed()
     }
 
     private fun episode() = EpisodeEntity(
