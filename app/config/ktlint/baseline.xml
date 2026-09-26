@@ -191,9 +191,6 @@
     <file name="src/main/java/com/shapeshed/booth/ui/PodcastManagementScreen.kt">
         <error line="23" column="5" source="compose:parameter-naming" />
     </file>
-    <file name="src/main/java/com/shapeshed/booth/ui/PodcastPlayerScreens.kt">
-        <error line="1546" column="19" source="standard:property-naming" />
-    </file>
     <file name="src/main/java/com/shapeshed/booth/ui/PodcastQueueScreens.kt">
         <error line="259" column="5" source="compose:parameter-naming" />
         <error line="476" column="14" source="compose:param-order-check" />

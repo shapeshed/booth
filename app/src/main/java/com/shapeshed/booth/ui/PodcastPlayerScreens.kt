@@ -173,6 +173,7 @@ import androidx.compose.material3.adaptive.navigation3.rememberSupportingPaneSce
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberBottomSheetState
+import androidx.compose.material3.rememberSliderState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -624,23 +625,32 @@ internal fun PodcastNowPlayingOverlay(
                         } else {
                             0f
                         }
+                        val sliderState = rememberSliderState(
+                            value = if (isScrubbing) scrubPosition else playerProgress,
+                        )
+                        // The state-based Slider owns its value, so external progress updates
+                        // have to be mirrored into it while the user is not dragging.
                         LaunchedEffect(positionMs, durationMs, isScrubbing) {
-                            if (!isScrubbing) scrubPosition = playerProgress
+                            if (!isScrubbing) {
+                                scrubPosition = playerProgress
+                                sliderState.value = playerProgress
+                            }
                         }
                         Slider(
-                            value = if (isScrubbing) scrubPosition else playerProgress,
+                            state = sliderState,
                             onValueChange = {
                                 isScrubbing = true
                                 scrubPosition = it
+                                sliderState.value = it
                             },
                             onValueChangeFinished = {
                                 if (durationMs > 0L) onSeekTo((scrubPosition * durationMs).toLong())
                                 isScrubbing = false
                             },
                             enabled = durationMs > 0L,
-                            track = { sliderState ->
+                            track = { state ->
                                 SliderDefaults.Track(
-                                    sliderState = sliderState,
+                                    sliderState = state,
                                     drawStopIndicator = null,
                                 )
                             },
@@ -1003,23 +1013,32 @@ internal fun PodcastNowPlayingOverlay(
                     } else {
                         0f
                     }
+                    val sliderState = rememberSliderState(
+                        value = if (isScrubbing) scrubPosition else playerProgress,
+                    )
+                    // The state-based Slider owns its value, so external progress updates
+                    // have to be mirrored into it while the user is not dragging.
                     LaunchedEffect(positionMs, durationMs, isScrubbing) {
-                        if (!isScrubbing) scrubPosition = playerProgress
+                        if (!isScrubbing) {
+                            scrubPosition = playerProgress
+                            sliderState.value = playerProgress
+                        }
                     }
                     Slider(
-                        value = if (isScrubbing) scrubPosition else playerProgress,
+                        state = sliderState,
                         onValueChange = {
                             isScrubbing = true
                             scrubPosition = it
+                            sliderState.value = it
                         },
                         onValueChangeFinished = {
                             if (durationMs > 0L) onSeekTo((scrubPosition * durationMs).toLong())
                             isScrubbing = false
                         },
                         enabled = durationMs > 0L,
-                        track = { sliderState ->
+                        track = { state ->
                             SliderDefaults.Track(
-                                sliderState = sliderState,
+                                sliderState = state,
                                 drawStopIndicator = null,
                             )
                         },
@@ -1412,7 +1431,7 @@ private fun ClickableDescriptionText(
         modifier = modifier.pointerInput(text) {
             detectTapGestures { position: Offset ->
                 val offset = layoutResult?.getOffsetForPosition(position) ?: return@detectTapGestures
-                text.getStringAnnotations(DescriptionUrlAnnotation, offset, offset)
+                text.getStringAnnotations(DESCRIPTION_URL_ANNOTATION, offset, offset)
                     .firstOrNull()
                     ?.item
                     ?.let(uriHandler::openUri)
@@ -1491,7 +1510,7 @@ private fun AnnotatedString.Builder.appendDescriptionNode(node: Node, linkColor:
             if (node.tagName() == "br") {
                 append("\n")
             } else if (node.tagName() == "a" && node.hasAttr("href")) {
-                pushStringAnnotation(DescriptionUrlAnnotation, node.attr("abs:href").ifBlank { node.attr("href") })
+                pushStringAnnotation(DESCRIPTION_URL_ANNOTATION, node.attr("abs:href").ifBlank { node.attr("href") })
                 withStyle(
                     SpanStyle(
                         color = linkColor,
@@ -1525,7 +1544,7 @@ private fun AnnotatedString.Builder.appendTextWithLinks(text: String, linkColor:
     PlainUrlPattern.findAll(text).forEach { match ->
         append(text.substring(cursor, match.range.first))
         val url = match.value.trimEnd('.', ',', ')', ']', ';')
-        pushStringAnnotation(DescriptionUrlAnnotation, url)
+        pushStringAnnotation(DESCRIPTION_URL_ANNOTATION, url)
         withStyle(
             SpanStyle(
                 color = linkColor,
@@ -1543,4 +1562,4 @@ private fun AnnotatedString.Builder.appendTextWithLinks(text: String, linkColor:
 
 private val PlainUrlPattern = Regex("https?://[^\\s<>\\\"']+")
 
-private const val DescriptionUrlAnnotation = "description-url"
+private const val DESCRIPTION_URL_ANNOTATION = "description-url"
