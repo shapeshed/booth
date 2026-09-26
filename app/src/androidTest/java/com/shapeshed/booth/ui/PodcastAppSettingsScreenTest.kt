@@ -4,6 +4,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -44,7 +45,10 @@ class PodcastAppSettingsScreenTest {
         composeRule.onNodeWithText("Podcast video downloads").assertDoesNotExist()
         scrollTo("Download network")
         composeRule.onNodeWithText("Download network").assertIsDisplayed()
-        composeRule.onNodeWithText("Wi-Fi only").assertIsDisplayed()
+        // The Download network and Refresh network rows can both show "Wi-Fi only", and
+        // ListItem merges each row's headline and supporting text into one node, so assert
+        // the value against the Download network row rather than matching the label alone.
+        composeRule.onNodeWithText("Download network").assertTextContains("Wi-Fi only")
         scrollTo("Auto refresh")
         composeRule.onNodeWithText("Auto refresh").assertIsDisplayed()
         scrollTo("Refresh podcasts automatically")
