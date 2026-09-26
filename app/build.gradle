@@ -6,6 +6,17 @@ plugins {
     id 'com.google.dagger.hilt.android'
     id 'org.jetbrains.kotlin.plugin.compose'
     id 'org.jetbrains.kotlin.plugin.serialization'
+    id 'org.jlleitschuh.gradle.ktlint'
+}
+
+ktlint {
+    // Pin the ktlint CLI rather than inheriting the plugin's default so upgrades
+    // are explicit. 1.8.0 parses the Kotlin 2.x sources, and is the version the
+    // Compose ruleset below is built against.
+    version = '1.8.0'
+    android = true
+    // Existing violations are recorded in app/config/ktlint/baseline.xml by
+    // `./gradlew :app:ktlintGenerateBaseline`. Only new violations fail the build.
 }
 
 android {
@@ -186,6 +197,11 @@ dependencies {
     androidTestImplementation 'com.google.dagger:hilt-android-testing:2.60.1'
     screenshotTestImplementation 'com.android.tools.screenshot:screenshot-validation-api:0.0.1-alpha16'
     screenshotTestImplementation 'androidx.compose.ui:ui-tooling'
+
+    // Jetpack Compose lint rules for ktlint (modifier ordering, state hoisting,
+    // parameter ordering, ...). These enforce the Compose conventions described
+    // in AGENTS.md.
+    ktlintRuleset 'io.nlopez.compose.rules:ktlint:0.6.7'
 }
 
 tasks.register("jacocoDeviceTestUnitTestReport", JacocoReport) {
