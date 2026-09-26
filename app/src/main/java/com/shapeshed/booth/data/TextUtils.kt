@@ -2,9 +2,7 @@ package com.shapeshed.booth.data
 
 import java.net.URI
 
-/**
- * Pure text helpers (no Android APIs) so they can be unit-tested directly.
- */
+// Pure text helpers (no Android APIs) so they can be unit-tested directly.
 
 /** Display host for a feed URL — the host with any leading `www.` removed, or null if unparseable. */
 fun hostOf(url: String?): String? {

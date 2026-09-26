@@ -3,7 +3,7 @@ package com.shapeshed.booth.data
 import org.jsoup.Jsoup
 import org.jsoup.parser.Parser
 
-private const val OpmlVersion = "2.0"
+private const val OPML_VERSION = "2.0"
 
 data class OpmlFeed(val title: String, val url: String, val tags: String?)
 
@@ -42,7 +42,7 @@ private fun org.jsoup.nodes.Element.outlineTagCandidates(): Sequence<String> = s
 
 fun buildPodcastOpml(podcasts: List<PodcastEntity>): String = buildString {
     appendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>")
-    appendLine("<opml version=\"$OpmlVersion\">")
+    appendLine("<opml version=\"$OPML_VERSION\">")
     appendLine("  <head>")
     appendLine("    <title>Booth subscriptions</title>")
     appendLine("  </head>")

@@ -22,10 +22,10 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
-import com.shapeshed.booth.ExtraInitialPodcastEpisodeId
-import com.shapeshed.booth.ExtraInitialPodcastNotificationAction
-import com.shapeshed.booth.PodcastNotificationActionAddToQueue
-import com.shapeshed.booth.PodcastNotificationActionPlay
+import com.shapeshed.booth.EXTRA_INITIAL_PODCAST_EPISODE_ID
+import com.shapeshed.booth.EXTRA_INITIAL_PODCAST_NOTIFICATION_ACTION
+import com.shapeshed.booth.PODCAST_NOTIFICATION_ACTION_ADD_TO_QUEUE
+import com.shapeshed.booth.PODCAST_NOTIFICATION_ACTION_PLAY
 import com.shapeshed.booth.R
 import com.shapeshed.booth.di.boothWorkerEntryPoint
 import java.io.ByteArrayOutputStream
@@ -139,7 +139,7 @@ class PodcastRefreshWorker(context: Context, workerParams: WorkerParameters) : C
     }
 
     companion object {
-        private const val WorkName = "podcast-auto-refresh"
+        private const val WORK_NAME = "podcast-auto-refresh"
 
         fun schedule(context: Context, interval: PodcastRefreshInterval, network: PodcastRefreshNetwork) {
             val workManager = WorkManager.getInstance(context.applicationContext)
@@ -161,7 +161,7 @@ class PodcastRefreshWorker(context: Context, workerParams: WorkerParameters) : C
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
                 .build()
             workManager.enqueueUniquePeriodicWork(
-                WorkName,
+                WORK_NAME,
                 ExistingPeriodicWorkPolicy.UPDATE,
                 request,
             )
@@ -190,10 +190,10 @@ internal fun Throwable.isRetryableFeedFailure(): Boolean = when (this) {
     else -> false
 }
 
-private const val PodcastNotificationChannelId = "podcast_new_episodes"
-private const val PodcastNotificationSummaryId = 2201
-private const val PodcastNotificationChildIdBase = 2202
-private const val PodcastNotificationGroup = "podcast_new_episodes"
+private const val PODCAST_NOTIFICATION_CHANNEL_ID = "podcast_new_episodes"
+private const val PODCAST_NOTIFICATION_SUMMARY_ID = 2201
+private const val PODCAST_NOTIFICATION_CHILD_ID_BASE = 2202
+private const val PODCAST_NOTIFICATION_GROUP = "podcast_new_episodes"
 
 private data class NewPodcastEpisodeNotification(
     val episodeId: Long,
@@ -213,10 +213,10 @@ private suspend fun Context.postPodcastNotifications(
     }
 
     val manager = getSystemService(NotificationManager::class.java)
-    if (manager.getNotificationChannel(PodcastNotificationChannelId) == null) {
+    if (manager.getNotificationChannel(PODCAST_NOTIFICATION_CHANNEL_ID) == null) {
         manager.createNotificationChannel(
             NotificationChannel(
-                PodcastNotificationChannelId,
+                PODCAST_NOTIFICATION_CHANNEL_ID,
                 getString(R.string.podcast_notifications_channel),
                 NotificationManager.IMPORTANCE_DEFAULT,
             ).apply {
@@ -236,7 +236,7 @@ private suspend fun Context.postPodcastNotifications(
             this,
             episode.episodeId.hashCode(),
             Intent(this, com.shapeshed.booth.MainActivity::class.java).apply {
-                putExtra(ExtraInitialPodcastEpisodeId, episode.episodeId)
+                putExtra(EXTRA_INITIAL_PODCAST_EPISODE_ID, episode.episodeId)
             },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
@@ -244,13 +244,13 @@ private suspend fun Context.postPodcastNotifications(
             this,
             (episode.episodeId.hashCode() * 31) + action.hashCode(),
             Intent(this, com.shapeshed.booth.MainActivity::class.java).apply {
-                putExtra(ExtraInitialPodcastEpisodeId, episode.episodeId)
-                putExtra(ExtraInitialPodcastNotificationAction, action)
+                putExtra(EXTRA_INITIAL_PODCAST_EPISODE_ID, episode.episodeId)
+                putExtra(EXTRA_INITIAL_PODCAST_NOTIFICATION_ACTION, action)
             },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         val artwork = episode.artworkUrl?.let { loadNotificationBitmap(client, it) }
-        val builder = NotificationCompat.Builder(this, PodcastNotificationChannelId)
+        val builder = NotificationCompat.Builder(this, PODCAST_NOTIFICATION_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(episode.episodeTitle)
             .setContentText(episode.podcastTitle)
@@ -258,17 +258,17 @@ private suspend fun Context.postPodcastNotifications(
             .setAutoCancel(true)
             .setCategory(NotificationCompat.CATEGORY_RECOMMENDATION)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setGroup(PodcastNotificationGroup)
+            .setGroup(PODCAST_NOTIFICATION_GROUP)
             .setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY)
             .addAction(
                 R.drawable.ic_notification_play,
                 getString(R.string.notification_action_play),
-                actionIntent(PodcastNotificationActionPlay),
+                actionIntent(PODCAST_NOTIFICATION_ACTION_PLAY),
             )
             .addAction(
                 R.drawable.ic_notification_queue,
                 getString(R.string.notification_action_add_to_queue),
-                actionIntent(PodcastNotificationActionAddToQueue),
+                actionIntent(PODCAST_NOTIFICATION_ACTION_ADD_TO_QUEUE),
             )
         if (artwork != null) {
             builder
@@ -281,14 +281,14 @@ private suspend fun Context.postPodcastNotifications(
         } else {
             builder.setStyle(NotificationCompat.BigTextStyle().bigText(episode.podcastTitle))
         }
-        manager.notify(PodcastNotificationChildIdBase + episode.episodeId.hashCode(), builder.build())
+        manager.notify(PODCAST_NOTIFICATION_CHILD_ID_BASE + episode.episodeId.hashCode(), builder.build())
     }
 
     val summaryIntent = PendingIntent.getActivity(
         this,
-        PodcastNotificationSummaryId,
+        PODCAST_NOTIFICATION_SUMMARY_ID,
         Intent(this, com.shapeshed.booth.MainActivity::class.java).apply {
-            putExtra(ExtraInitialPodcastEpisodeId, uniqueEpisodes.first().episodeId)
+            putExtra(EXTRA_INITIAL_PODCAST_EPISODE_ID, uniqueEpisodes.first().episodeId)
         },
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
     )
@@ -296,8 +296,8 @@ private suspend fun Context.postPodcastNotifications(
         .setSummaryText(title)
         .also { style -> uniqueEpisodes.take(5).forEach { style.addLine("${it.podcastTitle} · ${it.episodeTitle}") } }
     manager.notify(
-        PodcastNotificationSummaryId,
-        NotificationCompat.Builder(this, PodcastNotificationChannelId)
+        PODCAST_NOTIFICATION_SUMMARY_ID,
+        NotificationCompat.Builder(this, PODCAST_NOTIFICATION_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
             .setContentText(uniqueEpisodes.first().episodeTitle)
@@ -305,7 +305,7 @@ private suspend fun Context.postPodcastNotifications(
             .setAutoCancel(true)
             .setCategory(NotificationCompat.CATEGORY_RECOMMENDATION)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setGroup(PodcastNotificationGroup)
+            .setGroup(PODCAST_NOTIFICATION_GROUP)
             .setGroupSummary(true)
             .setStyle(inboxStyle)
             .build(),
@@ -318,7 +318,7 @@ private suspend fun loadNotificationBitmap(client: okhttp3.OkHttpClient, imageUr
             client.newCall(Request.Builder().url(imageUrl).build()).execute().use { response ->
                 if (!response.isSuccessful) return@use null
                 val bytes = response.body.byteStream().use {
-                    readBoundedBytes(it, MaxNotificationImageBytes)
+                    readBoundedBytes(it, MAX_NOTIFICATION_IMAGE_BYTES)
                 }
                 val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
                 BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
@@ -368,4 +368,4 @@ private fun Bitmap.fitNotificationSize(maxDimension: Int = 512): Bitmap {
     return scaled
 }
 
-private const val MaxNotificationImageBytes = 2L * 1024L * 1024L
+private const val MAX_NOTIFICATION_IMAGE_BYTES = 2L * 1024L * 1024L

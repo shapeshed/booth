@@ -1,61 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <baseline version="1.0">
-    <file name="src/androidTest/java/com/shapeshed/booth/ui/PodcastSwipeRowTest.kt">
+    <file name="../../booth-pr16/app/src/androidTest/java/com/shapeshed/booth/ui/PodcastSwipeRowTest.kt">
         <error line="24" column="27" source="compose:mutable-state-autoboxing" />
     </file>
-    <file name="src/main/java/com/shapeshed/booth/MainActivity.kt">
-        <error line="66" column="11" source="standard:property-naming" />
-        <error line="67" column="11" source="standard:property-naming" />
-        <error line="68" column="11" source="standard:property-naming" />
-        <error line="69" column="11" source="standard:property-naming" />
-        <error line="70" column="11" source="standard:property-naming" />
+    <file name="../../booth-pr16/app/src/test/java/com/shapeshed/booth/data/RssParserTest.kt">
+        <error line="39" column="121" source="standard:max-line-length" />
+        <error line="109" column="121" source="standard:max-line-length" />
+        <error line="259" column="121" source="standard:max-line-length" />
+        <error line="282" column="121" source="standard:max-line-length" />
+        <error line="534" column="121" source="standard:max-line-length" />
+        <error line="535" column="121" source="standard:max-line-length" />
     </file>
-    <file name="src/main/java/com/shapeshed/booth/data/Opml.kt">
-        <error line="6" column="19" source="standard:property-naming" />
+    <file name="../../booth-pr16/app/src/test/java/com/shapeshed/booth/ui/PodcastNavigationKeyTest.kt">
+        <error line="117" column="33" source="compose:mutable-state-autoboxing" />
+        <error line="119" column="35" source="compose:mutable-state-autoboxing" />
+        <error line="120" column="33" source="compose:mutable-state-autoboxing" />
     </file>
     <file name="src/main/java/com/shapeshed/booth/data/PodcastDatabase.kt">
         <error line="477" column="121" source="standard:max-line-length" />
         <error line="490" column="121" source="standard:max-line-length" />
     </file>
-    <file name="src/main/java/com/shapeshed/booth/data/PodcastDownloadReceiver.kt">
-        <error line="142" column="19" source="standard:property-naming" />
-    </file>
-    <file name="src/main/java/com/shapeshed/booth/data/PodcastDownloadReconciliationWorker.kt">
-        <error line="32" column="27" source="standard:property-naming" />
-        <error line="33" column="27" source="standard:property-naming" />
-    </file>
-    <file name="src/main/java/com/shapeshed/booth/data/PodcastRefreshWorker.kt">
-        <error line="142" column="27" source="standard:property-naming" />
-        <error line="193" column="19" source="standard:property-naming" />
-        <error line="194" column="19" source="standard:property-naming" />
-        <error line="195" column="19" source="standard:property-naming" />
-        <error line="196" column="19" source="standard:property-naming" />
-        <error line="371" column="19" source="standard:property-naming" />
-    </file>
-    <file name="src/main/java/com/shapeshed/booth/data/PodcastTags.kt">
-        <error line="46" column="19" source="standard:property-naming" />
-        <error line="47" column="19" source="standard:property-naming" />
-    </file>
-    <file name="src/main/java/com/shapeshed/booth/data/RssParser.kt">
-        <error line="164" column="20" source="standard:property-naming" />
-        <error line="199" column="19" source="standard:property-naming" />
-        <error line="200" column="19" source="standard:property-naming" />
-    </file>
     <file name="src/main/java/com/shapeshed/booth/data/StreamingFeedParser.kt">
         <error line="1" column="1" source="standard:filename" />
-        <error line="24" column="19" source="standard:property-naming" />
-        <error line="25" column="19" source="standard:property-naming" />
-        <error line="26" column="19" source="standard:property-naming" />
-        <error line="27" column="19" source="standard:property-naming" />
-        <error line="28" column="19" source="standard:property-naming" />
-        <error line="29" column="19" source="standard:property-naming" />
-        <error line="30" column="19" source="standard:property-naming" />
-        <error line="31" column="19" source="standard:property-naming" />
-        <error line="63" column="19" source="standard:property-naming" />
-        <error line="64" column="19" source="standard:property-naming" />
-    </file>
-    <file name="src/main/java/com/shapeshed/booth/data/TextUtils.kt">
-        <error line="5" column="1" source="standard:kdoc" />
     </file>
     <file name="src/main/java/com/shapeshed/booth/ui/MaterialSpeedIcons.kt">
         <error line="79" column="13" source="standard:backing-property-naming" />
@@ -152,7 +118,6 @@
         <error line="34" column="5" source="compose:parameter-naming" />
     </file>
     <file name="src/main/java/com/shapeshed/booth/ui/PodcastHomeScreen.kt">
-        <error line="380" column="20" source="standard:property-naming" />
         <error line="381" column="14" source="compose:compositionlocal-allowlist" />
         <error line="395" column="5" source="compose:lambda-param-in-effect" />
         <error line="869" column="9" source="compose:vm-forwarding-check" />
@@ -162,17 +127,18 @@
         <error line="1015" column="9" source="compose:vm-forwarding-check" />
         <error line="1205" column="121" source="standard:max-line-length" />
         <error line="1253" column="41" source="compose:vm-forwarding-check" />
-        <error line="1351" column="73" source="standard:function-literal" />
-        <error line="1351" column="82" source="standard:function-literal" />
-        <error line="1384" column="121" source="standard:max-line-length" />
-        <error line="1517" column="41" source="compose:vm-forwarding-check" />
-        <error line="1772" column="121" source="standard:max-line-length" />
-        <error line="1907" column="37" source="compose:vm-forwarding-check" />
-        <error line="1962" column="45" source="compose:vm-forwarding-check" />
-        <error line="2053" column="29" source="compose:vm-forwarding-check" />
-        <error line="2064" column="29" source="compose:vm-forwarding-check" />
-        <error line="2080" column="29" source="compose:vm-forwarding-check" />
-        <error line="2101" column="9" source="compose:vm-forwarding-check" />
+        <error line="1350" column="111" source="standard:function-literal" />
+        <error line="1350" column="120" source="standard:function-literal" />
+        <error line="1350" column="121" source="standard:max-line-length" />
+        <error line="1382" column="121" source="standard:max-line-length" />
+        <error line="1515" column="41" source="compose:vm-forwarding-check" />
+        <error line="1770" column="121" source="standard:max-line-length" />
+        <error line="1905" column="37" source="compose:vm-forwarding-check" />
+        <error line="1960" column="45" source="compose:vm-forwarding-check" />
+        <error line="2051" column="29" source="compose:vm-forwarding-check" />
+        <error line="2062" column="29" source="compose:vm-forwarding-check" />
+        <error line="2078" column="29" source="compose:vm-forwarding-check" />
+        <error line="2099" column="9" source="compose:vm-forwarding-check" />
     </file>
     <file name="src/main/java/com/shapeshed/booth/ui/PodcastHomeUpNextDestination.kt">
         <error line="22" column="5" source="compose:parameter-naming" />
@@ -203,18 +169,5 @@
     </file>
     <file name="src/main/java/com/shapeshed/booth/ui/PodcastUpNextContent.kt">
         <error line="19" column="5" source="compose:parameter-naming" />
-    </file>
-    <file name="src/test/java/com/shapeshed/booth/data/RssParserTest.kt">
-        <error line="39" column="121" source="standard:max-line-length" />
-        <error line="109" column="121" source="standard:max-line-length" />
-        <error line="259" column="121" source="standard:max-line-length" />
-        <error line="282" column="121" source="standard:max-line-length" />
-        <error line="534" column="121" source="standard:max-line-length" />
-        <error line="535" column="121" source="standard:max-line-length" />
-    </file>
-    <file name="src/test/java/com/shapeshed/booth/ui/PodcastNavigationKeyTest.kt">
-        <error line="117" column="33" source="compose:mutable-state-autoboxing" />
-        <error line="119" column="35" source="compose:mutable-state-autoboxing" />
-        <error line="120" column="33" source="compose:mutable-state-autoboxing" />
     </file>
 </baseline>

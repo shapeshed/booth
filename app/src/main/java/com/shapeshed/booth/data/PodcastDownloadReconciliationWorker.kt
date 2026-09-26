@@ -29,18 +29,18 @@ class PodcastDownloadReconciliationWorker(appContext: Context, workerParams: Wor
     }
 
     companion object {
-        private const val StartupWorkName = "podcast-download-reconciliation-startup"
-        private const val PeriodicWorkName = "podcast-download-reconciliation-periodic"
+        private const val STARTUP_WORK_NAME = "podcast-download-reconciliation-startup"
+        private const val PERIODIC_WORK_NAME = "podcast-download-reconciliation-periodic"
 
         fun schedule(context: Context) {
             val workManager = WorkManager.getInstance(context.applicationContext)
             workManager.enqueueUniqueWork(
-                StartupWorkName,
+                STARTUP_WORK_NAME,
                 ExistingWorkPolicy.KEEP,
                 OneTimeWorkRequestBuilder<PodcastDownloadReconciliationWorker>().build(),
             )
             workManager.enqueueUniquePeriodicWork(
-                PeriodicWorkName,
+                PERIODIC_WORK_NAME,
                 androidx.work.ExistingPeriodicWorkPolicy.KEEP,
                 PeriodicWorkRequestBuilder<PodcastDownloadReconciliationWorker>(
                     15,

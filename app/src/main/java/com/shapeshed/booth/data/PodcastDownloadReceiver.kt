@@ -139,10 +139,10 @@ class PodcastDownloadReceiver : BroadcastReceiver() {
     }
 }
 
-private const val MaxDownloadRetries = 3
+private const val MAX_DOWNLOAD_RETRIES = 3
 
 internal fun shouldRetryDownload(reason: Int, retryCount: Int): Boolean =
-    retryCount < MaxDownloadRetries && reason in setOf(
+    retryCount < MAX_DOWNLOAD_RETRIES && reason in setOf(
         DownloadManager.ERROR_CANNOT_RESUME,
         DownloadManager.ERROR_HTTP_DATA_ERROR,
     )

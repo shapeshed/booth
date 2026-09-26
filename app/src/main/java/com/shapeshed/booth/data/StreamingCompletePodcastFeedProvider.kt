@@ -64,8 +64,8 @@ class StreamingCompletePodcastFeedProvider(
             return client.newCall(
                 Request.Builder()
                     .url(feedUrl)
-                    .header("Accept", FeedAcceptHeader)
-                    .header("User-Agent", FeedUserAgent)
+                    .header("Accept", FEED_ACCEPT_HEADER)
+                    .header("User-Agent", FEED_USER_AGENT)
                     .get()
                     .apply {
                         etag?.let { header("If-None-Match", it) }

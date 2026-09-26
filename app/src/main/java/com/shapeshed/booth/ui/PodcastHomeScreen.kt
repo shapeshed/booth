@@ -373,11 +373,11 @@ internal val PodcastEpisodeAction.hasPlaybackPosition: Boolean
     }
 
 // Material's 8dp spacing rhythm for adjacent card-like list items.
-internal val PodcastListItemSpacing = 8.dp
+internal val PODCAST_LIST_ITEM_SPACING = 8.dp
 internal val PodcastEpisodeArtworkSize = 80.dp
 
 // Require an intentional horizontal gesture so vertical list scrolling does not dismiss rows.
-internal const val SwipeToDismissThresholdFraction = 0.5f
+internal const val SWIPE_TO_DISMISS_THRESHOLD_FRACTION = 0.5f
 internal val LocalPodcastMiniPlayerInset = compositionLocalOf { 0.dp }
 
 @Composable
@@ -1347,9 +1347,7 @@ fun PodcastHomeScreen(
                                                                 artworkUrl = podcast.artworkUrl,
                                                                 explicit = podcast.explicit,
                                                                 categories = podcast.categories.map { it.name },
-                                                                categoryIds = podcast.categories.mapNotNull {
-                                                                        category,
-                                                                    ->
+                                                                categoryIds = podcast.categories.mapNotNull { category ->
                                                                     category.externalId?.let { category.name to it }
                                                                 }.toMap(),
                                                             ),

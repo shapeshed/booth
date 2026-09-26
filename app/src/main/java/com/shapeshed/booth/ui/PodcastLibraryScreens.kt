@@ -306,7 +306,7 @@ internal fun PodcastLibrary(
                     16.dp,
                 )
             } else {
-                Arrangement.spacedBy(PodcastListItemSpacing)
+                Arrangement.spacedBy(PODCAST_LIST_ITEM_SPACING)
             },
             contentPadding = PaddingValues(
                 start = 16.dp,
@@ -601,7 +601,7 @@ internal fun PodcastSwipeRow(
     val haptic = LocalHapticFeedback.current
     var showRemovalConfirmation by remember { mutableStateOf(initiallyShowRemovalConfirmation) }
     val dismissState = rememberSwipeToDismissBoxState(
-        positionalThreshold = { distance -> distance * SwipeToDismissThresholdFraction },
+        positionalThreshold = { distance -> distance * SWIPE_TO_DISMISS_THRESHOLD_FRACTION },
     )
     LaunchedEffect(dismissState.currentValue) {
         if (dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
