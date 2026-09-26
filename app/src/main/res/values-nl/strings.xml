@@ -119,8 +119,6 @@
     <string name="long_press_drag_reorder">Houd %1$s ingedrukt en sleep om te herschikken</string>
     <string name="move_episode">%1$s verplaatsen</string>
     <string name="selected_item">Geselecteerd</string>
-    <string name="auto_download">Automatisch downloaden</string>
-    <string name="download_video">Video downloaden</string>
     <string name="podcast_search">Podcast zoeken</string>
     <string name="default_value">Standaard</string>
     <string name="podcast_index_access">Toegang tot Podcast Index</string>

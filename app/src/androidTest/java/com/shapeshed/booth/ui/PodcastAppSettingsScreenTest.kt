@@ -32,19 +32,16 @@ class PodcastAppSettingsScreenTest {
     fun showsSettingsAndKeepsPodcastDiscovery() {
         setSettingsContent()
 
-        composeRule.onNodeWithText("Playback speed").assertIsDisplayed()
-        composeRule.onNodeWithText("1×").assertIsDisplayed()
+        composeRule.onNodeWithText("Playback speed").assertDoesNotExist()
         scrollTo("Add new episodes to Up Next")
         composeRule.onNodeWithText("Add new episodes to Up Next").assertIsDisplayed()
         scrollTo("Podcasts added to Up Next")
         composeRule.onNodeWithText("Podcasts added to Up Next").assertIsDisplayed()
         composeRule.onNodeWithText("3 podcasts").assertIsDisplayed()
-        scrollTo("Download new episodes")
-        composeRule.onNodeWithText("Download new episodes").assertIsDisplayed()
-        scrollTo("Download videos when available")
-        composeRule.onNodeWithText("Download videos when available").assertIsDisplayed()
-        scrollTo("Podcast video downloads")
-        composeRule.onNodeWithText("Podcast video downloads").assertIsDisplayed()
+        scrollTo("Download episodes added to Up Next")
+        composeRule.onNodeWithText("Download episodes added to Up Next").assertIsDisplayed()
+        composeRule.onNodeWithText("Download videos when available").assertDoesNotExist()
+        composeRule.onNodeWithText("Podcast video downloads").assertDoesNotExist()
         scrollTo("Download network")
         composeRule.onNodeWithText("Download network").assertIsDisplayed()
         composeRule.onNodeWithText("Wi-Fi only").assertIsDisplayed()
@@ -101,12 +98,15 @@ class PodcastAppSettingsScreenTest {
     fun countAndDataRowsOpenTheirManagementActions() {
         var managedCategory: PodcastManagementCategory? = null
         var autoQueueEnabled: Boolean? = null
+        var downloadQueuedEpisodes: Boolean? = null
         var importCalls = 0
         var exportCalls = 0
         setSettingsContent(
             onManagePodcasts = { managedCategory = it },
             autoQueueEnabled = true,
             onAutoQueueEnabledChange = { autoQueueEnabled = it },
+            downloadEpisodesAddedToUpNext = false,
+            onDownloadEpisodesAddedToUpNextChange = { downloadQueuedEpisodes = it },
             onImportOpml = { importCalls++ },
             onExportOpml = { exportCalls++ },
         )
@@ -130,10 +130,12 @@ class PodcastAppSettingsScreenTest {
             assertEquals(PodcastManagementCategory.AUTO_REFRESH, managedCategory)
         }
 
-        scrollTo("Download new episodes")
-        composeRule.onNodeWithText("Download new episodes").performClick()
+        managedCategory = null
+        scrollTo("Download episodes added to Up Next")
+        composeRule.onNodeWithText("Download episodes added to Up Next").performClick()
         composeRule.runOnIdle {
-            assertEquals(PodcastManagementCategory.AUTO_DOWNLOAD, managedCategory)
+            assertEquals(true, downloadQueuedEpisodes)
+            assertEquals(null, managedCategory)
         }
 
         scrollTo("Import OPML")
@@ -143,27 +145,6 @@ class PodcastAppSettingsScreenTest {
         scrollTo("Export OPML")
         composeRule.onNodeWithText("Export OPML").assertIsDisplayed().performClick()
         composeRule.runOnIdle { assertEquals(1, exportCalls) }
-    }
-
-    @Test
-    fun videoMasterAndPodcastManagementHaveSeparateActions() {
-        var videoEnabled: Boolean? = null
-        var managedCategory: PodcastManagementCategory? = null
-        setSettingsContent(
-            videoDownloadsEnabled = true,
-            onVideoDownloadsEnabledChange = { videoEnabled = it },
-            onManagePodcasts = { managedCategory = it },
-        )
-
-        scrollTo("Download videos when available")
-        composeRule.onNodeWithText("Download videos when available").performClick()
-        composeRule.runOnIdle { assertEquals(false, videoEnabled) }
-
-        scrollTo("Podcast video downloads")
-        composeRule.onNodeWithText("Podcast video downloads").performClick()
-        composeRule.runOnIdle {
-            assertEquals(PodcastManagementCategory.VIDEO_DOWNLOAD, managedCategory)
-        }
     }
 
     @Test
@@ -200,8 +181,8 @@ class PodcastAppSettingsScreenTest {
         composeRule.onNodeWithText("100 episodes").performClick()
         composeRule.runOnIdle { assertEquals(PodcastDownloadLimit.ONE_HUNDRED, limit) }
 
-        scrollTo("Delete before auto-download")
-        composeRule.onNodeWithText("Delete before auto-download").performClick()
+        scrollTo("Delete before downloading")
+        composeRule.onNodeWithText("Delete before downloading").performClick()
         composeRule.onNodeWithText("All eligible episodes").performClick()
         composeRule.runOnIdle { assertEquals(PodcastDeleteBeforeAutoDownload.ALL_ELIGIBLE, cleanup) }
     }
@@ -235,8 +216,8 @@ class PodcastAppSettingsScreenTest {
         onManagePodcasts: (PodcastManagementCategory) -> Unit = {},
         autoQueueEnabled: Boolean = true,
         onAutoQueueEnabledChange: (Boolean) -> Unit = {},
-        videoDownloadsEnabled: Boolean = false,
-        onVideoDownloadsEnabledChange: (Boolean) -> Unit = {},
+        downloadEpisodesAddedToUpNext: Boolean = false,
+        onDownloadEpisodesAddedToUpNextChange: (Boolean) -> Unit = {},
         onRefreshIntervalChange: (PodcastRefreshInterval) -> Unit = {},
         onRefreshNetworkChange: (PodcastRefreshNetwork) -> Unit = {},
         onDownloadLimitChange: (PodcastDownloadLimit) -> Unit = {},
@@ -250,23 +231,16 @@ class PodcastAppSettingsScreenTest {
         composeRule.setContent {
             BoothAppTheme {
                 PodcastAppSettingsScreen(
-                    globalPlaybackSpeed = 1f,
                     podcastManagementCounts = PodcastManagementCounts(
                         total = 4,
-                        playbackSpeed = 2,
                         autoRefresh = 0,
-                        autoDownload = 4,
                         autoQueue = 3,
-                        videoDownload = 0,
                         notifications = 4,
                     ),
                     autoQueueEnabled = autoQueueEnabled,
                     onAutoQueueEnabledChange = onAutoQueueEnabledChange,
-                    skipSilence = false,
-                    onGlobalPlaybackSpeedChange = {},
-                    onSkipSilenceChange = {},
-                    videoDownloadsEnabled = videoDownloadsEnabled,
-                    onVideoDownloadsEnabledChange = onVideoDownloadsEnabledChange,
+                    downloadEpisodesAddedToUpNext = downloadEpisodesAddedToUpNext,
+                    onDownloadEpisodesAddedToUpNextChange = onDownloadEpisodesAddedToUpNextChange,
                     refreshInterval = PodcastRefreshInterval.SIX_HOURS,
                     onRefreshIntervalChange = onRefreshIntervalChange,
                     refreshNetwork = PodcastRefreshNetwork.WIFI_ONLY,

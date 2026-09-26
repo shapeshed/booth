@@ -83,11 +83,8 @@ internal sealed interface PodcastNavigationKey : NavKey {
 
 @Serializable
 internal enum class PodcastManagementCategory {
-    PLAYBACK_SPEED,
     AUTO_REFRESH,
-    AUTO_DOWNLOAD,
     AUTO_QUEUE,
-    VIDEO_DOWNLOAD,
     NOTIFICATIONS,
 }
 

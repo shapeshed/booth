@@ -6,6 +6,7 @@ data class PodcastSettingsState(
     val refreshNetwork: PodcastRefreshNetwork = PodcastRefreshNetwork.ANY_CONNECTION,
     val notificationsEnabled: Boolean = false,
     val autoQueueEnabled: Boolean = false,
+    val downloadEpisodesAddedToUpNext: Boolean = false,
     val downloadNetwork: PodcastDownloadNetwork = PodcastDownloadNetwork.WIFI_ONLY,
     val downloadLimit: PodcastDownloadLimit = PodcastDownloadLimit.FIFTY,
     val deleteBeforeAutoDownload: PodcastDeleteBeforeAutoDownload = PodcastDeleteBeforeAutoDownload.PLAYED,

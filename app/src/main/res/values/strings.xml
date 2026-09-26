@@ -104,9 +104,7 @@
     <string name="all_podcasts" translatable="false">All podcasts</string>
     <string name="automatically_add_to_up_next" translatable="false">Add new episodes to Up Next</string>
     <string name="podcast_auto_queue" translatable="false">Podcasts added to Up Next</string>
-    <string name="download_up_next" translatable="false">Download new episodes</string>
-    <string name="download_videos_when_available" translatable="false">Download videos when available</string>
-    <string name="podcast_video_downloads" translatable="false">Podcast video downloads</string>
+    <string name="download_up_next" translatable="false">Download episodes added to Up Next</string>
     <string name="disabled_globally" translatable="false">Disabled globally</string>
     <string name="podcast_notifications" translatable="false">Podcast notifications</string>
     <string name="skip_silence">Skip silence</string>
@@ -159,7 +157,7 @@
     <string name="discovery_settings_group" translatable="false">Podcast discovery</string>
     <string name="download_network" translatable="false">Download network</string>
     <string name="download_limit" translatable="false">Download limit</string>
-    <string name="delete_before_auto_download" translatable="false">Delete before auto-download</string>
+    <string name="delete_before_auto_download" translatable="false">Delete before downloading</string>
     <string name="remove_played_downloads" translatable="false">Remove played downloads</string>
     <string name="remove_played_downloads_summary" translatable="false">24 hours after playback</string>
     <string name="download_limit_25" translatable="false">25 episodes</string>
@@ -171,8 +169,6 @@
     <string name="download_cleanup_all_eligible" translatable="false">All eligible episodes</string>
     <string name="download_wifi_or_mobile" translatable="false">Wi-Fi or mobile data</string>
     <string name="download_wifi_only" translatable="false">Wi-Fi only</string>
-    <string name="auto_download">Auto download</string>
-    <string name="download_video">Download video</string>
     <string name="podcast_search">Podcast search</string>
     <string name="default_value">Default</string>
     <string name="podcast_index_access">Podcast Index access</string>

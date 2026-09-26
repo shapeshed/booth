@@ -54,11 +54,12 @@ class PodcastRefreshWorker(
         var retryableFailure = false
         val notificationsEnabled = settings.podcastNotificationsEnabled.first()
         val autoQueueEnabled = settings.podcastAutoQueueEnabled.first()
+        val downloadEpisodesAddedToUpNext = settings.podcastDownloadEpisodesAddedToUpNext.first()
         val downloadNetwork = settings.podcastDownloadNetwork.first()
         val downloadLimit = settings.podcastDownloadLimit.first()
         val deleteBeforeAutoDownload = settings.podcastDeleteBeforeAutoDownload.first()
         val newEpisodes = mutableListOf<NewPodcastEpisodeNotification>()
-        val autoDownloadCandidates = mutableListOf<EpisodeEntity>()
+        val queuedDownloadCandidates = mutableListOf<EpisodeEntity>()
         val podcasts = repository.podcasts.first().filter { it.includeInAutoRefresh }
         val existingEpisodeIdentities = podcasts.associate { podcast ->
             podcast.id to repository.episodes(podcast.id).first()
@@ -87,9 +88,7 @@ class PodcastRefreshWorker(
                 newPersistedEpisodes.forEach { episode ->
                     repository.addToQueueFromInbox(episode.id)
                 }
-            }
-            if (podcast.includeInAutoDownload) {
-                autoDownloadCandidates += newPersistedEpisodes
+                if (downloadEpisodesAddedToUpNext) queuedDownloadCandidates += newPersistedEpisodes
             }
             if (notificationsEnabled && podcast.includeInNotifications) {
                 newPersistedEpisodes
@@ -107,7 +106,7 @@ class PodcastRefreshWorker(
         val allEpisodes = repository.podcasts.first()
             .flatMap { subscribed -> repository.episodes(subscribed.id).first() }
         val downloadsToEnqueue = PodcastDownloadManager(applicationContext, repository).downloadsWithinLimit(
-            candidates = autoDownloadCandidates,
+            candidates = queuedDownloadCandidates,
             downloadedEpisodes = allEpisodes,
             downloadAssets = repository.downloadAssets.first(),
             queuedEpisodeIds = repository.queue.first().mapTo(mutableSetOf(), QueueEntity::episodeId),

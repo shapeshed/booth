@@ -432,7 +432,6 @@ fun PodcastHomeScreen(
     val selectedSearchProvider = viewModel.searchProviders.firstOrNull {
         it.id == settingsState.searchProviderId
     }
-    val podcastDownloadVideos = settingsState.downloadVideos
     val podcastNotificationsEnabled = settingsState.notificationsEnabled
     val podcastAutoQueueEnabled = settingsState.autoQueueEnabled
     val podcastDownloadNetwork = settingsState.downloadNetwork
@@ -994,9 +993,7 @@ fun PodcastHomeScreen(
     fun SettingsContent() {
         PodcastHomeSettingsDestination(
             homeUiState = homeUiState,
-            globalPlaybackSpeed = globalPlaybackSpeed,
             viewModel = viewModel,
-            playbackViewModel = playbackViewModel,
             platformActions = platformActions,
             onManagePodcasts = ::openPodcastManagement,
             modifier = Modifier.fillMaxSize(),
@@ -1850,10 +1847,7 @@ fun PodcastHomeScreen(
                         PodcastHomeManagementDestination(
                             destination = destination,
                             podcasts = allPodcasts,
-                            globalPlaybackSpeed = globalPlaybackSpeed,
-                            globalSkipSilence = homeUiState.playback.skipSilence,
                             viewModel = viewModel,
-                            playbackViewModel = playbackViewModel,
                             modifier = Modifier.fillMaxSize(),
                         )
                     }
@@ -1906,10 +1900,6 @@ fun PodcastHomeScreen(
                                 },
                                 onSkipSilenceChange = { enabled ->
                                     playbackViewModel.setPodcastSkipSilence(podcast.id, enabled)
-                                },
-                                videoDownloadsEnabled = podcastDownloadVideos,
-                                onPodcastVideoDownloadChange = { enabled ->
-                                    viewModel.setPodcastVideoDownload(podcast.id, enabled)
                                 },
                                 globalAutoQueueEnabled = podcastAutoQueueEnabled,
                                 globalNotificationsEnabled = podcastNotificationsEnabled &&

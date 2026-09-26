@@ -218,6 +218,7 @@ class PodcastDownloadManager(
             .mapTo(currentEpisodeIds, DownloadAssetEntity::episodeId)
         val newCandidates = candidates.distinctBy(EpisodeEntity::id)
             .filterNot { it.id in currentEpisodeIds }
+        if (newCandidates.isEmpty()) return emptyList()
         if (maximumDownloads == null) return newCandidates
 
         val excess = (currentEpisodeIds.size + newCandidates.size - maximumDownloads).coerceAtLeast(0)

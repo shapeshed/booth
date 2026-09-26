@@ -125,8 +125,6 @@
     <string name="long_press_drag_reorder">Long press and drag to reorder %1$s</string>
     <string name="move_episode">Move %1$s</string>
     <string name="selected_item">Selected</string>
-    <string name="auto_download">Auto download</string>
-    <string name="download_video">Download video</string>
     <string name="podcast_search">Podcast search</string>
     <string name="default_value">Default</string>
     <string name="podcast_index_access">Podcast Index access</string>

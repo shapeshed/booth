@@ -119,8 +119,6 @@
     <string name="long_press_drag_reorder">Tieni premuto e trascina per riordinare %1$s</string>
     <string name="move_episode">Sposta %1$s</string>
     <string name="selected_item">Selezionato</string>
-    <string name="auto_download">Download automatico</string>
-    <string name="download_video">Scarica video</string>
     <string name="podcast_search">Ricerca podcast</string>
     <string name="default_value">Predefinito</string>
     <string name="podcast_index_access">Accesso a Podcast Index</string>

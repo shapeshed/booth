@@ -9,34 +9,25 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @Composable
 internal fun PodcastHomeSettingsDestination(
     homeUiState: PodcastHomeUiState,
-    globalPlaybackSpeed: Float,
     viewModel: PodcastViewModel,
-    playbackViewModel: PodcastPlaybackViewModel,
     platformActions: PodcastHomePlatformActions,
     onManagePodcasts: (PodcastManagementCategory) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val podcastManagementCounts = PodcastManagementCounts(
         total = homeUiState.allPodcasts.size,
-        playbackSpeed = homeUiState.allPodcasts.count { it.playbackSpeed != null },
         autoRefresh = homeUiState.allPodcasts.count { it.includeInAutoRefresh },
-        autoDownload = homeUiState.allPodcasts.count { it.includeInAutoDownload },
         autoQueue = homeUiState.allPodcasts.count { it.includeInAutoQueue },
-        videoDownload = homeUiState.allPodcasts.count { it.includeInVideoDownload },
         notifications = homeUiState.allPodcasts.count { it.includeInNotifications },
     )
     val podcastIndexCredentials by viewModel.podcastIndexCredentials.collectAsStateWithLifecycle()
 
     PodcastAppSettingsContent(
-        globalPlaybackSpeed = globalPlaybackSpeed,
         podcastManagementCounts = podcastManagementCounts,
         autoQueueEnabled = homeUiState.settings.autoQueueEnabled,
         onAutoQueueEnabledChange = viewModel::setPodcastAutoQueueEnabled,
-        skipSilence = homeUiState.playback.skipSilence,
-        onGlobalPlaybackSpeedChange = playbackViewModel::setSpeed,
-        onSkipSilenceChange = playbackViewModel::setSkipSilence,
-        videoDownloadsEnabled = homeUiState.settings.downloadVideos,
-        onVideoDownloadsEnabledChange = viewModel::setPodcastDownloadVideos,
+        downloadEpisodesAddedToUpNext = homeUiState.settings.downloadEpisodesAddedToUpNext,
+        onDownloadEpisodesAddedToUpNextChange = viewModel::setPodcastDownloadEpisodesAddedToUpNext,
         refreshInterval = homeUiState.settings.refreshInterval,
         onRefreshIntervalChange = viewModel::setPodcastRefreshInterval,
         refreshNetwork = homeUiState.settings.refreshNetwork,

@@ -12,25 +12,18 @@ import com.shapeshed.booth.data.PodcastIndexCredentials
 
 internal data class PodcastManagementCounts(
     val total: Int,
-    val playbackSpeed: Int,
     val autoRefresh: Int,
-    val autoDownload: Int,
     val autoQueue: Int,
-    val videoDownload: Int,
     val notifications: Int,
 )
 
 @Composable
 internal fun PodcastAppSettingsContent(
-    globalPlaybackSpeed: Float,
     podcastManagementCounts: PodcastManagementCounts,
     autoQueueEnabled: Boolean,
     onAutoQueueEnabledChange: (Boolean) -> Unit,
-    skipSilence: Boolean,
-    onGlobalPlaybackSpeedChange: (Float) -> Unit,
-    onSkipSilenceChange: (Boolean) -> Unit,
-    videoDownloadsEnabled: Boolean,
-    onVideoDownloadsEnabledChange: (Boolean) -> Unit,
+    downloadEpisodesAddedToUpNext: Boolean,
+    onDownloadEpisodesAddedToUpNextChange: (Boolean) -> Unit,
     refreshInterval: PodcastRefreshInterval,
     onRefreshIntervalChange: (PodcastRefreshInterval) -> Unit,
     refreshNetwork: PodcastRefreshNetwork,
@@ -62,15 +55,11 @@ internal fun PodcastAppSettingsContent(
     modifier: Modifier = Modifier,
 ) {
     PodcastAppSettingsScreen(
-        globalPlaybackSpeed = globalPlaybackSpeed,
         podcastManagementCounts = podcastManagementCounts,
         autoQueueEnabled = autoQueueEnabled,
         onAutoQueueEnabledChange = onAutoQueueEnabledChange,
-        skipSilence = skipSilence,
-        onGlobalPlaybackSpeedChange = onGlobalPlaybackSpeedChange,
-        onSkipSilenceChange = onSkipSilenceChange,
-        videoDownloadsEnabled = videoDownloadsEnabled,
-        onVideoDownloadsEnabledChange = onVideoDownloadsEnabledChange,
+        downloadEpisodesAddedToUpNext = downloadEpisodesAddedToUpNext,
+        onDownloadEpisodesAddedToUpNextChange = onDownloadEpisodesAddedToUpNextChange,
         refreshInterval = refreshInterval,
         onRefreshIntervalChange = onRefreshIntervalChange,
         refreshNetwork = refreshNetwork,

@@ -41,6 +41,7 @@ class SettingsStore(private val context: Context) {
     private val refreshNetworkKey = stringPreferencesKey("podcast_refresh_network")
     private val notificationsEnabledKey = booleanPreferencesKey("podcast_notifications_enabled")
     private val autoQueueEnabledKey = booleanPreferencesKey("podcast_auto_queue_enabled")
+    private val downloadEpisodesAddedToUpNextKey = booleanPreferencesKey("podcast_download_episodes_added_to_up_next")
     private val downloadNetworkKey = stringPreferencesKey("podcast_download_network")
     private val downloadLimitKey = stringPreferencesKey("podcast_download_limit")
     private val deleteBeforeAutoDownloadKey = stringPreferencesKey("podcast_delete_before_auto_download")
@@ -118,6 +119,14 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setPodcastAutoQueueEnabled(enabled: Boolean) {
         context.dataStore.edit { it[autoQueueEnabledKey] = enabled }
+    }
+
+    val podcastDownloadEpisodesAddedToUpNext: Flow<Boolean> = context.dataStore.data.map {
+        it[downloadEpisodesAddedToUpNextKey] ?: false
+    }
+
+    suspend fun setPodcastDownloadEpisodesAddedToUpNext(enabled: Boolean) {
+        context.dataStore.edit { it[downloadEpisodesAddedToUpNextKey] = enabled }
     }
 
     val podcastDownloadNetwork: Flow<PodcastDownloadNetwork> = context.dataStore.data.map { prefs ->

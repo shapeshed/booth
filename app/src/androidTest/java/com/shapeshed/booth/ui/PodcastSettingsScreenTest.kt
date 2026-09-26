@@ -4,7 +4,6 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
 import com.shapeshed.booth.data.PodcastEntity
 import com.shapeshed.booth.ui.theme.BoothAppTheme
 import org.junit.Assert.assertEquals
@@ -18,7 +17,6 @@ class PodcastSettingsScreenTest {
     @Test
     fun automaticEpisodeTogglesPersistTheirPodcastPreferences() {
         var savedAutoRefresh: Boolean? = null
-        var savedAutoDownload: Boolean? = null
         composeRule.setContent {
             BoothAppTheme {
                 PodcastSettingsScreen(
@@ -27,14 +25,11 @@ class PodcastSettingsScreenTest {
                     globalSkipSilence = false,
                     onPlaybackSpeedChange = {},
                     onSkipSilenceChange = {},
-                    videoDownloadsEnabled = false,
-                    onPodcastVideoDownloadChange = {},
                     globalAutoQueueEnabled = false,
                     globalNotificationsEnabled = false,
                     availableTags = emptyList(),
-                    onSaveSettings = { _, _, _, refresh, download, _, _ ->
+                    onSaveSettings = { _, _, _, refresh, _, _, _ ->
                         savedAutoRefresh = refresh
-                        savedAutoDownload = download
                     },
                 )
             }
@@ -44,14 +39,11 @@ class PodcastSettingsScreenTest {
 
         composeRule.runOnIdle { assertEquals(false, savedAutoRefresh) }
 
-        composeRule.onNodeWithText("Download new episodes").assertIsDisplayed().performClick()
-
-        composeRule.runOnIdle { assertEquals(true, savedAutoDownload) }
+        composeRule.onNodeWithText("Download episodes added to Up Next").assertDoesNotExist()
     }
 
     @Test
-    fun podcastVideoPreferenceIsAvailableWhenGlobalVideoDownloadsAreEnabled() {
-        var videoEnabled: Boolean? = null
+    fun podcastVideoPreferenceIsNotShown() {
         composeRule.setContent {
             BoothAppTheme {
                 PodcastSettingsScreen(
@@ -60,8 +52,6 @@ class PodcastSettingsScreenTest {
                     globalSkipSilence = false,
                     onPlaybackSpeedChange = {},
                     onSkipSilenceChange = {},
-                    videoDownloadsEnabled = true,
-                    onPodcastVideoDownloadChange = { videoEnabled = it },
                     globalAutoQueueEnabled = true,
                     globalNotificationsEnabled = true,
                     availableTags = emptyList(),
@@ -70,9 +60,7 @@ class PodcastSettingsScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("Download videos when available").performScrollTo().performClick()
-
-        composeRule.runOnIdle { assertEquals(false, videoEnabled) }
+        composeRule.onNodeWithText("Download videos when available").assertDoesNotExist()
     }
 
     @Test
@@ -87,8 +75,6 @@ class PodcastSettingsScreenTest {
                     globalSkipSilence = false,
                     onPlaybackSpeedChange = { playbackSpeed = it },
                     onSkipSilenceChange = { skipSilence = it },
-                    videoDownloadsEnabled = false,
-                    onPodcastVideoDownloadChange = {},
                     globalAutoQueueEnabled = false,
                     globalNotificationsEnabled = false,
                     availableTags = emptyList(),

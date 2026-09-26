@@ -212,6 +212,9 @@ class PodcastViewModel @Inject constructor(
         .combine(settings.podcastAutoQueueEnabled) { state, autoQueueEnabled ->
             state.copy(autoQueueEnabled = autoQueueEnabled)
         }
+        .combine(settings.podcastDownloadEpisodesAddedToUpNext) { state, enabled ->
+            state.copy(downloadEpisodesAddedToUpNext = enabled)
+        }
         .combine(settings.podcastDownloadNetwork) { state, downloadNetwork ->
             state.copy(downloadNetwork = downloadNetwork)
         }
@@ -428,6 +431,10 @@ class PodcastViewModel @Inject constructor(
         viewModelScope.launch {
             settings.setPodcastAutoQueueEnabled(enabled)
         }
+    }
+
+    fun setPodcastDownloadEpisodesAddedToUpNext(enabled: Boolean) {
+        viewModelScope.launch { settings.setPodcastDownloadEpisodesAddedToUpNext(enabled) }
     }
 
     fun setPodcastDownloadNetwork(network: com.shapeshed.booth.data.PodcastDownloadNetwork) {
@@ -820,7 +827,7 @@ class PodcastViewModel @Inject constructor(
     ) {
         preparePreviewEpisode(episode, podcast) { savedEpisode ->
             viewModelScope.launch {
-                runCancellableCatching { repository.addToQueueFromInbox(savedEpisode.id) }
+                runCancellableCatching { addToQueueAndMaybeDownload(savedEpisode.id) }
                     .onSuccess { onAdded() }
                     .onFailure { onError() }
             }
@@ -994,12 +1001,12 @@ class PodcastViewModel @Inject constructor(
                 .map { it.guid to it.audioUrl }
                 .toSet()
             val shouldAutoQueue = settings.podcastAutoQueueEnabled.first() && podcast.includeInAutoQueue
-            val shouldAutoDownload = podcast.includeInAutoDownload
+            val shouldDownloadQueuedEpisodes = shouldAutoQueue && settings.podcastDownloadEpisodesAddedToUpNext.first()
             _refreshing.value = true
             _refreshProgress.value = PodcastRefreshProgress(total = 1)
             try {
                 repository.refresh(podcast)
-                if (shouldAutoQueue || shouldAutoDownload) {
+                if (shouldAutoQueue) {
                     _refreshProgress.value = PodcastRefreshProgress(
                         completed = 1,
                         total = 1,
@@ -1010,7 +1017,7 @@ class PodcastViewModel @Inject constructor(
                 if (shouldAutoQueue) {
                     repository.addNewEpisodesToQueue(podcast, existingEpisodeIdentities)
                 }
-                enqueueAutoDownloads(context, podcast, newEpisodes)
+                if (shouldDownloadQueuedEpisodes) enqueueConfiguredDownloads(context, newEpisodes)
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (_: Exception) {
@@ -1041,14 +1048,14 @@ class PodcastViewModel @Inject constructor(
             }
             val shouldAutoQueue = settings.podcastAutoQueueEnabled.first() &&
                 refreshTargets.any(PodcastEntity::includeInAutoQueue)
-            val shouldAutoDownload = context != null && refreshTargets.any(PodcastEntity::includeInAutoDownload)
+            val downloadQueuedEpisodes = settings.podcastDownloadEpisodesAddedToUpNext.first()
             _refreshProgress.value = PodcastRefreshProgress(total = refreshTargets.size)
             try {
                 val results = repository.refreshAll(refreshTargets) { completed, total ->
                     _refreshProgress.value = PodcastRefreshProgress(
                         completed = completed,
                         total = total,
-                        phase = if ((shouldAutoQueue || shouldAutoDownload) && completed == total) {
+                        phase = if (shouldAutoQueue && completed == total) {
                             PodcastRefreshPhase.FINALIZING
                         } else {
                             PodcastRefreshPhase.FETCHING
@@ -1063,14 +1070,16 @@ class PodcastViewModel @Inject constructor(
                         )
                     }
                 }
-                if (context != null) {
-                    results.filter { it.result.isSuccess }.forEach { result ->
-                        val newEpisodes = newEpisodesSince(
-                            repository.episodes(result.podcast.id).first(),
-                            existingEpisodeIdentities[result.podcast.id].orEmpty(),
-                        )
-                        enqueueAutoDownloads(context, result.podcast, newEpisodes)
-                    }
+                if (context != null && shouldAutoQueue && downloadQueuedEpisodes) {
+                    val queuedEpisodes = results
+                        .filter { it.result.isSuccess && it.podcast.includeInAutoQueue }
+                        .flatMap { result ->
+                            newEpisodesSince(
+                                repository.episodes(result.podcast.id).first(),
+                                existingEpisodeIdentities[result.podcast.id].orEmpty(),
+                            )
+                        }
+                    enqueueConfiguredDownloads(context, queuedEpisodes)
                 }
                 results.firstNotNullOfOrNull { it.result.exceptionOrNull() }?.let {
                     _state.value = state.value.copy(error = PodcastUiError.PartialRefreshFailed)
@@ -1180,7 +1189,7 @@ class PodcastViewModel @Inject constructor(
 
     fun addToQueueFromInbox(episodeId: Long, onAdded: () -> Unit = {}, onError: () -> Unit = {}) {
         viewModelScope.launch {
-            runCancellableCatching { repository.addToQueueFromInbox(episodeId) }
+            runCancellableCatching { addToQueueAndMaybeDownload(episodeId) }
                 .onSuccess { onAdded() }
                 .onFailure { onError() }
         }
@@ -1239,12 +1248,18 @@ class PodcastViewModel @Inject constructor(
         enqueueDownload(context, episodeId, PodcastDownloadNetwork.ANY_CONNECTION)
     }
 
-    private suspend fun enqueueAutoDownloads(
+    private suspend fun addToQueueAndMaybeDownload(episodeId: Long) {
+        repository.addToQueueFromInbox(episodeId)
+        if (settings.podcastDownloadEpisodesAddedToUpNext.first()) {
+            repository.episode(episodeId)?.let { enqueueConfiguredDownloads(applicationContext, listOf(it)) }
+        }
+    }
+
+    private suspend fun enqueueConfiguredDownloads(
         context: Context,
-        podcast: PodcastEntity,
         episodes: List<EpisodeEntity>,
     ) {
-        if (!podcast.includeInAutoDownload) return
+        if (episodes.isEmpty()) return
         val network = settings.podcastDownloadNetwork.first()
         val allEpisodes = repository.podcasts.first()
             .flatMap { subscribed -> repository.episodes(subscribed.id).first() }

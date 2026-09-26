@@ -9,17 +9,12 @@ import com.shapeshed.booth.data.podcastTags
 internal fun PodcastHomeManagementDestination(
     destination: PodcastNavigationKey.PodcastManagement,
     podcasts: List<PodcastEntity>,
-    globalPlaybackSpeed: Float,
-    globalSkipSilence: Boolean,
     viewModel: PodcastViewModel,
-    playbackViewModel: PodcastPlaybackViewModel,
     modifier: Modifier = Modifier,
 ) {
     PodcastManagementScreen(
         category = destination.category,
         podcasts = podcasts,
-        globalPlaybackSpeed = globalPlaybackSpeed,
-        globalSkipSilence = globalSkipSilence,
         onPodcastFlagsChange = { podcast, refresh, download, notifications ->
             viewModel.updatePodcastSettings(
                 podcast.id,
@@ -32,26 +27,14 @@ internal fun PodcastHomeManagementDestination(
                 notifications,
             )
         },
-        onPodcastSpeedChange = { podcast, speed ->
-            viewModel.setPodcastPlaybackSpeed(podcast.id, speed)
-        },
-        onPodcastSkipSilenceChange = { podcast, enabled ->
-            playbackViewModel.setPodcastSkipSilence(podcast.id, enabled)
-        },
-        onPodcastVideoDownloadChange = { podcast, enabled ->
-            viewModel.setPodcastVideoDownload(podcast.id, enabled)
-        },
         onPodcastAutoQueueChange = { podcast, enabled ->
             viewModel.setPodcastAutoQueue(podcast.id, enabled)
         },
         onSetAllEnabled = { enabled ->
             when (destination.category) {
                 PodcastManagementCategory.AUTO_REFRESH -> viewModel.setAllPodcastAutoRefresh(enabled)
-                PodcastManagementCategory.AUTO_DOWNLOAD -> viewModel.setAllPodcastAutoDownload(enabled)
                 PodcastManagementCategory.AUTO_QUEUE -> viewModel.setAllPodcastAutoQueue(enabled)
-                PodcastManagementCategory.VIDEO_DOWNLOAD -> viewModel.setAllPodcastVideoDownload(enabled)
                 PodcastManagementCategory.NOTIFICATIONS -> viewModel.setAllPodcastNotifications(enabled)
-                PodcastManagementCategory.PLAYBACK_SPEED -> Unit
             }
         },
         modifier = modifier,

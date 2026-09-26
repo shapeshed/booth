@@ -158,6 +158,7 @@ class PodcastBackupManager(
                     .put("refreshNetwork", settings.podcastRefreshNetwork.first().name)
                     .put("notificationsEnabled", settings.podcastNotificationsEnabled.first())
                     .put("autoQueueEnabled", settings.podcastAutoQueueEnabled.first())
+                    .put("downloadEpisodesAddedToUpNext", settings.podcastDownloadEpisodesAddedToUpNext.first())
                     .put("downloadNetwork", settings.podcastDownloadNetwork.first().name)
                     .put("downloadLimit", settings.podcastDownloadLimit.first().name)
                     .put("deleteBeforeAutoDownload", settings.podcastDeleteBeforeAutoDownload.first().name)
@@ -363,6 +364,9 @@ class PodcastBackupManager(
             global.optionalString("refreshNetwork")?.toEnum<PodcastRefreshNetwork>()?.let { settings.setPodcastRefreshNetwork(it) }
             global.optionalBoolean("notificationsEnabled")?.let { settings.setPodcastNotificationsEnabled(it) }
             global.optionalBoolean("autoQueueEnabled")?.let { settings.setPodcastAutoQueueEnabled(it) }
+            global.optionalBoolean("downloadEpisodesAddedToUpNext")?.let {
+                settings.setPodcastDownloadEpisodesAddedToUpNext(it)
+            }
             global.optionalString("downloadNetwork")?.toEnum<PodcastDownloadNetwork>()?.let { settings.setPodcastDownloadNetwork(it) }
             global.optionalString("downloadLimit")?.toEnum<PodcastDownloadLimit>()?.let { settings.setPodcastDownloadLimit(it) }
             global.optionalString("deleteBeforeAutoDownload")?.toEnum<PodcastDeleteBeforeAutoDownload>()?.let { settings.setPodcastDeleteBeforeAutoDownload(it) }
