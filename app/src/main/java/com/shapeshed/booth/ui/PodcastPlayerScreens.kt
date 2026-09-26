@@ -151,6 +151,7 @@ import androidx.compose.material3.ShortNavigationBarItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.rememberSliderState
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -610,23 +611,32 @@ internal fun PodcastNowPlayingOverlay(
                         } else {
                             0f
                         }
+                        val sliderState = rememberSliderState(
+                            value = if (isScrubbing) scrubPosition else playerProgress,
+                        )
+                        // The state-based Slider owns its value, so external progress updates
+                        // have to be mirrored into it while the user is not dragging.
                         LaunchedEffect(positionMs, durationMs, isScrubbing) {
-                            if (!isScrubbing) scrubPosition = playerProgress
+                            if (!isScrubbing) {
+                                scrubPosition = playerProgress
+                                sliderState.value = playerProgress
+                            }
                         }
                         Slider(
-                            value = if (isScrubbing) scrubPosition else playerProgress,
+                            state = sliderState,
                             onValueChange = {
                                 isScrubbing = true
                                 scrubPosition = it
+                                sliderState.value = it
                             },
                             onValueChangeFinished = {
                                 if (durationMs > 0L) onSeekTo((scrubPosition * durationMs).toLong())
                                 isScrubbing = false
                             },
                             enabled = durationMs > 0L,
-                            track = { sliderState ->
+                            track = { state ->
                                 SliderDefaults.Track(
-                                    sliderState = sliderState,
+                                    sliderState = state,
                                     drawStopIndicator = null,
                                 )
                             },
@@ -981,23 +991,32 @@ internal fun PodcastNowPlayingOverlay(
                     } else {
                         0f
                     }
+                    val sliderState = rememberSliderState(
+                        value = if (isScrubbing) scrubPosition else playerProgress,
+                    )
+                    // The state-based Slider owns its value, so external progress updates
+                    // have to be mirrored into it while the user is not dragging.
                     LaunchedEffect(positionMs, durationMs, isScrubbing) {
-                        if (!isScrubbing) scrubPosition = playerProgress
+                        if (!isScrubbing) {
+                            scrubPosition = playerProgress
+                            sliderState.value = playerProgress
+                        }
                     }
                     Slider(
-                        value = if (isScrubbing) scrubPosition else playerProgress,
+                        state = sliderState,
                         onValueChange = {
                             isScrubbing = true
                             scrubPosition = it
+                            sliderState.value = it
                         },
                         onValueChangeFinished = {
                             if (durationMs > 0L) onSeekTo((scrubPosition * durationMs).toLong())
                             isScrubbing = false
                         },
                         enabled = durationMs > 0L,
-                        track = { sliderState ->
+                        track = { state ->
                             SliderDefaults.Track(
-                                sliderState = sliderState,
+                                sliderState = state,
                                 drawStopIndicator = null,
                             )
                         },
