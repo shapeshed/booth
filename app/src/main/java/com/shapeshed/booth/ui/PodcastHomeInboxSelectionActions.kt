@@ -1,17 +1,14 @@
 package com.shapeshed.booth.ui
 
-import androidx.compose.ui.res.stringResource
-import com.shapeshed.booth.R
-
 import android.content.Context
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.FileDownload
-import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.rounded.Replay10
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -21,6 +18,8 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.shapeshed.booth.R
 import com.shapeshed.booth.data.DownloadProgress
 import com.shapeshed.booth.data.EpisodeEntity
 import com.shapeshed.booth.data.PodcastEntity
@@ -57,7 +56,10 @@ internal fun PodcastHomeInboxSelectionActions(
         }
         onClearSelection()
     }) {
-        Icon(Icons.AutoMirrored.Rounded.PlaylistAdd, contentDescription = stringResource(R.string.add_selected_to_up_next))
+        Icon(
+            Icons.AutoMirrored.Rounded.PlaylistAdd,
+            contentDescription = stringResource(R.string.add_selected_to_up_next),
+        )
     }
     IconButton(onClick = {
         inbox.filter { it.id in selectedIds }.forEach { viewModel.download(context, it.id) }
@@ -72,7 +74,7 @@ internal fun PodcastHomeInboxSelectionActions(
     }
     Box {
         IconButton(onClick = { onMenuExpandedChange(true) }) {
-        Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.more_selection_actions))
+            Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.more_selection_actions))
         }
         DropdownMenu(
             expanded = menuExpanded,

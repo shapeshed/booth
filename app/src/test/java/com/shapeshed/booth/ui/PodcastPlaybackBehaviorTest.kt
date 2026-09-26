@@ -39,14 +39,12 @@ class PodcastPlaybackBehaviorTest {
         assertTrue(episode(mimeType = "video/mp4", videoMimeType = "video/mp4").isVideoOnlySource())
         assertTrue(episode(mimeType = "audio/mpeg", videoMimeType = "video/mp4").isVideoOnlySource())
         assertFalse(episode(mimeType = "audio/mpeg", videoMimeType = "audio/mpeg").isVideoOnlySource())
-        assertFalse(episode(mimeType = "video/mp4", videoMimeType = "video/mp4", videoUrl = "other").isVideoOnlySource())
+        assertFalse(
+            episode(mimeType = "video/mp4", videoMimeType = "video/mp4", videoUrl = "other").isVideoOnlySource(),
+        )
     }
 
-    private fun episode(
-        mimeType: String,
-        videoMimeType: String,
-        videoUrl: String = "same",
-    ) = EpisodeEntity(
+    private fun episode(mimeType: String, videoMimeType: String, videoUrl: String = "same") = EpisodeEntity(
         id = 1L,
         podcastId = 1L,
         guid = "episode-1",

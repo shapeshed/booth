@@ -99,8 +99,7 @@ class RssParserRealWorldFixtureTest {
         ).filterIsInstance<FeedParseEvent.Completed>().toList().single().result
     }
 
-    private fun fixtureBytes(path: String): ByteArray =
-        checkNotNull(javaClass.classLoader?.getResourceAsStream(path)) {
-            "Missing parser fixture: $path"
-        }.use { it.readBytes() }
+    private fun fixtureBytes(path: String): ByteArray = checkNotNull(javaClass.classLoader?.getResourceAsStream(path)) {
+        "Missing parser fixture: $path"
+    }.use { it.readBytes() }
 }

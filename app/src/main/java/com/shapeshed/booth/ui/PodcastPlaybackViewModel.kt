@@ -5,11 +5,10 @@ import android.content.ComponentName
 import android.content.Context
 import android.os.Bundle
 import android.util.Log
-import java.io.File
+import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
@@ -17,25 +16,26 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionToken
-import androidx.core.content.ContextCompat
-import androidx.core.net.toUri
+import com.google.common.util.concurrent.ListenableFuture
 import com.shapeshed.booth.PodcastPlaybackService
-import com.shapeshed.booth.data.EpisodeEntity
-import com.shapeshed.booth.data.PodcastRepository
-import com.shapeshed.booth.data.DownloadAssetStatus
+import com.shapeshed.booth.data.ACTION_SKIP_SILENCE_SET
 import com.shapeshed.booth.data.ACTION_SLEEP_TIMER_CANCEL
 import com.shapeshed.booth.data.ACTION_SLEEP_TIMER_SET
-import com.shapeshed.booth.data.ACTION_SKIP_SILENCE_SET
+import com.shapeshed.booth.data.DownloadAssetStatus
+import com.shapeshed.booth.data.EpisodeEntity
+import com.shapeshed.booth.data.PodcastRepository
 import com.shapeshed.booth.data.SKIP_SILENCE_ENABLED
 import com.shapeshed.booth.data.SLEEP_TIMER_DURATION_MS
 import com.shapeshed.booth.data.SleepTimerState
 import com.shapeshed.booth.data.SleepTimerStore
-import com.google.common.util.concurrent.ListenableFuture
+import dagger.hilt.android.lifecycle.HiltViewModel
+import java.io.File
+import javax.inject.Inject
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
@@ -69,8 +69,10 @@ class PodcastPlaybackViewModel @Inject constructor(
     private var playlistEpisodes: Map<Long, EpisodeEntity> = emptyMap()
     private var playlistPodcastTitles: Map<Long, String> = emptyMap()
     private var videoMode = false
+
     // The user's foreground choice. Minimizing temporarily uses audio without changing this.
     private var foregroundVideoPreference = false
+
     // HLS carries audio and video on one prepared source. Audio mode can therefore hide the
     // surface without replacing the MediaItem or seeking through a rebuffering cycle.
     private var activeSourceIsVideo = false
@@ -398,9 +400,14 @@ class PodcastPlaybackViewModel @Inject constructor(
         val mediaUrl = if (useVideo) {
             // HLS is stream-only for now. Ignore any old manifest file marker from the previous
             // downloader, which downloaded only the playlist rather than its media segments.
-            if (isHlsVideo(episode)) episode.videoUrl ?: episode.audioUrl
-            else episode.localVideoUri ?: episode.videoUrl ?: episode.audioUrl
-        } else resolveAudioUri(episode)
+            if (isHlsVideo(episode)) {
+                episode.videoUrl ?: episode.audioUrl
+            } else {
+                episode.localVideoUri ?: episode.videoUrl ?: episode.audioUrl
+            }
+        } else {
+            resolveAudioUri(episode)
+        }
         val mediaMimeType = if (useVideo) episode.videoMimeType else episode.mimeType
         return MediaItem.Builder()
             .setMediaId(episode.id.toString())
@@ -431,7 +438,9 @@ class PodcastPlaybackViewModel @Inject constructor(
         } ?: episode.audioUrl
     }
 
-    fun pause() { controller?.pause() }
+    fun pause() {
+        controller?.pause()
+    }
 
     fun togglePlayPause() {
         controller?.let { if (it.isPlaying) it.pause() else it.play() }
@@ -535,9 +544,13 @@ class PodcastPlaybackViewModel @Inject constructor(
         )
     }
 
-    fun seekBack() { controller?.seekBack() }
+    fun seekBack() {
+        controller?.seekBack()
+    }
 
-    fun seekForward() { controller?.seekForward() }
+    fun seekForward() {
+        controller?.seekForward()
+    }
 
     fun seekTo(positionMs: Long) {
         displayedPositionMs = positionMs.coerceAtLeast(0L)
@@ -547,7 +560,10 @@ class PodcastPlaybackViewModel @Inject constructor(
     fun resetPositionIfCurrent(episodeId: Long) {
         val mediaController = controller
         if (mediaController?.currentMediaItem?.mediaId != episodeId.toString()) {
-            Log.d("PodcastPlayback", "reset ignored episode=$episodeId current=${mediaController?.currentMediaItem?.mediaId}")
+            Log.d(
+                "PodcastPlayback",
+                "reset ignored episode=$episodeId current=${mediaController?.currentMediaItem?.mediaId}",
+            )
             return
         }
         Log.d(
@@ -570,7 +586,7 @@ class PodcastPlaybackViewModel @Inject constructor(
         controllerListener = null
         controller?.release()
         controller = null
-        controllerFuture?.let(MediaController:: releaseFuture)
+        controllerFuture?.let(MediaController::releaseFuture)
         controllerFuture = null
     }
 }
@@ -579,12 +595,15 @@ internal fun PlaybackException.userMessage(): PodcastUiError = when (errorCode) 
     PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
     PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT,
     -> PodcastUiError.PlaybackConnectionFailed
+
     PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS ->
         PodcastUiError.PlaybackServerFailed
+
     else -> PodcastUiError.PlaybackFailed
 }
 
-internal fun EpisodeEntity.isVideoOnlySource(): Boolean =
-    audioUrl == videoUrl &&
-        (mimeType.orEmpty().startsWith("video/", ignoreCase = true) ||
-            videoMimeType.orEmpty().startsWith("video/", ignoreCase = true))
+internal fun EpisodeEntity.isVideoOnlySource(): Boolean = audioUrl == videoUrl &&
+    (
+        mimeType.orEmpty().startsWith("video/", ignoreCase = true) ||
+            videoMimeType.orEmpty().startsWith("video/", ignoreCase = true)
+        )

@@ -14,8 +14,8 @@ import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -499,30 +499,29 @@ class RssParserNetworkTest {
     private fun testFallbackProvider(
         onArguments: (String, String?, String?) -> Unit = { _, _, _ -> },
         onFetch: () -> Unit,
-    ): PodcastFeedProvider =
-        object : PodcastFeedProvider {
-            override suspend fun fetch(
-                feedUrl: String,
-                etag: String?,
-                lastModified: String?,
-                onEpisodeProgress: (processed: Int, total: Int) -> Unit,
-            ): PodcastFeed {
-                onFetch()
-                onArguments(feedUrl, etag, lastModified)
-                return PodcastFeed(
-                    podcast = Podcast(
-                        id = podcastId(feedUrl),
-                        title = "Fallback show",
-                        author = null,
-                        feedUrl = feedUrl,
-                        siteUrl = null,
-                        descriptionHtml = null,
-                        artworkUrl = null,
-                    ),
-                    episodes = emptyList(),
-                )
-            }
+    ): PodcastFeedProvider = object : PodcastFeedProvider {
+        override suspend fun fetch(
+            feedUrl: String,
+            etag: String?,
+            lastModified: String?,
+            onEpisodeProgress: (processed: Int, total: Int) -> Unit,
+        ): PodcastFeed {
+            onFetch()
+            onArguments(feedUrl, etag, lastModified)
+            return PodcastFeed(
+                podcast = Podcast(
+                    id = podcastId(feedUrl),
+                    title = "Fallback show",
+                    author = null,
+                    feedUrl = feedUrl,
+                    siteUrl = null,
+                    descriptionHtml = null,
+                    artworkUrl = null,
+                ),
+                episodes = emptyList(),
+            )
         }
+    }
 
     private fun feedUrl(): String = "http://127.0.0.1:${server.address.port}/feed"
 }

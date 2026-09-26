@@ -4,8 +4,8 @@ import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.shapeshed.booth.data.DownloadProgress
-import com.shapeshed.booth.data.EpisodeEntity
 import com.shapeshed.booth.data.Episode
+import com.shapeshed.booth.data.EpisodeEntity
 import com.shapeshed.booth.data.PodcastDiscoveryCategory
 
 @Composable
@@ -42,13 +42,19 @@ internal fun PodcastDiscoveryContent(
             isFavorite = previewEpisodeEntities[previewEpisode.id]?.favorite == true,
             isPlaying = playback.episode?.id == previewEpisode.id && playback.isPlaying,
             isBuffering = playback.episode?.id == previewEpisode.id && playback.isBuffering,
-            positionMs = if (playback.episode?.id == previewEpisode.id) playback.positionMs
-            else previewEpisodeEntities[previewEpisode.id]?.positionMs ?: 0L,
+            positionMs = if (playback.episode?.id == previewEpisode.id) {
+                playback.positionMs
+            } else {
+                previewEpisodeEntities[previewEpisode.id]?.positionMs ?: 0L
+            },
             completed = previewEpisodeEntities[previewEpisode.id]?.completed == true,
             onPlay = {
-                if (playback.episode?.id == previewEpisode.id) playbackViewModel.togglePlayPause()
-                else viewModel.preparePreviewEpisode(previewEpisode, previewResult.podcast) { savedEpisode ->
-                    playbackViewModel.play(savedEpisode, previewResult.podcast.title)
+                if (playback.episode?.id == previewEpisode.id) {
+                    playbackViewModel.togglePlayPause()
+                } else {
+                    viewModel.preparePreviewEpisode(previewEpisode, previewResult.podcast) { savedEpisode ->
+                        playbackViewModel.play(savedEpisode, previewResult.podcast.title)
+                    }
                 }
             },
             onWatch = previewEpisode.videoUrl?.let {
@@ -120,9 +126,12 @@ internal fun PodcastDiscoveryContent(
                 }
             },
             onPlay = { episode ->
-                if (playback.episode?.id == episode.id) playbackViewModel.togglePlayPause()
-                else viewModel.preparePreviewEpisode(episode, previewResult.podcast) { savedEpisode ->
-                    playbackViewModel.play(savedEpisode, previewResult.podcast.title)
+                if (playback.episode?.id == episode.id) {
+                    playbackViewModel.togglePlayPause()
+                } else {
+                    viewModel.preparePreviewEpisode(episode, previewResult.podcast) { savedEpisode ->
+                        playbackViewModel.play(savedEpisode, previewResult.podcast.title)
+                    }
                 }
             },
             onLongPress = { episode ->

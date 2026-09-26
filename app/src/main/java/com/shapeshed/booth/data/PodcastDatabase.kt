@@ -3,15 +3,15 @@
 package com.shapeshed.booth.data
 
 import android.content.Context
+import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Database
-import androidx.room.ColumnInfo
 import androidx.room.Entity
-import androidx.room.Fts4
 import androidx.room.ForeignKey
+import androidx.room.Fts4
 import androidx.room.Ignore
-import androidx.room.Insert
 import androidx.room.Index
+import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.PrimaryKey
 import androidx.room.Query
@@ -52,19 +52,14 @@ data class PodcastEntity(
     val feedLastModified: String? = null,
     val lastRefreshAttemptMillis: Long? = null,
     val lastRefreshError: String? = null,
-)
-
-{
+) {
     /** Normalized category rows, populated by the repository and not persisted in this entity. */
     @Ignore
     var categories: List<CategoryEntity> = emptyList()
 }
 
 @Entity(tableName = "directory_providers")
-data class DirectoryProviderEntity(
-    @PrimaryKey val id: String,
-    val name: String,
-)
+data class DirectoryProviderEntity(@PrimaryKey val id: String, val name: String)
 
 @Entity(
     tableName = "categories",
@@ -107,10 +102,7 @@ data class CategoryEntity(
     ],
     indices = [Index(value = ["podcastId"])],
 )
-data class CategoryPodcastEntity(
-    val categoryId: Long,
-    val podcastId: Long,
-)
+data class CategoryPodcastEntity(val categoryId: Long, val podcastId: Long)
 
 data class PodcastCategoryRow(
     val id: Long,
@@ -191,15 +183,9 @@ data class PodcastEpisodeSearchResult(
     tableName = "queue",
     indices = [Index(value = ["position"], name = "index_queue_position")],
 )
-data class QueueEntity(
-    @PrimaryKey val episodeId: Long,
-    val position: Int,
-)
+data class QueueEntity(@PrimaryKey val episodeId: Long, val position: Int)
 
-data class PodcastLatestEpisode(
-    val podcastId: Long,
-    val publishedAtMillis: Long?,
-)
+data class PodcastLatestEpisode(val podcastId: Long, val publishedAtMillis: Long?)
 
 @Dao
 interface PodcastDao {
@@ -212,13 +198,17 @@ interface PodcastDao {
     @Query("SELECT * FROM podcasts")
     suspend fun allPodcasts(): List<PodcastEntity>
 
-    @Query("SELECT c.*, cp.podcastId FROM categories c INNER JOIN categories_podcasts cp ON cp.categoryId = c.id ORDER BY c.name COLLATE NOCASE")
+    @Query(
+        "SELECT c.*, cp.podcastId FROM categories c INNER JOIN categories_podcasts cp ON cp.categoryId = c.id ORDER BY c.name COLLATE NOCASE",
+    )
     fun observePodcastCategories(): Flow<List<PodcastCategoryRow>>
 
     @Query("SELECT * FROM categories WHERE providerId = :providerId ORDER BY name COLLATE NOCASE")
     suspend fun categoriesForProvider(providerId: String): List<CategoryEntity>
 
-    @Query("SELECT c.* FROM categories c INNER JOIN categories_podcasts cp ON cp.categoryId = c.id WHERE cp.podcastId = :podcastId ORDER BY c.name COLLATE NOCASE")
+    @Query(
+        "SELECT c.* FROM categories c INNER JOIN categories_podcasts cp ON cp.categoryId = c.id WHERE cp.podcastId = :podcastId ORDER BY c.name COLLATE NOCASE",
+    )
     suspend fun categoriesForPodcast(podcastId: Long): List<CategoryEntity>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
@@ -227,13 +217,17 @@ interface PodcastDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertCategory(category: CategoryEntity): Long
 
-    @Query("SELECT * FROM categories WHERE providerId = :providerId AND name = :name AND ((externalId IS NULL AND :externalId IS NULL) OR externalId = :externalId) LIMIT 1")
+    @Query(
+        "SELECT * FROM categories WHERE providerId = :providerId AND name = :name AND ((externalId IS NULL AND :externalId IS NULL) OR externalId = :externalId) LIMIT 1",
+    )
     suspend fun category(providerId: String, name: String, externalId: String?): CategoryEntity?
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertCategoryPodcast(join: CategoryPodcastEntity)
 
-    @Query("DELETE FROM categories_podcasts WHERE podcastId = :podcastId AND categoryId IN (SELECT id FROM categories WHERE providerId = :providerId)")
+    @Query(
+        "DELETE FROM categories_podcasts WHERE podcastId = :podcastId AND categoryId IN (SELECT id FROM categories WHERE providerId = :providerId)",
+    )
     suspend fun deletePodcastCategoriesForProvider(podcastId: Long, providerId: String)
 
     @Query("SELECT * FROM podcasts WHERE isSubscribed = 1 ORDER BY title COLLATE NOCASE")
@@ -251,7 +245,8 @@ interface PodcastDao {
     @Query("SELECT guid FROM episodes WHERE podcastId = :podcastId")
     suspend fun episodeGuidsForPodcast(podcastId: Long): List<String>
 
-    @Query("""
+    @Query(
+        """
         SELECT e.id, e.podcastId, e.guid, e.title,
             NULL AS descriptionHtml,
             e.audioUrl, e.mimeType, e.artworkUrl, e.publishedAtMillis, e.durationMs,
@@ -263,16 +258,20 @@ interface PodcastDao {
         INNER JOIN podcasts p ON p.id = e.podcastId
         WHERE e.inInbox = 1 AND p.isSubscribed = 1
         ORDER BY e.publishedAtMillis DESC, e.firstSeenAtMillis DESC
-    """)
+    """,
+    )
     fun observeInbox(): androidx.paging.PagingSource<Int, EpisodeEntity>
 
     @Query("SELECT * FROM episodes ORDER BY publishedAtMillis DESC, firstSeenAtMillis DESC")
     fun observeAllEpisodes(): androidx.paging.PagingSource<Int, EpisodeEntity>
 
-    @Query("SELECT e.* FROM episodes e INNER JOIN podcasts p ON e.podcastId = p.id WHERE p.id IN (:podcastIds) ORDER BY e.publishedAtMillis DESC, e.firstSeenAtMillis DESC")
+    @Query(
+        "SELECT e.* FROM episodes e INNER JOIN podcasts p ON e.podcastId = p.id WHERE p.id IN (:podcastIds) ORDER BY e.publishedAtMillis DESC, e.firstSeenAtMillis DESC",
+    )
     fun observeEpisodesForPodcasts(podcastIds: List<Long>): androidx.paging.PagingSource<Int, EpisodeEntity>
 
-    @Query("""
+    @Query(
+        """
         SELECT e.*, p.title AS podcastTitle, p.author AS podcastAuthor, p.artworkUrl AS podcastArtworkUrl
         FROM episodes e
         INNER JOIN podcasts p ON p.id = e.podcastId
@@ -283,10 +282,12 @@ interface PodcastDao {
             COALESCE(e.publishedAtMillis, e.firstSeenAtMillis) DESC,
             e.firstSeenAtMillis DESC
         LIMIT :limit
-    """)
+    """,
+    )
     fun observeEpisodesMatching(query: String, limit: Int): Flow<List<PodcastEpisodeSearchResult>>
 
-    @Query("""
+    @Query(
+        """
         SELECT e.*, p.title AS podcastTitle, p.author AS podcastAuthor, p.artworkUrl AS podcastArtworkUrl
         FROM episodes e
         INNER JOIN podcasts p ON p.id = e.podcastId
@@ -295,7 +296,8 @@ interface PodcastDao {
             COALESCE(e.publishedAtMillis, e.firstSeenAtMillis) DESC,
             e.firstSeenAtMillis DESC
         LIMIT :limit
-    """)
+    """,
+    )
     fun observeRecentEpisodesForSearch(limit: Int): Flow<List<PodcastEpisodeSearchResult>>
 
     @Query("SELECT * FROM episodes")
@@ -331,15 +333,14 @@ interface PodcastDao {
     @Query("UPDATE podcasts SET lastRefreshAttemptMillis = :attemptedAtMillis WHERE id = :podcastId")
     suspend fun markRefreshAttempt(podcastId: Long, attemptedAtMillis: Long)
 
-    @Query("UPDATE podcasts SET lastRefreshMillis = :refreshedAtMillis, lastRefreshAttemptMillis = :refreshedAtMillis, feedEtag = COALESCE(:etag, feedEtag), feedLastModified = COALESCE(:lastModified, feedLastModified), lastRefreshError = NULL WHERE id = :podcastId")
-    suspend fun markRefreshSuccessful(
-        podcastId: Long,
-        refreshedAtMillis: Long,
-        etag: String?,
-        lastModified: String?,
+    @Query(
+        "UPDATE podcasts SET lastRefreshMillis = :refreshedAtMillis, lastRefreshAttemptMillis = :refreshedAtMillis, feedEtag = COALESCE(:etag, feedEtag), feedLastModified = COALESCE(:lastModified, feedLastModified), lastRefreshError = NULL WHERE id = :podcastId",
     )
+    suspend fun markRefreshSuccessful(podcastId: Long, refreshedAtMillis: Long, etag: String?, lastModified: String?)
 
-    @Query("UPDATE podcasts SET lastRefreshAttemptMillis = :attemptedAtMillis, lastRefreshError = :error WHERE id = :podcastId")
+    @Query(
+        "UPDATE podcasts SET lastRefreshAttemptMillis = :attemptedAtMillis, lastRefreshError = :error WHERE id = :podcastId",
+    )
     suspend fun markRefreshFailed(podcastId: Long, attemptedAtMillis: Long, error: String?)
 
     @Query("UPDATE episodes SET preferVideo = :preferVideo, videoPreferenceSet = 1 WHERE id = :episodeId")
@@ -417,15 +418,13 @@ interface PodcastDao {
     @Query("UPDATE episodes SET inInbox = 0 WHERE inInbox = 1")
     suspend fun clearInbox()
 
-    @Query("UPDATE episodes SET positionMs = :positionMs, completed = :completed, durationMs = COALESCE(:durationMs, durationMs) WHERE id = :episodeId")
+    @Query(
+        "UPDATE episodes SET positionMs = :positionMs, completed = :completed, durationMs = COALESCE(:durationMs, durationMs) WHERE id = :episodeId",
+    )
     suspend fun updateProgress(episodeId: Long, positionMs: Long, completed: Boolean, durationMs: Long?)
 
     @Transaction
-    suspend fun markCompletedAndRemoveFromQueue(
-        episodeId: Long,
-        positionMs: Long,
-        durationMs: Long?,
-    ) {
+    suspend fun markCompletedAndRemoveFromQueue(episodeId: Long, positionMs: Long, durationMs: Long?) {
         updateProgress(episodeId, positionMs, completed = true, durationMs = durationMs)
         removeFromQueue(episodeId)
     }
@@ -436,7 +435,9 @@ interface PodcastDao {
     @Query("UPDATE episodes SET localVideoUri = :localVideoUri WHERE id = :episodeId")
     suspend fun setLocalVideoUri(episodeId: Long, localVideoUri: String?)
 
-    @Query("UPDATE episodes SET audioSizeBytes = COALESCE(:audioSizeBytes, audioSizeBytes), videoSizeBytes = COALESCE(:videoSizeBytes, videoSizeBytes), audioSizeChecked = :audioSizeChecked, videoSizeChecked = :videoSizeChecked WHERE id = :episodeId")
+    @Query(
+        "UPDATE episodes SET audioSizeBytes = COALESCE(:audioSizeBytes, audioSizeBytes), videoSizeBytes = COALESCE(:videoSizeBytes, videoSizeBytes), audioSizeChecked = :audioSizeChecked, videoSizeChecked = :videoSizeChecked WHERE id = :episodeId",
+    )
     suspend fun updateMediaSizes(
         episodeId: Long,
         audioSizeBytes: Long?,
@@ -472,7 +473,11 @@ interface PodcastDao {
 }
 
 @androidx.room.TypeConverters(DownloadAssetConverters::class)
-@Database(entities = [PodcastEntity::class, EpisodeEntity::class, EpisodeSearchFtsEntity::class, QueueEntity::class, DownloadAssetEntity::class, DirectoryProviderEntity::class, CategoryEntity::class, CategoryPodcastEntity::class], version = 27, exportSchema = true)
+@Database(
+    entities = [PodcastEntity::class, EpisodeEntity::class, EpisodeSearchFtsEntity::class, QueueEntity::class, DownloadAssetEntity::class, DirectoryProviderEntity::class, CategoryEntity::class, CategoryPodcastEntity::class],
+    version = 27,
+    exportSchema = true,
+)
 abstract class PodcastDatabase : RoomDatabase() {
     abstract fun podcastDao(): PodcastDao
     abstract fun downloadAssetDao(): DownloadAssetDao
@@ -578,7 +583,9 @@ private val MIGRATION_12_13 = object : androidx.room.migration.Migration(12, 13)
                 "PRIMARY KEY(episodeId, assetType)" +
                 ")",
         )
-        database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_download_assets_downloadId ON download_assets(downloadId)")
+        database.execSQL(
+            "CREATE UNIQUE INDEX IF NOT EXISTS index_download_assets_downloadId ON download_assets(downloadId)",
+        )
     }
 }
 
@@ -681,12 +688,24 @@ private val MIGRATION_24_25 = object : androidx.room.migration.Migration(24, 25)
 
 internal val MIGRATION_25_26 = object : androidx.room.migration.Migration(25, 26) {
     override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
-        database.execSQL("CREATE TABLE IF NOT EXISTS directory_providers (id TEXT NOT NULL PRIMARY KEY, name TEXT NOT NULL)")
-        database.execSQL("CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, providerId TEXT NOT NULL, name TEXT NOT NULL, externalId TEXT, parentId INTEGER, FOREIGN KEY(providerId) REFERENCES directory_providers(id) ON UPDATE NO ACTION ON DELETE CASCADE)")
-        database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_categories_providerId_name ON categories(providerId, name)")
-        database.execSQL("CREATE TABLE IF NOT EXISTS categories_podcasts (categoryId INTEGER NOT NULL, podcastId INTEGER NOT NULL, PRIMARY KEY(categoryId, podcastId), FOREIGN KEY(categoryId) REFERENCES categories(id) ON UPDATE NO ACTION ON DELETE CASCADE, FOREIGN KEY(podcastId) REFERENCES podcasts(id) ON UPDATE NO ACTION ON DELETE CASCADE)")
-        database.execSQL("CREATE INDEX IF NOT EXISTS index_categories_podcasts_podcastId ON categories_podcasts(podcastId)")
-        database.execSQL("INSERT OR IGNORE INTO directory_providers(id, name) VALUES ('local', 'Local'), ('apple', 'Apple Podcasts'), ('podcast-index', 'Podcast Index')")
+        database.execSQL(
+            "CREATE TABLE IF NOT EXISTS directory_providers (id TEXT NOT NULL PRIMARY KEY, name TEXT NOT NULL)",
+        )
+        database.execSQL(
+            "CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, providerId TEXT NOT NULL, name TEXT NOT NULL, externalId TEXT, parentId INTEGER, FOREIGN KEY(providerId) REFERENCES directory_providers(id) ON UPDATE NO ACTION ON DELETE CASCADE)",
+        )
+        database.execSQL(
+            "CREATE UNIQUE INDEX IF NOT EXISTS index_categories_providerId_name ON categories(providerId, name)",
+        )
+        database.execSQL(
+            "CREATE TABLE IF NOT EXISTS categories_podcasts (categoryId INTEGER NOT NULL, podcastId INTEGER NOT NULL, PRIMARY KEY(categoryId, podcastId), FOREIGN KEY(categoryId) REFERENCES categories(id) ON UPDATE NO ACTION ON DELETE CASCADE, FOREIGN KEY(podcastId) REFERENCES podcasts(id) ON UPDATE NO ACTION ON DELETE CASCADE)",
+        )
+        database.execSQL(
+            "CREATE INDEX IF NOT EXISTS index_categories_podcasts_podcastId ON categories_podcasts(podcastId)",
+        )
+        database.execSQL(
+            "INSERT OR IGNORE INTO directory_providers(id, name) VALUES ('local', 'Local'), ('apple', 'Apple Podcasts'), ('podcast-index', 'Podcast Index')",
+        )
     }
 }
 

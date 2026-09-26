@@ -2,7 +2,6 @@ package com.shapeshed.booth
 
 import android.content.Intent
 import android.os.Bundle
-import com.shapeshed.booth.BuildConfig
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -10,12 +9,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.shapeshed.booth.BuildConfig
 import com.shapeshed.booth.ui.PodcastHomeScreen
-import com.shapeshed.booth.ui.theme.BoothAppTheme
 import com.shapeshed.booth.ui.PodcastPlaybackViewModel
 import com.shapeshed.booth.ui.PodcastViewModel
+import com.shapeshed.booth.ui.theme.BoothAppTheme
 import dagger.hilt.android.AndroidEntryPoint
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -33,14 +33,14 @@ class MainActivity : ComponentActivity() {
         forceGettingStarted = intent.debugGettingStartedExtra()
         setContent {
             BoothAppTheme {
-            PodcastHomeScreen(
-                initialEpisodeId = initialPodcastEpisodeId,
-                initialNotificationAction = initialPodcastNotificationAction,
-                forceGettingStarted = forceGettingStarted,
-                onInitialContentReady = { initialContentReady = true },
-                viewModel = hiltViewModel<PodcastViewModel>(),
-                playbackViewModel = hiltViewModel<PodcastPlaybackViewModel>(),
-            )
+                PodcastHomeScreen(
+                    initialEpisodeId = initialPodcastEpisodeId,
+                    initialNotificationAction = initialPodcastNotificationAction,
+                    forceGettingStarted = forceGettingStarted,
+                    onInitialContentReady = { initialContentReady = true },
+                    viewModel = hiltViewModel<PodcastViewModel>(),
+                    playbackViewModel = hiltViewModel<PodcastPlaybackViewModel>(),
+                )
             }
         }
     }

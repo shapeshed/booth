@@ -1,35 +1,32 @@
 package com.shapeshed.booth.data
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.sync.withPermit
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
+import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import java.util.concurrent.ConcurrentHashMap
 
-data class PodcastRefreshResult(
-    val podcast: PodcastEntity,
-    val result: Result<PodcastFeed>,
-)
+data class PodcastRefreshResult(val podcast: PodcastEntity, val result: Result<PodcastFeed>)
 
 class PodcastRepository(
     private val feedProvider: PodcastFeedProvider,
@@ -48,7 +45,9 @@ class PodcastRepository(
                 try {
                     when (request) {
                         is SearchIndexRequest.Upsert -> dao.upsertEpisodeSearch(request.episodes.map(::toSearchEntity))
+
                         is SearchIndexRequest.Delete -> dao.deleteEpisodeSearch(request.episodeIds)
+
                         SearchIndexRequest.Rebuild -> {
                             dao.clearEpisodeSearch()
                             dao.upsertEpisodeSearch(dao.allEpisodesForSearchIndex().map(::toSearchEntity))
@@ -64,10 +63,16 @@ class PodcastRepository(
         }
     }
 
-    val podcasts: Flow<List<PodcastEntity>> = dao.observePodcasts().combine(dao.observePodcastCategories()) { podcasts, categories ->
+    val podcasts: Flow<List<PodcastEntity>> = dao.observePodcasts().combine(dao.observePodcastCategories()) {
+            podcasts,
+            categories,
+        ->
         podcasts.withCategories(categories)
     }
-    val allPodcasts: Flow<List<PodcastEntity>> = dao.observeAllPodcasts().combine(dao.observePodcastCategories()) { podcasts, categories ->
+    val allPodcasts: Flow<List<PodcastEntity>> = dao.observeAllPodcasts().combine(dao.observePodcastCategories()) {
+            podcasts,
+            categories,
+        ->
         podcasts.withCategories(categories)
     }
 
@@ -105,14 +110,20 @@ class PodcastRepository(
     fun allEpisodesPager(podcastIds: List<Long>? = null): Flow<PagingData<EpisodeEntity>> = Pager(
         config = PagingConfig(pageSize = 40, prefetchDistance = 10, enablePlaceholders = false),
     ) {
-        if (podcastIds == null) dao.observeAllEpisodes()
-        else dao.observeEpisodesForPodcasts(podcastIds)
+        if (podcastIds == null) {
+            dao.observeAllEpisodes()
+        } else {
+            dao.observeEpisodesForPodcasts(podcastIds)
+        }
     }.flow
 
     fun searchEpisodes(query: String, limit: Int = 80): Flow<List<PodcastEpisodeSearchResult>> =
         podcastFtsQuery(query)?.let { dao.observeEpisodesMatching(it, limit) }
-            ?: if (query.isBlank()) dao.observeRecentEpisodesForSearch(limit.coerceAtMost(40))
-            else flowOf(emptyList())
+            ?: if (query.isBlank()) {
+                dao.observeRecentEpisodesForSearch(limit.coerceAtMost(40))
+            } else {
+                flowOf(emptyList())
+            }
 
     val queue: Flow<List<QueueEntity>> = dao.observeQueue()
 
@@ -160,10 +171,8 @@ class PodcastRepository(
         feedProvider.fetch(canonicalFeedUrl(feedUrl))
     }
 
-    suspend fun previewStreaming(
-        feedUrl: String,
-        onUpdate: suspend (PodcastFeed) -> Unit,
-    ): PodcastFeed = streamingFeedProvider?.fetch(feedUrl, onUpdate) ?: preview(feedUrl)
+    suspend fun previewStreaming(feedUrl: String, onUpdate: suspend (PodcastFeed) -> Unit): PodcastFeed =
+        streamingFeedProvider?.fetch(feedUrl, onUpdate) ?: preview(feedUrl)
 
     /**
      * Returns the locally persisted copy of a feed, when discovery has seen it before.
@@ -232,10 +241,7 @@ class PodcastRepository(
             refreshInternal(podcast)
         }
 
-    suspend fun addNewEpisodesToQueue(
-        podcast: PodcastEntity,
-        existingEpisodeIdentities: Set<Pair<String, String>>,
-    ) {
+    suspend fun addNewEpisodesToQueue(podcast: PodcastEntity, existingEpisodeIdentities: Set<Pair<String, String>>) {
         if (!podcast.includeInAutoQueue) return
         newEpisodesSince(episodes(podcast.id).first(), existingEpisodeIdentities)
             .forEach { addToQueueFromInbox(it.id) }
@@ -350,20 +356,21 @@ class PodcastRepository(
     }
 
     /** Persists a preview episode without adding its podcast to subscriptions. */
-    suspend fun savePreviewEpisode(episode: Episode, podcast: Podcast? = null): EpisodeEntity = withContext(Dispatchers.IO) {
-        val entity = episode.toEntity(dao.episode(episode.id))
-        val podcastEntity = podcast?.let {
-            val existing = dao.podcast(it.id)
-            it.toEntity(existing = existing).copy(isSubscribed = existing?.isSubscribed ?: false)
+    suspend fun savePreviewEpisode(episode: Episode, podcast: Podcast? = null): EpisodeEntity =
+        withContext(Dispatchers.IO) {
+            val entity = episode.toEntity(dao.episode(episode.id))
+            val podcastEntity = podcast?.let {
+                val existing = dao.podcast(it.id)
+                it.toEntity(existing = existing).copy(isSubscribed = existing?.isSubscribed ?: false)
+            }
+            if (podcastEntity == null) {
+                dao.upsertEpisodes(listOf(entity))
+            } else {
+                dao.upsertPodcastAndEpisodes(podcastEntity, listOf(entity))
+            }
+            searchIndexRequests.trySend(SearchIndexRequest.Upsert(listOf(entity)))
+            entity
         }
-        if (podcastEntity == null) {
-            dao.upsertEpisodes(listOf(entity))
-        } else {
-            dao.upsertPodcastAndEpisodes(podcastEntity, listOf(entity))
-        }
-        searchIndexRequests.trySend(SearchIndexRequest.Upsert(listOf(entity)))
-        entity
-    }
 
     suspend fun podcast(podcastId: Long): PodcastEntity? = dao.podcast(podcastId)?.let { enrich(it) }
 
@@ -433,8 +440,7 @@ class PodcastRepository(
     suspend fun downloadAsset(episodeId: Long, assetType: DownloadAssetType): DownloadAssetEntity? =
         downloadDao.find(episodeId, assetType)
 
-    suspend fun downloadAssetById(downloadId: Long): DownloadAssetEntity? =
-        downloadDao.findByDownloadId(downloadId)
+    suspend fun downloadAssetById(downloadId: Long): DownloadAssetEntity? = downloadDao.findByDownloadId(downloadId)
 
     suspend fun saveDownloadAsset(asset: DownloadAssetEntity) = downloadDao.upsert(asset)
 
@@ -463,25 +469,23 @@ class PodcastRepository(
         completedAtMillis = completedAtMillis,
     )
 
-    suspend fun markDownloadRetrying(
-        episodeId: Long,
-        assetType: DownloadAssetType,
-        errorMessage: String,
-    ) = downloadDao.markRetrying(
-        episodeId = episodeId,
-        assetType = assetType,
-        status = DownloadAssetStatus.RETRYING,
-        errorMessage = errorMessage,
-        updatedAtMillis = System.currentTimeMillis(),
-    )
-
+    suspend fun markDownloadRetrying(episodeId: Long, assetType: DownloadAssetType, errorMessage: String) =
+        downloadDao.markRetrying(
+            episodeId = episodeId,
+            assetType = assetType,
+            status = DownloadAssetStatus.RETRYING,
+            errorMessage = errorMessage,
+            updatedAtMillis = System.currentTimeMillis(),
+        )
 
     suspend fun resolveMediaSizes(episode: EpisodeEntity): Pair<Long?, Long?> = withContext(Dispatchers.IO) {
         val client = httpClient ?: return@withContext episode.audioSizeBytes to episode.videoSizeBytes
         val shouldCheckAudio = episode.audioSizeBytes == null || episode.audioSizeBytes <= 1024L
         val audioLookup = if (shouldCheckAudio) {
             headContentLength(client, episode.audioUrl)
-        } else null
+        } else {
+            null
+        }
         val audioSize = episode.audioSizeBytes?.takeIf { it > 1024L }
             ?: (audioLookup as? MediaSizeLookup.Completed)?.bytes
         val audioChecked = episode.audioSizeChecked || audioLookup is MediaSizeLookup.Completed
@@ -650,11 +654,7 @@ class PodcastRepository(
         }
     }
 
-    private suspend fun replaceCategories(
-        podcastId: Long,
-        providerId: String,
-        categories: List<PodcastCategory>,
-    ) {
+    private suspend fun replaceCategories(podcastId: Long, providerId: String, categories: List<PodcastCategory>) {
         dao.insertProviders(
             listOf(
                 DirectoryProviderEntity(LOCAL_DIRECTORY_PROVIDER_ID, "Local"),
@@ -677,7 +677,6 @@ class PodcastRepository(
             dao.insertCategoryPodcast(CategoryPodcastEntity(persisted.id, podcastId))
         }
     }
-
 }
 
 internal fun mediaTotalBytes(contentRange: String?, contentLength: String?): Long? {
@@ -745,13 +744,12 @@ private fun EpisodeEntity.toPreviewEpisode() = Episode(
     explicit = explicit,
 )
 
-internal fun podcastFtsQuery(query: String): String? =
-    query.trim()
-        .split(Regex("\\s+"))
-        .map { it.filter(Char::isLetterOrDigit) }
-        .filter(String::isNotBlank)
-        .takeIf(List<String>::isNotEmpty)
-        ?.joinToString(" AND ") { "$it*" }
+internal fun podcastFtsQuery(query: String): String? = query.trim()
+    .split(Regex("\\s+"))
+    .map { it.filter(Char::isLetterOrDigit) }
+    .filter(String::isNotBlank)
+    .takeIf(List<String>::isNotEmpty)
+    ?.joinToString(" AND ") { "$it*" }
 
 private fun Podcast.toEntity(
     idOverride: Long = id,

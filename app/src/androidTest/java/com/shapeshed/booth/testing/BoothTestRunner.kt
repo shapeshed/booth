@@ -1,8 +1,8 @@
 package com.shapeshed.booth.testing
 
 import android.os.Bundle
-import dagger.hilt.android.testing.HiltTestApplication
 import androidx.test.runner.AndroidJUnitRunner
+import dagger.hilt.android.testing.HiltTestApplication
 
 /** Prevents instrumented tests from targeting the normal developer app install. */
 class BoothTestRunner : AndroidJUnitRunner() {

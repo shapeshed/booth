@@ -12,10 +12,8 @@ import kotlinx.coroutines.withContext
 const val EPISODE_ID_INPUT = "episodeId"
 
 /** Enqueues durable system downloads; DownloadManager owns the actual transfer and retries. */
-class EpisodeDownloadWorker(
-    appContext: Context,
-    workerParams: WorkerParameters,
-) : CoroutineWorker(appContext, workerParams) {
+class EpisodeDownloadWorker(appContext: Context, workerParams: WorkerParameters) :
+    CoroutineWorker(appContext, workerParams) {
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val episodeId = inputData.getLong(EPISODE_ID_INPUT, 0L)
         if (episodeId <= 0L) return@withContext Result.failure()

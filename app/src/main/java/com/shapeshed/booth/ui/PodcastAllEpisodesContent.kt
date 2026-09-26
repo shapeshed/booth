@@ -13,9 +13,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -48,69 +48,74 @@ internal fun PodcastAllEpisodesContent(
 ) {
     val listState = rememberLazyListState()
     LazyColumn(
-            modifier = modifier,
-            state = listState,
-            contentPadding = PaddingValues(
-                start = 16.dp,
-                end = 16.dp,
-                top = 16.dp,
-                bottom = 16.dp + LocalPodcastMiniPlayerInset.current,
-            ),
-            verticalArrangement = Arrangement.spacedBy(PodcastListItemSpacing),
-        ) {
-            if (episodes.loadState.refresh is LoadState.Loading && episodes.itemCount == 0) {
-                item(key = "all-episodes-loading") {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 80.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                }
-            } else if (episodes.loadState.refresh is LoadState.NotLoading && episodes.itemCount == 0) {
-                item(key = "all-episodes-empty") {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 80.dp, horizontal = 24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Text(stringResource(com.shapeshed.booth.R.string.no_episodes_yet), style = MaterialTheme.typography.headlineSmall)
-                        Text(
-                            stringResource(com.shapeshed.booth.R.string.episodes_from_subscriptions),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+        modifier = modifier,
+        state = listState,
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            end = 16.dp,
+            top = 16.dp,
+            bottom = 16.dp + LocalPodcastMiniPlayerInset.current,
+        ),
+        verticalArrangement = Arrangement.spacedBy(PodcastListItemSpacing),
+    ) {
+        if (episodes.loadState.refresh is LoadState.Loading && episodes.itemCount == 0) {
+            item(key = "all-episodes-loading") {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 80.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    CircularProgressIndicator()
                 }
             }
-            items(
-                count = episodes.itemCount,
-                key = episodes.itemKey { it.id },
-            ) { index ->
-                episodes[index]?.let { episode ->
-                    InboxEpisodeSwipeRow(
-                        episode = episode,
-                        podcastTitle = podcastsById[episode.podcastId]?.title.orEmpty(),
-                        active = episode.id == playback.episode?.id,
-                        selected = false,
-                        selectionMode = false,
-                        onOpen = { onOpen(episode) },
-                        onAddToQueue = { onAddToQueue(episode) },
-                        onDismiss = {},
-                        onLongPress = {},
-                        onActions = { onActions(episode) },
-                        onToggleSelection = {},
-                        onPlay = { onPlay(episode) },
-                        onDownload = { onDownload(episode) },
-                        isPlaying = playback.isPlaying,
-                        isBuffering = playback.isBuffering,
-                        positionOverride = if (episode.id == playback.episode?.id) {
-                            playback.durationMs.takeIf { it > 0L }?.let { duration ->
-                                (playback.positionMs.toFloat() / duration * (episode.durationMs ?: duration)).toLong()
-                            }
-                        } else null,
-                        downloadProgress = downloadProgress[episode.id],
-                        swipeEnabled = false,
+        } else if (episodes.loadState.refresh is LoadState.NotLoading && episodes.itemCount == 0) {
+            item(key = "all-episodes-empty") {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 80.dp, horizontal = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        stringResource(com.shapeshed.booth.R.string.no_episodes_yet),
+                        style = MaterialTheme.typography.headlineSmall,
+                    )
+                    Text(
+                        stringResource(com.shapeshed.booth.R.string.episodes_from_subscriptions),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
+        }
+        items(
+            count = episodes.itemCount,
+            key = episodes.itemKey { it.id },
+        ) { index ->
+            episodes[index]?.let { episode ->
+                InboxEpisodeSwipeRow(
+                    episode = episode,
+                    podcastTitle = podcastsById[episode.podcastId]?.title.orEmpty(),
+                    active = episode.id == playback.episode?.id,
+                    selected = false,
+                    selectionMode = false,
+                    onOpen = { onOpen(episode) },
+                    onAddToQueue = { onAddToQueue(episode) },
+                    onDismiss = {},
+                    onLongPress = {},
+                    onActions = { onActions(episode) },
+                    onToggleSelection = {},
+                    onPlay = { onPlay(episode) },
+                    onDownload = { onDownload(episode) },
+                    isPlaying = playback.isPlaying,
+                    isBuffering = playback.isBuffering,
+                    positionOverride = if (episode.id == playback.episode?.id) {
+                        playback.durationMs.takeIf { it > 0L }?.let { duration ->
+                            (playback.positionMs.toFloat() / duration * (episode.durationMs ?: duration)).toLong()
+                        }
+                    } else {
+                        null
+                    },
+                    downloadProgress = downloadProgress[episode.id],
+                    swipeEnabled = false,
+                )
+            }
+        }
     }
 }

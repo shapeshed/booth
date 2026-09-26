@@ -1,6 +1,5 @@
 package com.shapeshed.booth.data
 
-
 data class Podcast(
     val id: Long,
     val title: String,
@@ -51,23 +50,13 @@ data class PodcastFeed(
     val notModified: Boolean = false,
 )
 
-data class PodcastSearchResult(
-    val providerId: String,
-    val podcast: Podcast,
-)
+data class PodcastSearchResult(val providerId: String, val podcast: Podcast)
 
-enum class PodcastDiscoveryShelf(
-    val id: String,
-    val title: String,
-) {
+enum class PodcastDiscoveryShelf(val id: String, val title: String) {
     TOP_SHOWS("top-shows", "Popular shows"),
 }
 
-data class PodcastDiscoveryCategory(
-    val id: String,
-    val title: String,
-    val appleGenreId: String,
-)
+data class PodcastDiscoveryCategory(val id: String, val title: String, val appleGenreId: String)
 
 val PodcastDiscoveryCategories = listOf(
     PodcastDiscoveryCategory("arts", "Arts", "1301"),
@@ -96,9 +85,11 @@ data class PodcastDiscoveryShelfResult(
 interface PodcastSearchProvider {
     val id: String
     val displayName: String
+
     /** Whether this provider can supply the unauthenticated popular-podcast shelf. */
     val supportsPopularPodcasts: Boolean get() = false
     suspend fun search(query: String): List<PodcastSearchResult>
+
     /** Gives a provider an opportunity to attach canonical metadata to a result before display. */
     suspend fun enrich(result: PodcastSearchResult): PodcastSearchResult = result
 }
@@ -131,8 +122,7 @@ class DefaultPodcastDiscoveryCatalog(
         PodcastDiscoveryShelfResult(shelf, provider.browse(shelf))
     }
 
-    override suspend fun load(category: PodcastDiscoveryCategory): PodcastDiscoveryShelfResult =
-        load(category, 0)
+    override suspend fun load(category: PodcastDiscoveryCategory): PodcastDiscoveryShelfResult = load(category, 0)
 
     override suspend fun load(category: PodcastDiscoveryCategory, offset: Int): PodcastDiscoveryShelfResult =
         PodcastDiscoveryShelfResult(
@@ -147,9 +137,7 @@ interface PodcastSearchCatalog {
     suspend fun search(providerId: String, query: String): List<PodcastSearchResult>
 }
 
-class DefaultPodcastSearchCatalog(
-    override val providers: List<PodcastSearchProvider>,
-) : PodcastSearchCatalog {
+class DefaultPodcastSearchCatalog(override val providers: List<PodcastSearchProvider>) : PodcastSearchCatalog {
     private val providersById = providers.associateBy(PodcastSearchProvider::id)
 
     override suspend fun search(providerId: String, query: String): List<PodcastSearchResult> =

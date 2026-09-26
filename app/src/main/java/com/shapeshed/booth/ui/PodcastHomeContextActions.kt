@@ -1,8 +1,5 @@
 package com.shapeshed.booth.ui
 
-import androidx.compose.ui.res.stringResource
-import com.shapeshed.booth.R
-
 import android.content.Context
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -10,16 +7,18 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import com.shapeshed.booth.data.PodcastEntity
+import com.shapeshed.booth.R
 import com.shapeshed.booth.data.EpisodeEntity
+import com.shapeshed.booth.data.PodcastEntity
 
 @Composable
 internal fun PodcastHomeContextActions(
@@ -55,6 +54,7 @@ internal fun PodcastHomeContextActions(
                 Text(stringResource(R.string.discover))
             }
         }
+
         !showPodcastAppSettings && showDiscovery && hasPreviewResult && !hasCategoryDiscovery -> {
             PodcastSubscriptionAction(
                 isSubscribed = isDiscoverySubscribed,
@@ -73,11 +73,13 @@ internal fun PodcastHomeContextActions(
                 )
             }
         }
+
         !showPodcastAppSettings && showDiscovery && !hasCategoryDiscovery && !hasPreviewResult -> {
             IconButton(onClick = onShowDiscoverySearch) {
                 Icon(Icons.Rounded.Search, contentDescription = stringResource(R.string.search_podcasts))
             }
         }
+
         !showPodcastAppSettings && !showPodcastSettings && selectedEpisode == null && selectedPodcast != null -> {
             PodcastSubscriptionAction(
                 isSubscribed = isPodcastSubscribed,
