@@ -62,7 +62,11 @@ internal fun podcastErrorMessage(error: PodcastUiError): String = when (error) {
 
     PodcastUiError.BackupExportCompleted -> stringResource(R.string.backup_export_completed)
 
-    is PodcastUiError.BackupImportCompleted -> stringResource(R.string.backup_import_completed, error.imported)
+    is PodcastUiError.BackupImportCompleted -> pluralStringResource(
+        R.plurals.backup_import_completed,
+        error.imported,
+        error.imported,
+    )
 
     PodcastUiError.RefreshFailed -> stringResource(R.string.error_refresh_failed)
 

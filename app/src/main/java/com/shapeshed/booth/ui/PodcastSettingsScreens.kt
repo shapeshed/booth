@@ -3,7 +3,6 @@ package com.shapeshed.booth.ui
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -50,11 +49,9 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -65,7 +62,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -80,6 +76,14 @@ import com.shapeshed.booth.data.PodcastRefreshInterval
 import com.shapeshed.booth.data.PodcastRefreshNetwork
 import com.shapeshed.booth.data.PodcastSearchProvider
 
+/** How many podcasts currently opt in to each automatic behaviour, for the management screens. */
+internal data class PodcastManagementCounts(
+    val total: Int,
+    val autoRefresh: Int,
+    val autoQueue: Int,
+    val notifications: Int,
+)
+
 @Composable
 internal fun PodcastAppSettingsScreen(
     podcastManagementCounts: PodcastManagementCounts,
@@ -93,12 +97,6 @@ internal fun PodcastAppSettingsScreen(
     onRefreshNetworkChange: (PodcastRefreshNetwork) -> Unit,
     downloadNetwork: PodcastDownloadNetwork,
     onDownloadNetworkChange: (PodcastDownloadNetwork) -> Unit,
-    downloadLimit: PodcastDownloadLimit = PodcastDownloadLimit.FIFTY,
-    onDownloadLimitChange: (PodcastDownloadLimit) -> Unit = {},
-    deleteBeforeAutoDownload: PodcastDeleteBeforeAutoDownload = PodcastDeleteBeforeAutoDownload.PLAYED,
-    onDeleteBeforeAutoDownloadChange: (PodcastDeleteBeforeAutoDownload) -> Unit = {},
-    removePlayedDownloads: Boolean = true,
-    onRemovePlayedDownloadsChange: (Boolean) -> Unit = {},
     notificationsEnabled: Boolean,
     onNotificationsEnabledChange: (Boolean) -> Unit,
     searchProviders: List<PodcastSearchProvider>,
@@ -111,11 +109,18 @@ internal fun PodcastAppSettingsScreen(
     statusMessage: PodcastUiError?,
     onImportOpml: () -> Unit,
     onExportOpml: () -> Unit,
+    onManagePodcasts: (PodcastManagementCategory) -> Unit,
+    onCopyVersion: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    downloadLimit: PodcastDownloadLimit = PodcastDownloadLimit.FIFTY,
+    onDownloadLimitChange: (PodcastDownloadLimit) -> Unit = {},
+    deleteBeforeAutoDownload: PodcastDeleteBeforeAutoDownload = PodcastDeleteBeforeAutoDownload.PLAYED,
+    onDeleteBeforeAutoDownloadChange: (PodcastDeleteBeforeAutoDownload) -> Unit = {},
+    removePlayedDownloads: Boolean = true,
+    onRemovePlayedDownloadsChange: (Boolean) -> Unit = {},
     onExportBackup: () -> Unit = {},
     onExportBackupZip: () -> Unit = {},
     onImportBackup: () -> Unit = {},
-    onManagePodcasts: (PodcastManagementCategory) -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     var showDownloadNetworkChooser by rememberSaveable { mutableStateOf(false) }
     var showDownloadLimitChooser by rememberSaveable { mutableStateOf(false) }
@@ -175,7 +180,6 @@ internal fun PodcastAppSettingsScreen(
     val versionLabel = BuildConfig.BUILD_LABEL.takeIf { it.isNotBlank() }?.let { label ->
         stringResource(R.string.build_label_format, label)
     } ?: stringResource(R.string.version_format, BuildConfig.VERSION_NAME)
-    val context = LocalContext.current
     Box(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.TopCenter,
@@ -466,10 +470,7 @@ internal fun PodcastAppSettingsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("settings-version")
-                        .clickable {
-                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            clipboard.setPrimaryClip(ClipData.newPlainText("version", versionLabel))
-                        }
+                        .clickable { onCopyVersion(versionLabel) }
                         .padding(vertical = 16.dp),
                 )
             }

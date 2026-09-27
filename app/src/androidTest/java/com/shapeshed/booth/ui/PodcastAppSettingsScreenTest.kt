@@ -1,7 +1,5 @@
 package com.shapeshed.booth.ui
 
-import android.content.ClipboardManager
-import android.content.Context
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasText
@@ -10,7 +8,6 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
-import androidx.test.core.app.ApplicationProvider
 import com.shapeshed.booth.BuildConfig
 import com.shapeshed.booth.data.PodcastDeleteBeforeAutoDownload
 import com.shapeshed.booth.data.PodcastDownloadLimit
@@ -85,17 +82,20 @@ class PodcastAppSettingsScreenTest {
     }
 
     @Test
-    fun tappingBuildLabelCopiesItToClipboard() {
-        setSettingsContent()
-        val buildLabel = BuildConfig.BUILD_LABEL.takeIf { it.isNotBlank() } ?: "Version ${BuildConfig.VERSION_NAME}"
+    fun tappingBuildLabelOffersItForCopying() {
+        var copied: String? = null
+        setSettingsContent(onCopyVersion = { copied = it })
+        val buildLabel = BuildConfig.BUILD_LABEL.takeIf { it.isNotBlank() }
+            ?: "Version ${BuildConfig.VERSION_NAME}"
 
         scrollTo(buildLabel)
         composeRule.onNodeWithTag("settings-version").performClick()
 
-        val clipboard = ApplicationProvider
-            .getApplicationContext<Context>()
-            .getSystemService(ClipboardManager::class.java)
-        assertEquals(buildLabel, clipboard.primaryClip?.getItemAt(0)?.text?.toString())
+        // The clipboard write is injected rather than read back from the system ClipboardManager:
+        // since Android 10 getPrimaryClip() returns null unless the reader holds focus, which a
+        // createComposeRule() instrumentation test never does. Asserting on the system clipboard
+        // here made this test fail on every API 29+ device while proving nothing.
+        assertEquals(buildLabel, copied)
     }
 
     @Test
@@ -231,6 +231,7 @@ class PodcastAppSettingsScreenTest {
         onImportBackup: () -> Unit = {},
         onExportBackup: () -> Unit = {},
         onExportBackupZip: () -> Unit = {},
+        onCopyVersion: (String) -> Unit = {},
     ) {
         composeRule.setContent {
             BoothAppTheme {
@@ -269,6 +270,7 @@ class PodcastAppSettingsScreenTest {
                     onExportBackup = onExportBackup,
                     onExportBackupZip = onExportBackupZip,
                     onManagePodcasts = onManagePodcasts,
+                    onCopyVersion = onCopyVersion,
                 )
             }
         }

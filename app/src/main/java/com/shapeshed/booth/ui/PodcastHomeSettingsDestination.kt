@@ -3,6 +3,7 @@ package com.shapeshed.booth.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 /** Adapts home state and actions to the stateless application settings screen. */
@@ -21,8 +22,11 @@ internal fun PodcastHomeSettingsDestination(
         notifications = homeUiState.allPodcasts.count { it.includeInNotifications },
     )
     val podcastIndexCredentials by viewModel.podcastIndexCredentials.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
-    PodcastAppSettingsContent(
+    // Calls PodcastAppSettingsScreen directly. There used to be a PodcastAppSettingsContent
+    // adapter in between that forwarded all 34 parameters verbatim and added nothing.
+    PodcastAppSettingsScreen(
         podcastManagementCounts = podcastManagementCounts,
         autoQueueEnabled = homeUiState.settings.autoQueueEnabled,
         onAutoQueueEnabledChange = viewModel::setPodcastAutoQueueEnabled,
@@ -57,6 +61,7 @@ internal fun PodcastHomeSettingsDestination(
         onExportBackupZip = platformActions.exportBackupZip,
         onImportBackup = platformActions.importBackup,
         onManagePodcasts = onManagePodcasts,
+        onCopyVersion = { label -> copyTextToClipboard(context, label, clipLabel = "version") },
         modifier = modifier,
     )
 }
