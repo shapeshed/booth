@@ -17,8 +17,8 @@ import androidx.compose.ui.unit.dp
 internal fun PodcastDetailTemplate(
     refreshing: Boolean,
     onRefresh: (() -> Unit)?,
-    state: LazyListState? = null,
     modifier: Modifier = Modifier,
+    state: LazyListState? = null,
     content: LazyListScope.() -> Unit,
 ) {
     val list = @Composable {

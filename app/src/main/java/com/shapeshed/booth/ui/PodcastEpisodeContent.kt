@@ -23,9 +23,9 @@ internal fun PodcastEpisodeContent(
     onToggleFavorite: () -> Unit,
     onOpenPodcast: () -> Unit,
     isSubscribed: Boolean,
+    modifier: Modifier = Modifier,
     isSubscriptionLoading: Boolean = false,
     onSubscribe: (() -> Unit)? = null,
-    modifier: Modifier = Modifier,
     twoPane: Boolean = false,
 ) {
     PodcastEpisodeDetail(

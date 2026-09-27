@@ -16,7 +16,6 @@ import androidx.work.workDataOf
 import com.shapeshed.booth.data.APPLE_DIRECTORY_PROVIDER_ID
 import com.shapeshed.booth.data.CategoryEntity
 import com.shapeshed.booth.data.DefaultPodcastDiscoveryCatalog
-import com.shapeshed.booth.data.DownloadAssetEntity
 import com.shapeshed.booth.data.DownloadProgress
 import com.shapeshed.booth.data.DownloadProgressStore
 import com.shapeshed.booth.data.EPISODE_ID_INPUT
