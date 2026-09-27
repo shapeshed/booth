@@ -454,6 +454,7 @@ fun PodcastHomeScreen(
         0.dp
     }
     val managementActions = rememberManagementActions(viewModel)
+    val nowPlayingActions = rememberNowPlayingActions(playbackViewModel, viewModel)
     val discoveryActions = rememberPodcastDiscoveryActions(context, viewModel, playbackViewModel)
     val platformActions = rememberPodcastHomePlatformActions(context, viewModel) {
         topLevelBackStack.clear()
@@ -1907,7 +1908,9 @@ fun PodcastHomeScreen(
                                 podcastTitle = playingPodcastTitle,
                                 isPlaying = playback.isPlaying,
                                 isBuffering = playback.isBuffering,
-                                playbackViewModel = playbackViewModel,
+                                onTogglePlayPause = playbackViewModel::togglePlayPause,
+                                onClearRememberedEpisode = playbackViewModel::clearRememberedEpisode,
+                                onStopAndClear = playbackViewModel::stopAndClear,
                                 onOpen = { showNowPlaying = true },
                                 onDismiss = ::dismissNowPlaying,
                                 onHeightChanged = { miniPlayerHeightPx = it },
@@ -1917,7 +1920,9 @@ fun PodcastHomeScreen(
                                 homeState = state,
                                 selectedPodcast = selectedPodcast,
                                 discoveryDescriptionBlocks = discoveryDescriptionBlocks,
-                                viewModel = viewModel,
+                                onSearchQueryChange = viewModel::setQuery,
+                                onSearch = viewModel::search,
+
                                 undoActions = undoActions,
                                 onUnsubscribeConfirmed = { retainedPodcastAfterUnsubscribe = it },
                                 directFeedUrl = directFeedUrl,
@@ -1963,8 +1968,9 @@ fun PodcastHomeScreen(
                 topLevelBackStack.add(selectedTab.toNavigationKey())
                 topLevelBackStack.add(PodcastNavigationKey.PodcastDetail(podcastId))
             },
-            playbackViewModel = playbackViewModel,
-            viewModel = viewModel,
+            actions = nowPlayingActions,
+            player = playbackViewModel.player,
+            playbackProgressFlow = playbackViewModel.progress,
             queueEpisodes = queueEpisodes,
             podcastsById = allPodcastsById,
             podcastTitlesById = podcastTitlesById,

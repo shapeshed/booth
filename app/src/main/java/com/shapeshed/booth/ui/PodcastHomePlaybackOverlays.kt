@@ -23,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -41,7 +42,9 @@ internal fun PodcastHomeMiniPlayerOverlay(
     podcastTitle: String?,
     isPlaying: Boolean,
     isBuffering: Boolean,
-    playbackViewModel: PodcastPlaybackViewModel,
+    onTogglePlayPause: () -> Unit,
+    onClearRememberedEpisode: () -> Unit,
+    onStopAndClear: () -> Unit,
     onOpen: () -> Unit,
     onDismiss: () -> Unit,
     onHeightChanged: (Int) -> Unit,
@@ -63,12 +66,19 @@ internal fun PodcastHomeMiniPlayerOverlay(
             episode?.let {
                 val haptic = LocalHapticFeedback.current
                 val dismissState = rememberSwipeToDismissBoxState()
+                // The dismiss effect is keyed only on the swipe state, so it does not restart when
+                // these change. Without remembering them it would run with whichever instances were
+                // captured the last time the key changed, which is a stale callback rather than the
+                // current one.
+                val currentOnDismiss by rememberUpdatedState(onDismiss)
+                val currentOnClearRememberedEpisode by rememberUpdatedState(onClearRememberedEpisode)
+                val currentOnStopAndClear by rememberUpdatedState(onStopAndClear)
                 LaunchedEffect(dismissState.currentValue) {
                     if (dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onDismiss()
-                        playbackViewModel.clearRememberedEpisode()
-                        playbackViewModel.stopAndClear()
+                        currentOnDismiss()
+                        currentOnClearRememberedEpisode()
+                        currentOnStopAndClear()
                     }
                 }
                 SwipeToDismissBox(
@@ -105,13 +115,76 @@ internal fun PodcastHomeMiniPlayerOverlay(
                         podcastTitle = podcastTitle,
                         isPlaying = isPlaying,
                         isBuffering = isBuffering,
-                        onPlayPause = playbackViewModel::togglePlayPause,
+                        onPlayPause = onTogglePlayPause,
                         onOpen = onOpen,
                     )
                 }
             }
         }
     }
+}
+
+/**
+ * What the now-playing sheet can do.
+ *
+ * The sheet is the app's densest control surface: transport, seek, video mode, speed, skip silence,
+ * the sleep timer, and the queue underneath it. It was taking both ViewModels to reach all of that,
+ * which is the forwarding the rule flags and which made the sheet untestable without Hilt.
+ *
+ * [playFromQueue] takes the queue and the titles rather than closing over them, so this class holds
+ * no caller state and can be remembered against the ViewModels alone. The video decision is worked
+ * out inside it, because deciding whether a queued episode should start in video mode is a rule
+ * about the episode, not about the sheet.
+ */
+internal class PodcastNowPlayingActions(
+    val togglePlayPause: () -> Unit,
+    val retryPlayback: () -> Unit,
+    val setVideoMode: (Boolean) -> Unit,
+    val setSkipSilence: (Boolean) -> Unit,
+    val setSleepTimer: (durationMs: Long) -> Unit,
+    val cancelSleepTimer: () -> Unit,
+    val seekBack: () -> Unit,
+    val seekForward: () -> Unit,
+    val seekTo: (positionMs: Long) -> Unit,
+    val setSpeed: (podcastId: Long, speed: Float?) -> Unit,
+    val playFromQueue: (
+        queued: com.shapeshed.booth.data.EpisodeEntity,
+        episodes: List<com.shapeshed.booth.data.EpisodeEntity>,
+        podcastTitles: Map<Long, String>,
+    ) -> Unit,
+    val removeFromQueue: (episodeId: Long) -> Unit,
+    val reorderQueue: (episodeIds: List<Long>) -> Unit,
+)
+
+/** Builds the now-playing actions where the ViewModels are in scope. */
+@Composable
+internal fun rememberNowPlayingActions(
+    playbackViewModel: PodcastPlaybackViewModel,
+    viewModel: PodcastViewModel,
+): PodcastNowPlayingActions = remember(playbackViewModel, viewModel) {
+    PodcastNowPlayingActions(
+        togglePlayPause = playbackViewModel::togglePlayPause,
+        retryPlayback = playbackViewModel::retryPlayback,
+        setVideoMode = playbackViewModel::setVideoMode,
+        setSkipSilence = playbackViewModel::setSkipSilence,
+        setSleepTimer = playbackViewModel::setSleepTimer,
+        cancelSleepTimer = playbackViewModel::cancelSleepTimer,
+        seekBack = playbackViewModel::seekBack,
+        seekForward = playbackViewModel::seekForward,
+        seekTo = playbackViewModel::seekTo,
+        setSpeed = playbackViewModel::setPodcastPlaybackSpeed,
+        playFromQueue = { queued, episodes, podcastTitles ->
+            playbackViewModel.playQueue(
+                episodes = episodes,
+                selectedEpisode = queued,
+                podcastTitles = podcastTitles,
+                useVideo = (queued.preferVideo || (!queued.videoPreferenceSet && queued.isVideoOnlySource())) &&
+                    !queued.videoUrl.isNullOrBlank(),
+            )
+        },
+        removeFromQueue = viewModel::removeFromQueue,
+        reorderQueue = viewModel::reorderQueue,
+    )
 }
 
 @Composable
@@ -121,16 +194,17 @@ internal fun PodcastHomeNowPlayingOverlay(
     sleepTimer: com.shapeshed.booth.data.SleepTimerState?,
     podcastTitle: String?,
     onOpenPodcast: (Long) -> Unit,
-    playbackViewModel: PodcastPlaybackViewModel,
-    viewModel: PodcastViewModel,
+    actions: PodcastNowPlayingActions,
+    player: androidx.media3.common.Player?,
+    playbackProgressFlow: kotlinx.coroutines.flow.StateFlow<PlaybackProgress>,
     queueEpisodes: List<com.shapeshed.booth.data.EpisodeEntity>,
     podcastsById: Map<Long, com.shapeshed.booth.data.PodcastEntity>,
     podcastTitlesById: Map<Long, String>,
     onDismiss: () -> Unit,
 ) {
-    // Collected here rather than passed in: this is the only overlay that draws a scrubber, and
+    // Collected here rather than in a parent: this is the only overlay that draws a scrubber, and
     // routing the 2 Hz position through a parent would recompose that parent's whole subtree.
-    val progress by playbackViewModel.progress.collectAsStateWithLifecycle()
+    val progress by playbackProgressFlow.collectAsStateWithLifecycle()
     AnimatedVisibility(
         visible = visible && playback.episode != null,
         enter = fadeIn() + slideInVertically(initialOffsetY = { it }),
@@ -145,40 +219,30 @@ internal fun PodcastHomeNowPlayingOverlay(
                 isPlaying = playback.isPlaying,
                 positionMs = progress.positionMs,
                 durationMs = progress.durationMs,
-                player = playbackViewModel.player,
+                player = player,
                 videoMode = playback.isVideoMode,
                 isBuffering = playback.isBuffering,
                 playbackError = playback.playbackError,
-                onToggle = playbackViewModel::togglePlayPause,
-                onVideoModeChange = playbackViewModel::setVideoMode,
+                onToggle = actions.togglePlayPause,
+                onVideoModeChange = actions.setVideoMode,
                 speed = playback.speed,
                 skipSilence = playback.skipSilence,
                 sleepTimer = sleepTimer,
-                onSetSleepTimer = playbackViewModel::setSleepTimer,
-                onCancelSleepTimer = playbackViewModel::cancelSleepTimer,
-                onSpeedChange = { speed ->
-                    playbackViewModel.setPodcastPlaybackSpeed(episode.podcastId, speed)
-                },
-                onSkipSilenceChange = playbackViewModel::setSkipSilence,
-                onSeekBack = playbackViewModel::seekBack,
-                onSeekForward = playbackViewModel::seekForward,
-                onSeekTo = playbackViewModel::seekTo,
-                onRetry = playbackViewModel::retryPlayback,
+                onSetSleepTimer = actions.setSleepTimer,
+                onCancelSleepTimer = actions.cancelSleepTimer,
+                onSpeedChange = { speed -> actions.setSpeed(episode.podcastId, speed) },
+                onSkipSilenceChange = actions.setSkipSilence,
+                onSeekBack = actions.seekBack,
+                onSeekForward = actions.seekForward,
+                onSeekTo = actions.seekTo,
+                onRetry = actions.retryPlayback,
                 onDismiss = onDismiss,
                 queueEpisodes = queueEpisodes,
                 queuePodcasts = podcastsById,
                 queueActiveProgress = playback.episode?.let { progress.fraction },
-                onQueuePlay = { queued ->
-                    playbackViewModel.playQueue(
-                        episodes = queueEpisodes,
-                        selectedEpisode = queued,
-                        podcastTitles = podcastTitlesById,
-                        useVideo = (queued.preferVideo || (!queued.videoPreferenceSet && queued.isVideoOnlySource())) &&
-                            !queued.videoUrl.isNullOrBlank(),
-                    )
-                },
-                onQueueRemove = viewModel::removeFromQueue,
-                onQueueReorder = viewModel::reorderQueue,
+                onQueuePlay = { queued -> actions.playFromQueue(queued, queueEpisodes, podcastTitlesById) },
+                onQueueRemove = actions.removeFromQueue,
+                onQueueReorder = actions.reorderQueue,
             )
         }
     }
