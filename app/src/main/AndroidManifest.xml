@@ -42,6 +42,22 @@
             </intent-filter>
         </activity>
 
+        <!--
+            Exported on purpose and not negotiable: a MediaSessionService has to be discoverable by
+            Android Auto, the assistant, Bluetooth and Wear, and the platform discovers it by binding
+            to the service from outside the app. Setting exported="false" would leave the app with
+            no lock screen, notification shade, headset or car transport at all, which is the centre
+            of this product.
+
+            The consequence is that any app on the device can bind and therefore browse the
+            subscription and episode list and drive playback, which is the standard Android media
+            session contract that every media app accepts. It is worth knowing about when deciding
+            what to put in a podcast title. The three custom commands handed out in
+            SessionCallback.onConnect, the sleep timer and skip-silence, are Booth's own controls
+            exposed to those same external surfaces on purpose.
+
+            ExportedService is suppressed rather than fixed for that reason.
+        -->
         <service
             android:name=".PodcastPlaybackService"
             android:foregroundServiceType="mediaPlayback"
