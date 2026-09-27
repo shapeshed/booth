@@ -95,7 +95,11 @@ internal fun PodcastGettingStarted(
         ) {
             Text(
                 text = stringResource(R.string.get_started_title),
-                style = if (isTablet) MaterialTheme.typography.headlineLarge else MaterialTheme.typography.headlineMedium,
+                style = if (isTablet) {
+                    MaterialTheme.typography.headlineLarge
+                } else {
+                    MaterialTheme.typography.headlineMedium
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .semantics { heading() },

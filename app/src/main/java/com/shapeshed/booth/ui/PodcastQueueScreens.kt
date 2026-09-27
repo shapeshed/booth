@@ -305,7 +305,7 @@ internal fun PodcastQueueScreen(
             bottom =
                 16.dp + LocalPodcastMiniPlayerInset.current,
         ),
-        verticalArrangement = Arrangement.spacedBy(PodcastListItemSpacing),
+        verticalArrangement = Arrangement.spacedBy(PODCAST_LIST_ITEM_SPACING),
     ) {
         if (showFilterChips) {
             item(key = "queue-filters") {
@@ -500,7 +500,7 @@ internal fun QueueEpisodeSwipeRow(
     val queueSwipeHint = stringResource(R.string.queue_swipe_hint)
     val selectedDescription = stringResource(R.string.selected_item)
     val dismissState = rememberSwipeToDismissBoxState(
-        positionalThreshold = { distance -> distance * SwipeToDismissThresholdFraction },
+        positionalThreshold = { distance -> distance * SWIPE_TO_DISMISS_THRESHOLD_FRACTION },
     )
     LaunchedEffect(dismissState.currentValue) {
         if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
@@ -670,7 +670,7 @@ internal fun InboxEpisodeSwipeRow(
     val queueSwipeHint = stringResource(R.string.queue_swipe_hint)
     val selectedDescription = stringResource(R.string.selected_item)
     val dismissState = rememberSwipeToDismissBoxState(
-        positionalThreshold = { distance -> distance * SwipeToDismissThresholdFraction },
+        positionalThreshold = { distance -> distance * SWIPE_TO_DISMISS_THRESHOLD_FRACTION },
     )
     LaunchedEffect(dismissState.currentValue) {
         when (dismissState.currentValue) {

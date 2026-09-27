@@ -31,7 +31,7 @@ internal fun PodcastDetailTemplate(
                 top = 12.dp,
                 bottom = 16.dp + LocalPodcastMiniPlayerInset.current,
             ),
-            verticalArrangement = Arrangement.spacedBy(PodcastListItemSpacing),
+            verticalArrangement = Arrangement.spacedBy(PODCAST_LIST_ITEM_SPACING),
             content = content,
         )
     }

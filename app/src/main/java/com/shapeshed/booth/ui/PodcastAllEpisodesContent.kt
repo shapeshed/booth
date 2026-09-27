@@ -56,7 +56,7 @@ internal fun PodcastAllEpisodesContent(
             top = 16.dp,
             bottom = 16.dp + LocalPodcastMiniPlayerInset.current,
         ),
-        verticalArrangement = Arrangement.spacedBy(PodcastListItemSpacing),
+        verticalArrangement = Arrangement.spacedBy(PODCAST_LIST_ITEM_SPACING),
     ) {
         if (episodes.loadState.refresh is LoadState.Loading && episodes.itemCount == 0) {
             item(key = "all-episodes-loading") {

@@ -7,8 +7,8 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.shapeshed.booth.PodcastNotificationActionAddToQueue
-import com.shapeshed.booth.PodcastNotificationActionPlay
+import com.shapeshed.booth.PODCAST_NOTIFICATION_ACTION_ADD_TO_QUEUE
+import com.shapeshed.booth.PODCAST_NOTIFICATION_ACTION_PLAY
 
 @Composable
 internal fun PodcastHomeEffects(
@@ -49,9 +49,9 @@ internal fun PodcastHomeEffects(
             viewModel.episode(episodeId)?.let { episode ->
                 onOpenInitialEpisode(episode)
                 when (initialNotificationAction) {
-                    PodcastNotificationActionAddToQueue -> viewModel.addToQueueFromInbox(episode.id)
+                    PODCAST_NOTIFICATION_ACTION_ADD_TO_QUEUE -> viewModel.addToQueueFromInbox(episode.id)
 
-                    PodcastNotificationActionPlay -> {
+                    PODCAST_NOTIFICATION_ACTION_PLAY -> {
                         val podcastTitle = viewModel.podcast(episode.podcastId)?.title.orEmpty()
                         playbackViewModel.playFromNotification(episode, podcastTitle)
                     }

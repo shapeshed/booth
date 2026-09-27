@@ -55,16 +55,16 @@ class MainActivity : ComponentActivity() {
 }
 
 private fun Intent.initialPodcastEpisodeIdExtra(): Long? =
-    getLongExtra(ExtraInitialPodcastEpisodeId, 0L).takeIf { it > 0L }
+    getLongExtra(EXTRA_INITIAL_PODCAST_EPISODE_ID, 0L).takeIf { it > 0L }
 
 private fun Intent.initialPodcastNotificationActionExtra(): String? =
-    getStringExtra(ExtraInitialPodcastNotificationAction)
+    getStringExtra(EXTRA_INITIAL_PODCAST_NOTIFICATION_ACTION)
 
 private fun Intent.debugGettingStartedExtra(): Boolean =
-    BuildConfig.DEBUG && getBooleanExtra(ExtraDebugGettingStarted, false)
+    BuildConfig.DEBUG && getBooleanExtra(EXTRA_DEBUG_GETTING_STARTED, false)
 
-const val ExtraInitialPodcastEpisodeId = "com.shapeshed.booth.extra.INITIAL_PODCAST_EPISODE_ID"
-const val ExtraInitialPodcastNotificationAction = "com.shapeshed.booth.extra.INITIAL_PODCAST_NOTIFICATION_ACTION"
-const val ExtraDebugGettingStarted = "com.shapeshed.booth.extra.DEBUG_GETTING_STARTED"
-const val PodcastNotificationActionPlay = "com.shapeshed.booth.action.PLAY_EPISODE"
-const val PodcastNotificationActionAddToQueue = "com.shapeshed.booth.action.ADD_EPISODE_TO_QUEUE"
+const val EXTRA_INITIAL_PODCAST_EPISODE_ID = "com.shapeshed.booth.extra.INITIAL_PODCAST_EPISODE_ID"
+const val EXTRA_INITIAL_PODCAST_NOTIFICATION_ACTION = "com.shapeshed.booth.extra.INITIAL_PODCAST_NOTIFICATION_ACTION"
+const val EXTRA_DEBUG_GETTING_STARTED = "com.shapeshed.booth.extra.DEBUG_GETTING_STARTED"
+const val PODCAST_NOTIFICATION_ACTION_PLAY = "com.shapeshed.booth.action.PLAY_EPISODE"
+const val PODCAST_NOTIFICATION_ACTION_ADD_TO_QUEUE = "com.shapeshed.booth.action.ADD_EPISODE_TO_QUEUE"

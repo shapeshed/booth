@@ -301,7 +301,7 @@ internal fun PodcastInbox(
                 bottom =
                     16.dp + LocalPodcastMiniPlayerInset.current,
             ),
-            verticalArrangement = Arrangement.spacedBy(PodcastListItemSpacing),
+            verticalArrangement = Arrangement.spacedBy(PODCAST_LIST_ITEM_SPACING),
         ) {
             if (visibleEpisodes.itemCount == 0) {
                 item(key = "empty-inbox") {
@@ -432,7 +432,7 @@ internal fun PodcastDownloadsScreen(
             top = 8.dp,
             bottom = 16.dp + LocalPodcastMiniPlayerInset.current,
         ),
-        verticalArrangement = Arrangement.spacedBy(PodcastListItemSpacing),
+        verticalArrangement = Arrangement.spacedBy(PODCAST_LIST_ITEM_SPACING),
     ) {
         item(key = "download-filters") {
             LazyRow(
@@ -613,7 +613,7 @@ internal fun PodcastDownloadsScreen(
                 }
             }
             val dismissState = rememberSwipeToDismissBoxState(
-                positionalThreshold = { distance -> distance * SwipeToDismissThresholdFraction },
+                positionalThreshold = { distance -> distance * SWIPE_TO_DISMISS_THRESHOLD_FRACTION },
             )
             LaunchedEffect(dismissState.currentValue) {
                 if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {

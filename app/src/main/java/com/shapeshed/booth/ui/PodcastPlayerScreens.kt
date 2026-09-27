@@ -1283,7 +1283,7 @@ internal fun PodcastNowPlayingQueueSheet(
                     .weight(1f),
                 state = listState,
                 contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(PodcastListItemSpacing),
+                verticalArrangement = Arrangement.spacedBy(PODCAST_LIST_ITEM_SPACING),
             ) {
                 items(orderedEpisodes, key = { "now-queue-${it.id}" }) { episode ->
                     val isDragging = draggingId == episode.id

@@ -23,28 +23,28 @@ internal fun encodeAppleCategories(categories: List<String>): String = categorie
     .map(String::trim)
     .filter(String::isNotBlank)
     .distinct()
-    .joinToString(AppleCategorySeparator)
+    .joinToString(APPLE_CATEGORY_SEPARATOR)
 
 internal fun decodeAppleCategories(value: String): List<String> = runCatching {
-    value.split(AppleCategorySeparator).map(String::trim).filter(String::isNotBlank).distinct()
+    value.split(APPLE_CATEGORY_SEPARATOR).map(String::trim).filter(String::isNotBlank).distinct()
 }.getOrDefault(emptyList())
 
 internal fun encodeAppleCategoryIds(categoryIds: Map<String, String>): String = categoryIds
     .mapKeys { it.key.trim() }
     .filter { (name, id) -> name.isNotBlank() && id.isNotBlank() }
     .entries
-    .joinToString(AppleCategorySeparator) { "${it.key}$AppleCategoryIdSeparator${it.value}" }
+    .joinToString(APPLE_CATEGORY_SEPARATOR) { "${it.key}$APPLE_CATEGORY_ID_SEPARATOR${it.value}" }
 
 internal fun decodeAppleCategoryIds(value: String): Map<String, String> = value
-    .split(AppleCategorySeparator)
+    .split(APPLE_CATEGORY_SEPARATOR)
     .mapNotNull { entry ->
-        val parts = entry.split(AppleCategoryIdSeparator, limit = 2)
+        val parts = entry.split(APPLE_CATEGORY_ID_SEPARATOR, limit = 2)
         if (parts.size == 2 && parts[0].isNotBlank() && parts[1].isNotBlank()) parts[0] to parts[1] else null
     }
     .toMap()
 
-private const val AppleCategorySeparator = "\u001F"
-private const val AppleCategoryIdSeparator = "\u001E"
+private const val APPLE_CATEGORY_SEPARATOR = "\u001F"
+private const val APPLE_CATEGORY_ID_SEPARATOR = "\u001E"
 
 internal fun PodcastEntity.displayCategories(): List<String> =
     categories.filter { it.providerId == LOCAL_DIRECTORY_PROVIDER_ID }.map(CategoryEntity::name)

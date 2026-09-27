@@ -57,8 +57,8 @@ class Prof18FeedParser private constructor(private val parser: RssParser, privat
             return boundedClient.newCall(
                 Request.Builder()
                     .url(feedUrl)
-                    .header("Accept", FeedAcceptHeader)
-                    .header("User-Agent", FeedUserAgent)
+                    .header("Accept", FEED_ACCEPT_HEADER)
+                    .header("User-Agent", FEED_USER_AGENT)
                     .get()
                     .apply {
                         etag?.let { header("If-None-Match", it) }
@@ -70,7 +70,7 @@ class Prof18FeedParser private constructor(private val parser: RssParser, privat
                     ?.substringBefore(';')
                     ?.trim()
                     ?.lowercase()
-                if (contentType in HtmlMimeTypes) throw NotAFeedResponseException()
+                if (contentType in HTML_MIME_TYPES) throw NotAFeedResponseException()
                 val finalUrl = response.request.url.toString()
                 val responseEtag = response.header("ETag") ?: etag
                 val responseLastModified = response.header("Last-Modified") ?: lastModified
@@ -94,7 +94,7 @@ class Prof18FeedParser private constructor(private val parser: RssParser, privat
                     readBoundedText(
                         input = input,
                         charset = responseBody.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8,
-                        maxBytes = MaxFeedBytes,
+                        maxBytes = MAX_FEED_BYTES,
                     )
                 }
                 Trace.beginSection("booth.feed.parse")
@@ -121,7 +121,7 @@ class Prof18FeedParser private constructor(private val parser: RssParser, privat
             client.newCall(
                 Request.Builder()
                     .url(feedUrl)
-                    .header("User-Agent", FeedUserAgent)
+                    .header("User-Agent", FEED_USER_AGENT)
                     .get()
                     .build(),
             ).execute().use { response ->
@@ -129,12 +129,12 @@ class Prof18FeedParser private constructor(private val parser: RssParser, privat
                 val finalUrl = response.request.url.toString()
                 val responseBody = response.body
                 val body = responseBody.byteStream().use { input ->
-                    readBoundedText(input, Charsets.UTF_8, MaxDiscoveryBytes)
+                    readBoundedText(input, Charsets.UTF_8, MAX_DISCOVERY_BYTES)
                 }
                 val document = Jsoup.parse(body, finalUrl)
                 val alternate = document.select("link[rel~=(?i)alternate]")
                     .firstOrNull { link ->
-                        link.attr("type").lowercase().substringBefore(';') in SupportedFeedMimeTypes
+                        link.attr("type").lowercase().substringBefore(';') in SUPPORTED_FEED_MIME_TYPES
                     }
                     ?.absUrl("href")
                     ?.takeIf(String::isHttpUrl)
@@ -151,7 +151,7 @@ class Prof18FeedParser private constructor(private val parser: RssParser, privat
     }
 }
 
-private val SupportedFeedMimeTypes = setOf(
+private val SUPPORTED_FEED_MIME_TYPES = setOf(
     "application/atom+xml",
     "application/rss+xml",
     "application/rdf+xml",
@@ -159,11 +159,11 @@ private val SupportedFeedMimeTypes = setOf(
     "text/xml",
 )
 
-private val HtmlMimeTypes = setOf("text/html", "application/xhtml+xml")
+private val HTML_MIME_TYPES = setOf("text/html", "application/xhtml+xml")
 
-internal const val FeedAcceptHeader =
+internal const val FEED_ACCEPT_HEADER =
     "application/rss+xml, application/atom+xml, application/rdf+xml, application/xml, text/xml, text/html;q=0.8"
-internal val FeedUserAgent = "Booth/${BuildConfig.VERSION_NAME} (Android; podcast player)"
+internal val FEED_USER_AGENT = "Booth/${BuildConfig.VERSION_NAME} (Android; podcast player)"
 
 class NotAFeedResponseException : IllegalArgumentException("The address returned a web page")
 
@@ -196,8 +196,8 @@ internal fun readBoundedText(input: InputStream, charset: Charset, maxBytes: Lon
     return output.toByteArray().toString(charset)
 }
 
-private const val MaxFeedBytes = 16L * 1024L * 1024L
-private const val MaxDiscoveryBytes = 2L * 1024L * 1024L
+private const val MAX_FEED_BYTES = 16L * 1024L * 1024L
+private const val MAX_DISCOVERY_BYTES = 2L * 1024L * 1024L
 
 /** RSS uses zero and sometimes negative values when an enclosure size is unknown. */
 internal fun positiveSizeOrNull(value: Long?): Long? = value?.takeIf { it > 0L }
@@ -370,7 +370,7 @@ internal fun parseVideoEnclosures(body: String, feedUrl: String): Map<Long, Pars
         val alternate = alternatePattern.findAll(block).mapNotNull { enclosure ->
             val attributes = enclosure.groupValues[1]
             val type = attribute(attributes, "type")?.lowercase() ?: return@mapNotNull null
-            if (!type.startsWith("video/") && type !in HlsMimeTypes) return@mapNotNull null
+            if (!type.startsWith("video/") && type !in HLS_MIME_TYPES) return@mapNotNull null
             val contents = enclosure.groupValues[2]
             val rawUrl = Regex(
                 "<(?:[A-Za-z0-9_-]+:)?source\\b[^>]*\\buri\\s*=\\s*[\\\"']([^\\\"']+)[\\\"']",
@@ -385,7 +385,7 @@ internal fun parseVideoEnclosures(body: String, feedUrl: String): Map<Long, Pars
                 type,
                 positiveSizeOrNull(attribute(attributes, "length")?.toLongOrNull()),
             )
-        }.sortedBy { it.mimeType !in HlsMimeTypes }.firstOrNull()
+        }.sortedBy { it.mimeType !in HLS_MIME_TYPES }.firstOrNull()
             ?: Regex(
                 "<(?:[A-Za-z0-9_-]+:)?enclosure\\b([^>]*)/?>",
                 RegexOption.IGNORE_CASE,
@@ -406,7 +406,7 @@ internal fun parseVideoEnclosures(body: String, feedUrl: String): Map<Long, Pars
     }.toMap()
 }
 
-private val HlsMimeTypes = setOf(
+private val HLS_MIME_TYPES = setOf(
     "application/vnd.apple.mpegurl",
     "application/x-mpegurl",
     "application/x-mpegURL".lowercase(),
@@ -475,11 +475,11 @@ internal fun String?.cleanText(): String? = this?.trim()?.takeIf(String::isNotBl
 
 internal fun String.parseFeedDateMillis(): Long? = sequenceOf(
     { ZonedDateTime.parse(this, DateTimeFormatter.RFC_1123_DATE_TIME).toInstant().toEpochMilli() },
-    { ZonedDateTime.parse(this, RssDateTimeWithZoneName).toInstant().toEpochMilli() },
+    { ZonedDateTime.parse(this, RSS_DATE_TIME_WITH_ZONE_NAME).toInstant().toEpochMilli() },
     { OffsetDateTime.parse(this, DateTimeFormatter.ISO_OFFSET_DATE_TIME).toInstant().toEpochMilli() },
 ).firstNotNullOfOrNull { parser -> runCatching(parser).getOrNull() }
 
-private val RssDateTimeWithZoneName: DateTimeFormatter = DateTimeFormatterBuilder()
+private val RSS_DATE_TIME_WITH_ZONE_NAME: DateTimeFormatter = DateTimeFormatterBuilder()
     .parseCaseInsensitive()
     .appendPattern("EEE, d MMM yyyy HH:mm:ss zzz")
     .toFormatter(Locale.US)

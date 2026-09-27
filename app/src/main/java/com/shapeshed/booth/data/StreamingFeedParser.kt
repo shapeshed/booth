@@ -21,14 +21,14 @@ import org.xml.sax.SAXException
 import org.xml.sax.SAXParseException
 import org.xml.sax.ext.DefaultHandler2
 
-private const val AtomNamespace = "http://www.w3.org/2005/Atom"
-private const val RdfNamespace = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-private const val RssNamespace = "http://purl.org/rss/1.0/"
-private const val ItunesNamespace = "http://www.itunes.com/dtds/podcast-1.0.dtd"
-private const val ContentNamespace = "http://purl.org/rss/1.0/modules/content/"
-private const val MediaRssNamespace = "http://search.yahoo.com/mrss/"
-private const val DublinCoreNamespace = "http://purl.org/dc/elements/1.1/"
-private const val XmlNamespace = "http://www.w3.org/XML/1998/namespace"
+private const val ATOM_NAMESPACE = "http://www.w3.org/2005/Atom"
+private const val RDF_NAMESPACE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+private const val RSS_NAMESPACE = "http://purl.org/rss/1.0/"
+private const val ITUNES_NAMESPACE = "http://www.itunes.com/dtds/podcast-1.0.dtd"
+private const val CONTENT_NAMESPACE = "http://purl.org/rss/1.0/modules/content/"
+private const val MEDIA_RSS_NAMESPACE = "http://search.yahoo.com/mrss/"
+private const val DUBLIN_CORE_NAMESPACE = "http://purl.org/dc/elements/1.1/"
+private const val XML_NAMESPACE = "http://www.w3.org/XML/1998/namespace"
 
 private val BasicItemFields = setOf(
     "guid", "id", "identifier", "title", "link", "description", "summary",
@@ -58,10 +58,10 @@ private val ItunesItemFields = setOf(
 private val DublinCoreItemFields = setOf("identifier", "creator", "date")
 private val BasicFeedFields = setOf("title", "link", "description", "summary", "image", "url", "explicit")
 private val RssFeedFields = setOf("title", "link", "description")
-private val AtomFeedFields = setOf("title", "link", "summary", "subtitle", "name")
-private val ItunesFeedFields = setOf("image", "author", "summary", "subtitle", "explicit", "name")
-private const val FeedImageContainerField = "__feed_image_container"
-private const val FeedImageUrlField = "__feed_image_url"
+private val ATOM_FEED_FIELDS = setOf("title", "link", "summary", "subtitle", "name")
+private val ITUNES_FEED_FIELDS = setOf("image", "author", "summary", "subtitle", "explicit", "name")
+private const val FEED_IMAGE_CONTAINER_FIELD = "__feed_image_container"
+private const val FEED_IMAGE_URL_FIELD = "__feed_image_url"
 
 /** Namespace-aware, Android-safe SAX parser. It intentionally has no network-capable XML features. */
 class SaxStreamingFeedParser(
@@ -181,7 +181,7 @@ class SaxStreamingFeedParser(
             checkCancellation()
             val name = localName.orEmpty().ifBlank { qName.orEmpty().substringAfter(':') }.lowercase(Locale.ROOT)
             val parentBaseUrl = elementBases.lastOrNull() ?: url
-            val elementBaseUrl = attrs.getValue(XmlNamespace, "base")
+            val elementBaseUrl = attrs.getValue(XML_NAMESPACE, "base")
                 ?.absoluteUrl(parentBaseUrl)
                 ?: parentBaseUrl
             elementBases += elementBaseUrl
@@ -193,8 +193,8 @@ class SaxStreamingFeedParser(
                 rootSeen = true
                 format = when (name) {
                     "rss" if uri.orEmpty().isBlank() -> FeedFormat.RSS
-                    "rdf" if uri.orEmpty() == RdfNamespace -> FeedFormat.RDF
-                    "feed" if uri.orEmpty() == AtomNamespace -> FeedFormat.ATOM
+                    "rdf" if uri.orEmpty() == RDF_NAMESPACE -> FeedFormat.RDF
+                    "feed" if uri.orEmpty() == ATOM_NAMESPACE -> FeedFormat.ATOM
                     else -> throw SAXException("Unsupported feed root: $name")
                 }
             }
@@ -218,14 +218,14 @@ class SaxStreamingFeedParser(
                     )
                 }
                 if (isItemField(uri.orEmpty(), name) &&
-                    !(uri == MediaRssNamespace && name == "content" && !isMediaImageElement(name, attrs)) &&
+                    !(uri == MEDIA_RSS_NAMESPACE && name == "content" && !isMediaImageElement(name, attrs)) &&
                     fieldDepth < 0
                 ) {
                     if (name == "link" && attrs.getValue("href") != null) {
                         current!!.setAtomLink(attrs.getValue("rel"), attrs.getValue("href"), elementBaseUrl)
                     }
                     if (name == "image" ||
-                        (uri == MediaRssNamespace && isMediaImageElement(name, attrs))
+                        (uri == MEDIA_RSS_NAMESPACE && isMediaImageElement(name, attrs))
                     ) {
                         current!!.setImage(
                             (attrs.getValue("href") ?: attrs.getValue("url"))
@@ -239,11 +239,11 @@ class SaxStreamingFeedParser(
                     text = StringBuilder()
                 }
             } else if (
-                field == FeedImageContainerField &&
+                field == FEED_IMAGE_CONTAINER_FIELD &&
                 name == "url" &&
                 elementDepth == fieldDepth + 1
             ) {
-                field = FeedImageUrlField
+                field = FEED_IMAGE_URL_FIELD
                 fieldDepth = elementDepth
                 fieldBaseUrl = elementBaseUrl
                 text = StringBuilder()
@@ -253,7 +253,7 @@ class SaxStreamingFeedParser(
                 }
                 if (name == "image") {
                     feedImage = (attrs.getValue("href") ?: attrs.getValue("url"))?.absoluteUrl(elementBaseUrl)
-                    field = FeedImageContainerField
+                    field = FEED_IMAGE_CONTAINER_FIELD
                     feedImageNestedUrlCaptured = false
                 } else {
                     field = name
@@ -265,7 +265,7 @@ class SaxStreamingFeedParser(
         }
 
         override fun characters(ch: CharArray, start: Int, length: Int) {
-            if (field == FeedImageContainerField && feedImageNestedUrlCaptured) return
+            if (field == FEED_IMAGE_CONTAINER_FIELD && feedImageNestedUrlCaptured) return
             if (field != null && text.length < maxText) text.append(ch, start, minOf(length, maxText - text.length))
         }
 
@@ -292,13 +292,13 @@ class SaxStreamingFeedParser(
                     item.set(name, value, uri.orEmpty(), fieldBaseUrl)
                     clearField()
                 }
-            } else if (field == FeedImageUrlField && fieldDepth == elementDepth && name == "url") {
+            } else if (field == FEED_IMAGE_URL_FIELD && fieldDepth == elementDepth && name == "url") {
                 if (value.isNotBlank()) feedImage = value.absoluteUrl(fieldBaseUrl)
                 feedImageNestedUrlCaptured = true
-                field = FeedImageContainerField
+                field = FEED_IMAGE_CONTAINER_FIELD
                 fieldDepth = elementDepth - 1
                 text = StringBuilder()
-            } else if (field == FeedImageContainerField && fieldDepth == elementDepth && name == "image") {
+            } else if (field == FEED_IMAGE_CONTAINER_FIELD && fieldDepth == elementDepth && name == "image") {
                 if (!feedImageNestedUrlCaptured && value.isNotBlank()) {
                     feedImage = value.absoluteUrl(fieldBaseUrl)
                 }
@@ -327,29 +327,29 @@ class SaxStreamingFeedParser(
         }
 
         private fun isItemElement(namespace: String, name: String): Boolean = when (format) {
-            FeedFormat.ATOM -> namespace == AtomNamespace && name == "entry"
+            FeedFormat.ATOM -> namespace == ATOM_NAMESPACE && name == "entry"
             FeedFormat.RSS -> namespace.isBlank() && name == "item"
-            FeedFormat.RDF -> name == "item" && (namespace.isBlank() || namespace == RssNamespace)
+            FeedFormat.RDF -> name == "item" && (namespace.isBlank() || namespace == RSS_NAMESPACE)
             null -> false
         }
 
         private fun isItemField(namespace: String, name: String): Boolean = when {
             namespace.isBlank() -> name in BasicItemFields
-            namespace == RssNamespace -> name in RssItemFields
-            namespace == AtomNamespace -> name in AtomItemFields
-            namespace == ItunesNamespace -> name in ItunesItemFields
-            namespace == ContentNamespace -> name == "encoded"
-            namespace == MediaRssNamespace -> name == "content" || name == "thumbnail"
-            namespace == DublinCoreNamespace -> name in DublinCoreItemFields
+            namespace == RSS_NAMESPACE -> name in RssItemFields
+            namespace == ATOM_NAMESPACE -> name in AtomItemFields
+            namespace == ITUNES_NAMESPACE -> name in ItunesItemFields
+            namespace == CONTENT_NAMESPACE -> name == "encoded"
+            namespace == MEDIA_RSS_NAMESPACE -> name == "content" || name == "thumbnail"
+            namespace == DUBLIN_CORE_NAMESPACE -> name in DublinCoreItemFields
             else -> false
         }
 
         private fun isFeedField(namespace: String, name: String): Boolean = when {
             namespace.isBlank() -> name in BasicFeedFields
-            namespace == RssNamespace -> name in RssFeedFields
-            namespace == AtomNamespace -> name in AtomFeedFields
-            namespace == ItunesNamespace -> name in ItunesFeedFields
-            namespace == ContentNamespace -> name == "encoded"
+            namespace == RSS_NAMESPACE -> name in RssFeedFields
+            namespace == ATOM_NAMESPACE -> name in ATOM_FEED_FIELDS
+            namespace == ITUNES_NAMESPACE -> name in ITUNES_FEED_FIELDS
+            namespace == CONTENT_NAMESPACE -> name == "encoded"
             else -> false
         }
 
@@ -435,7 +435,7 @@ class SaxStreamingFeedParser(
 
         fun setImage(candidate: String?, namespace: String) {
             if (candidate.isNullOrBlank()) return
-            if (namespace == ItunesNamespace || image == null) image = candidate
+            if (namespace == ITUNES_NAMESPACE || image == null) image = candidate
         }
 
         fun set(name: String, value: String, namespace: String, elementBaseUrl: String) {
@@ -464,28 +464,28 @@ class SaxStreamingFeedParser(
                 "http://purl.org/dc/elements/1.1/" to "date",
                 -> date = value
 
-                "" to "author", "" to "name", AtomNamespace to "name",
+                "" to "author", "" to "name", ATOM_NAMESPACE to "name",
                 "http://purl.org/dc/elements/1.1/" to "creator",
                 -> author = value
 
-                ItunesNamespace to "title" -> if (title.isNullOrBlank() && value.isNotBlank()) title = value
+                ITUNES_NAMESPACE to "title" -> if (title.isNullOrBlank() && value.isNotBlank()) title = value
 
-                ItunesNamespace to "summary",
-                ItunesNamespace to "subtitle",
+                ITUNES_NAMESPACE to "summary",
+                ITUNES_NAMESPACE to "subtitle",
                 -> if (summary.isNullOrBlank() && value.isNotBlank()) summary = value
 
-                ItunesNamespace to "author" -> if (author.isNullOrBlank() && value.isNotBlank()) author = value
+                ITUNES_NAMESPACE to "author" -> if (author.isNullOrBlank() && value.isNotBlank()) author = value
 
-                ItunesNamespace to "image",
-                MediaRssNamespace to "content",
-                MediaRssNamespace to "thumbnail",
+                ITUNES_NAMESPACE to "image",
+                MEDIA_RSS_NAMESPACE to "content",
+                MEDIA_RSS_NAMESPACE to "thumbnail",
                 -> {
                     setImage(value, namespace)
                 }
 
-                ItunesNamespace to "duration" -> duration = value
+                ITUNES_NAMESPACE to "duration" -> duration = value
 
-                ItunesNamespace to "explicit" -> explicit = parseFeedBoolean(value)
+                ITUNES_NAMESPACE to "explicit" -> explicit = parseFeedBoolean(value)
             }
         }
 
