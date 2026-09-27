@@ -59,22 +59,25 @@ class PodcastRepositoryStateDeviceTest {
     fun subscribedEpisodesAreSearchableImmediately() = runBlocking {
         repository.subscribe(FEED_URL)
 
-        val results = repository.searchEpisodes("episode").first()
+        // "First" is the episode's title, one of the three indexed columns. The guid happens to be
+        // "episode-1" but guids are not indexed, so searching for "episode" would match nothing.
+        val results = repository.searchEpisodes("First").first()
 
         assertTrue(results.isNotEmpty())
-        assertTrue(results.any { it.episode.title.contains("Episode") })
+        assertEquals("First", results.first().episode.title)
     }
 
     @Test
     fun rebuildRestoresAnIndexThatWasClearedOutFromUnderIt() = runBlocking {
         repository.subscribe(FEED_URL)
-        assertTrue(repository.searchEpisodes("episode").first().isNotEmpty())
+        assertTrue(repository.searchEpisodes("First").first().isNotEmpty())
 
         database.podcastDao().clearEpisodeSearch()
+        assertTrue(repository.searchEpisodes("First").first().isEmpty())
 
         repository.rebuildSearchIndex()
 
-        assertTrue(repository.searchEpisodes("episode").first().isNotEmpty())
+        assertTrue(repository.searchEpisodes("First").first().isNotEmpty())
     }
 
     @Test
