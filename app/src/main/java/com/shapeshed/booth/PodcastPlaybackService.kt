@@ -37,6 +37,7 @@ import com.shapeshed.booth.data.SleepTimerStore
 import com.shapeshed.booth.data.orderedResumptionIds
 import com.shapeshed.booth.di.boothPlaybackEntryPoint
 import java.io.File
+import java.util.concurrent.Executor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -400,39 +401,39 @@ class PodcastPlaybackService : MediaLibraryService() {
             return MediaSession.ConnectionResult.accept(sessionCommands, playerCommands)
         }
 
+        /**
+         * Answers an external controller's request to resume playback, such as Android Auto or the
+         * assistant.
+         *
+         * The work runs in the service scope, so it must always resolve the future, including when
+         * the scope is cancelled. `CallbackToFutureAdapter.Completer` has no `cancel()`, so a
+         * coroutine that is cancelled before its body starts would leave the future pending forever
+         * and hang whatever was waiting on it. `invokeOnCompletion` covers that window; the
+         * `try`/`catch` covers the rest. `set` and `setException` both no-op once the future is
+         * resolved, so racing them is safe.
+         *
+         * Cancellation is also no longer swallowed by `runCatching` and reported as a resumption
+         * failure: a service shutdown is not an error the client should be told about.
+         */
         override fun onPlaybackResumption(
             session: MediaSession,
             controller: MediaSession.ControllerInfo,
             isForPlayback: Boolean,
         ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> = CallbackToFutureAdapter.getFuture { completer ->
-            service.serviceScope.launch(Dispatchers.IO) {
-                runCatching {
-                    val episodeId = boothPlaybackEntryPoint(service.application)
-                        .settings.podcastLastEpisodeId.first()
-                    val episode = episodeId?.let { service.repository.episode(it) }
-                    if (episode == null) {
-                        completer.set(
-                            MediaSession.MediaItemsWithStartPosition(emptyList(), 0, C.TIME_UNSET),
-                        )
-                    } else {
-                        val queuedEpisodes = service.repository.queue.first()
-                            .mapNotNull { service.repository.episode(it.episodeId) }
-                        val resumedEpisodeIds = orderedResumptionIds(
-                            activeEpisodeId = episode.id,
-                            queuedEpisodeIds = queuedEpisodes.map { it.id },
-                        )
-                        val episodesById = (queuedEpisodes + episode).associateBy { it.id }
-                        val resumedEpisodes = resumedEpisodeIds.mapNotNull(episodesById::get)
-                        completer.set(
-                            MediaSession.MediaItemsWithStartPosition(
-                                resumedEpisodes.map { service.mediaItem(it) },
-                                resumedEpisodes.indexOfFirst { it.id == episode.id },
-                                episode.positionMs,
-                            ),
-                        )
-                    }
-                }.onFailure(completer::setException)
+            val job = service.serviceScope.launch(Dispatchers.IO) {
+                try {
+                    completer.set(service.resumptionItems())
+                } catch (error: Exception) {
+                    completer.setException(error)
+                }
             }
+            job.invokeOnCompletion { cause ->
+                if (cause != null) {
+                    completer.setException(cause)
+                }
+            }
+            // If the client walks away, stop hitting the database on its behalf.
+            completer.addCancellationListener({ job.cancel() }, Executor { it.run() })
             "podcast-playback-resumption"
         }
 
@@ -454,6 +455,29 @@ class PodcastPlaybackService : MediaLibraryService() {
             }
             return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
         }
+    }
+
+    /**
+     * The queue an external controller should resume: the last-played episode first, then whatever
+     * was queued, de-duplicated. Empty when nothing has been played yet.
+     */
+    private suspend fun resumptionItems(): MediaSession.MediaItemsWithStartPosition {
+        val episodeId = settings?.podcastLastEpisodeId?.first()
+        val episode = episodeId?.let { repository.episode(it) }
+            ?: return MediaSession.MediaItemsWithStartPosition(emptyList(), 0, C.TIME_UNSET)
+        val queuedEpisodes = repository.queue.first()
+            .mapNotNull { repository.episode(it.episodeId) }
+        val resumedEpisodeIds = orderedResumptionIds(
+            activeEpisodeId = episode.id,
+            queuedEpisodeIds = queuedEpisodes.map { it.id },
+        )
+        val episodesById = (queuedEpisodes + episode).associateBy { it.id }
+        val resumedEpisodes = resumedEpisodeIds.mapNotNull(episodesById::get)
+        return MediaSession.MediaItemsWithStartPosition(
+            resumedEpisodes.map { mediaItem(it) },
+            resumedEpisodes.indexOfFirst { it.id == episode.id },
+            episode.positionMs,
+        )
     }
 
     private fun startSleepTimer(durationMs: Long) {
