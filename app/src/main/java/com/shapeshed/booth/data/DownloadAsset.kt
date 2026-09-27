@@ -90,3 +90,29 @@ class DownloadAssetConverters {
     @androidx.room.TypeConverter
     fun storageToStatus(value: String): DownloadAssetStatus = DownloadAssetStatus.valueOf(value)
 }
+
+/**
+ * Whether a local media file exists for this episode, in either form.
+ *
+ * This is the retention question, and it is deliberately *not* the same as what the UI shows. It
+ * answers "is there a file on disk that reclaiming space could remove", so it counts audio and
+ * video and ignores in-flight progress. The rules that delete downloads use it, which is why it
+ * needs to be one named predicate rather than the same expression copied into each of them: a
+ * divergence here would either leak files or delete one the user still needs.
+ *
+ * Blank counts as absent, since an empty string names no file. Nothing writes one today, but
+ * retention would then skip that episode forever and leak it.
+ */
+internal fun EpisodeEntity.hasLocalMedia(): Boolean =
+    !localUri.isNullOrBlank() || !localVideoUri.isNullOrBlank()
+
+/**
+ * Whether to offer the UI a downloaded affordance for this episode.
+ *
+ * Broader than [hasLocalMedia] on purpose: a download that has just finished has its progress
+ * published before the episode row's localUri is written, so gating only on the column makes a
+ * completed download look unavailable for a moment. It is also audio-only, because that is the
+ * affordance being offered.
+ */
+internal fun EpisodeEntity.isDownloaded(progress: DownloadProgress?): Boolean =
+    !localUri.isNullOrBlank() || progress?.completed == true

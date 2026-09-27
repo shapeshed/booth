@@ -457,6 +457,17 @@ fun PodcastHomeScreen(
         topLevelBackStack.clear()
         topLevelBackStack.add(PodcastNavigationKey.Subscriptions)
     }
+    // Ask for POST_NOTIFICATIONS the first time audio actually starts, rather than only when the
+    // user finds the new-episode toggle in Settings. The media notification is the foreground
+    // service notification, so on API 33+ a user who never opened that toggle was listening to an
+    // episode with no lock screen, notification shade or headset transport at all.
+    var hasAskedForMediaNotification by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(playback.episode?.id) {
+        if (playback.episode != null && !hasAskedForMediaNotification) {
+            hasAskedForMediaNotification = true
+            platformActions.ensureMediaNotificationPermission()
+        }
+    }
     val scope = rememberCoroutineScope()
     fun openSettings() {
         topLevelBackStack.add(PodcastNavigationKey.Settings)

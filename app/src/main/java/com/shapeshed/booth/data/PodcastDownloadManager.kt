@@ -226,7 +226,7 @@ class PodcastDownloadManager(
     ): List<EpisodeEntity> {
         val currentEpisodeIds = downloadedEpisodes
             .asSequence()
-            .filter { it.localUri != null || it.localVideoUri != null }
+            .filter(EpisodeEntity::hasLocalMedia)
             .mapTo(mutableSetOf(), EpisodeEntity::id)
         downloadAssets
             .asSequence()

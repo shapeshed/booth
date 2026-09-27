@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <baseline version="1.0">
+    <file name="src/main/java/com/shapeshed/booth/data/DownloadAsset.kt">
+        <error line="106" column="54" source="standard:function-signature" />
+    </file>
+    <file name="src/main/java/com/shapeshed/booth/data/PlayedDownloadCleanupWorker.kt">
+        <error line="54" column="75" source="standard:function-signature" />
+    </file>
     <file name="src/main/java/com/shapeshed/booth/data/PodcastDownloadReceiver.kt">
         <error line="58" column="9" source="standard:function-signature" />
         <error line="59" column="9" source="standard:function-signature" />
@@ -70,7 +76,7 @@
         <error line="37" column="5" source="compose:parameter-naming" />
     </file>
     <file name="src/main/java/com/shapeshed/booth/ui/PodcastHomePlatformActions.kt">
-        <error line="27" column="5" source="compose:parameter-naming" />
+        <error line="38" column="5" source="compose:parameter-naming" />
     </file>
     <file name="src/main/java/com/shapeshed/booth/ui/PodcastHomePlaybackOverlays.kt">
         <error line="3" column="1" source="standard:import-ordering" />
@@ -85,20 +91,20 @@
     <file name="src/main/java/com/shapeshed/booth/ui/PodcastHomeScreen.kt">
         <error line="202" column="14" source="compose:compositionlocal-allowlist" />
         <error line="216" column="5" source="compose:lambda-param-in-effect" />
-        <error line="692" column="9" source="compose:vm-forwarding-check" />
-        <error line="714" column="5" source="compose:vm-forwarding-check" />
-        <error line="746" column="5" source="compose:vm-forwarding-check" />
-        <error line="827" column="9" source="compose:vm-forwarding-check" />
+        <error line="703" column="9" source="compose:vm-forwarding-check" />
+        <error line="725" column="5" source="compose:vm-forwarding-check" />
+        <error line="757" column="5" source="compose:vm-forwarding-check" />
         <error line="838" column="9" source="compose:vm-forwarding-check" />
-        <error line="1078" column="41" source="compose:vm-forwarding-check" />
-        <error line="1293" column="41" source="compose:vm-forwarding-check" />
-        <error line="1342" column="41" source="compose:vm-forwarding-check" />
-        <error line="1738" column="37" source="compose:vm-forwarding-check" />
-        <error line="1793" column="45" source="compose:vm-forwarding-check" />
-        <error line="1884" column="29" source="compose:vm-forwarding-check" />
+        <error line="849" column="9" source="compose:vm-forwarding-check" />
+        <error line="1089" column="41" source="compose:vm-forwarding-check" />
+        <error line="1304" column="41" source="compose:vm-forwarding-check" />
+        <error line="1353" column="41" source="compose:vm-forwarding-check" />
+        <error line="1749" column="37" source="compose:vm-forwarding-check" />
+        <error line="1804" column="45" source="compose:vm-forwarding-check" />
         <error line="1895" column="29" source="compose:vm-forwarding-check" />
-        <error line="1911" column="29" source="compose:vm-forwarding-check" />
-        <error line="1932" column="9" source="compose:vm-forwarding-check" />
+        <error line="1906" column="29" source="compose:vm-forwarding-check" />
+        <error line="1922" column="29" source="compose:vm-forwarding-check" />
+        <error line="1943" column="9" source="compose:vm-forwarding-check" />
     </file>
     <file name="src/main/java/com/shapeshed/booth/ui/PodcastHomeUpNextDestination.kt">
         <error line="25" column="5" source="compose:parameter-naming" />
