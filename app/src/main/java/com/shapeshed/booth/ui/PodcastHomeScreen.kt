@@ -1198,11 +1198,13 @@ fun PodcastHomeScreen(
                         } else {
                             TopAppBar(
                                 title = {
+                                    val managementCategory =
+                                        (currentDestination as? PodcastNavigationKey.PodcastManagement)?.category
                                     PodcastHomeTopBarTitle(
                                         inboxSelectionMode = selectionMode,
                                         selectedInboxCount = selectedInboxIds.size,
                                         showPodcastAppSettings = showPodcastAppSettings,
-                                        podcastManagementCategory = (currentDestination as? PodcastNavigationKey.PodcastManagement)?.category,
+                                        podcastManagementCategory = managementCategory,
                                         showDownloads = showDownloads,
                                         showAllEpisodes = showAllEpisodes,
                                         showPodcastSettings = showPodcastSettings,
@@ -1347,8 +1349,8 @@ fun PodcastHomeScreen(
                                                                 artworkUrl = podcast.artworkUrl,
                                                                 explicit = podcast.explicit,
                                                                 categories = podcast.categories.map { it.name },
-                                                                categoryIds = podcast.categories.mapNotNull { category ->
-                                                                    category.externalId?.let { category.name to it }
+                                                                categoryIds = podcast.categories.mapNotNull { c ->
+                                                                    c.externalId?.let { c.name to it }
                                                                 }.toMap(),
                                                             ),
                                                         ),
@@ -1379,7 +1381,8 @@ fun PodcastHomeScreen(
                                                             canonicalFeedUrl(result.podcast.feedUrl)
                                                     }?.let { podcast ->
                                                         selectedPodcastId = podcast.id
-                                                        if (topLevelBackStack.lastOrNull() !is PodcastNavigationKey.PodcastSettings) {
+                                                        val top = topLevelBackStack.lastOrNull()
+                                                        if (top !is PodcastNavigationKey.PodcastSettings) {
                                                             topLevelBackStack.add(
                                                                 PodcastNavigationKey.PodcastSettings(podcast.id),
                                                             )
@@ -1767,7 +1770,8 @@ fun PodcastHomeScreen(
                                                     onOpenPodcast = {
                                                         selectedEpisodeId = null
                                                         selectedPodcastId = displayEpisode.podcastId
-                                                        if (topLevelBackStack.lastOrNull() !is PodcastNavigationKey.PodcastDetail) {
+                                                        val top = topLevelBackStack.lastOrNull()
+                                                        if (top !is PodcastNavigationKey.PodcastDetail) {
                                                             topLevelBackStack.add(
                                                                 PodcastNavigationKey.PodcastDetail(
                                                                     displayEpisode.podcastId,

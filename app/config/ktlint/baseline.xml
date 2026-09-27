@@ -1,25 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <baseline version="1.0">
-    <file name="../../booth-pr16/app/src/androidTest/java/com/shapeshed/booth/ui/PodcastSwipeRowTest.kt">
-        <error line="24" column="27" source="compose:mutable-state-autoboxing" />
-    </file>
-    <file name="../../booth-pr16/app/src/test/java/com/shapeshed/booth/data/RssParserTest.kt">
-        <error line="39" column="121" source="standard:max-line-length" />
-        <error line="109" column="121" source="standard:max-line-length" />
-        <error line="259" column="121" source="standard:max-line-length" />
-        <error line="282" column="121" source="standard:max-line-length" />
-        <error line="534" column="121" source="standard:max-line-length" />
-        <error line="535" column="121" source="standard:max-line-length" />
-    </file>
-    <file name="../../booth-pr16/app/src/test/java/com/shapeshed/booth/ui/PodcastNavigationKeyTest.kt">
-        <error line="117" column="33" source="compose:mutable-state-autoboxing" />
-        <error line="119" column="35" source="compose:mutable-state-autoboxing" />
-        <error line="120" column="33" source="compose:mutable-state-autoboxing" />
-    </file>
-    <file name="src/main/java/com/shapeshed/booth/data/PodcastDatabase.kt">
-        <error line="477" column="121" source="standard:max-line-length" />
-        <error line="490" column="121" source="standard:max-line-length" />
-    </file>
     <file name="src/main/java/com/shapeshed/booth/data/StreamingFeedParser.kt">
         <error line="1" column="1" source="standard:filename" />
     </file>
@@ -71,11 +51,9 @@
         <error line="48" column="14" source="compose:param-order-check" />
         <error line="58" column="5" source="compose:lambda-param-in-effect" />
         <error line="58" column="5" source="compose:parameter-naming" />
-        <error line="98" column="121" source="standard:max-line-length" />
     </file>
     <file name="src/main/java/com/shapeshed/booth/ui/PodcastGlobalSearchContent.kt">
         <error line="48" column="14" source="compose:param-order-check" />
-        <error line="277" column="121" source="standard:max-line-length" />
     </file>
     <file name="src/main/java/com/shapeshed/booth/ui/PodcastHomeAppContent.kt">
         <error line="15" column="14" source="compose:param-order-check" />
@@ -89,9 +67,6 @@
     <file name="src/main/java/com/shapeshed/booth/ui/PodcastHomeEffects.kt">
         <error line="27" column="5" source="compose:lambda-param-in-effect" />
         <error line="28" column="5" source="compose:lambda-param-in-effect" />
-    </file>
-    <file name="src/main/java/com/shapeshed/booth/ui/PodcastHomeEpisodeActionsOverlay.kt">
-        <error line="107" column="121" source="standard:max-line-length" />
     </file>
     <file name="src/main/java/com/shapeshed/booth/ui/PodcastHomeInboxSelectionActions.kt">
         <error line="30" column="14" source="compose:multiple-emitters-check" />
@@ -125,20 +100,14 @@
         <error line="923" column="5" source="compose:vm-forwarding-check" />
         <error line="1004" column="9" source="compose:vm-forwarding-check" />
         <error line="1015" column="9" source="compose:vm-forwarding-check" />
-        <error line="1205" column="121" source="standard:max-line-length" />
-        <error line="1253" column="41" source="compose:vm-forwarding-check" />
-        <error line="1350" column="111" source="standard:function-literal" />
-        <error line="1350" column="120" source="standard:function-literal" />
-        <error line="1350" column="121" source="standard:max-line-length" />
-        <error line="1382" column="121" source="standard:max-line-length" />
-        <error line="1515" column="41" source="compose:vm-forwarding-check" />
-        <error line="1770" column="121" source="standard:max-line-length" />
-        <error line="1905" column="37" source="compose:vm-forwarding-check" />
-        <error line="1960" column="45" source="compose:vm-forwarding-check" />
-        <error line="2051" column="29" source="compose:vm-forwarding-check" />
-        <error line="2062" column="29" source="compose:vm-forwarding-check" />
-        <error line="2078" column="29" source="compose:vm-forwarding-check" />
-        <error line="2099" column="9" source="compose:vm-forwarding-check" />
+        <error line="1255" column="41" source="compose:vm-forwarding-check" />
+        <error line="1518" column="41" source="compose:vm-forwarding-check" />
+        <error line="1909" column="37" source="compose:vm-forwarding-check" />
+        <error line="1964" column="45" source="compose:vm-forwarding-check" />
+        <error line="2055" column="29" source="compose:vm-forwarding-check" />
+        <error line="2066" column="29" source="compose:vm-forwarding-check" />
+        <error line="2082" column="29" source="compose:vm-forwarding-check" />
+        <error line="2103" column="9" source="compose:vm-forwarding-check" />
     </file>
     <file name="src/main/java/com/shapeshed/booth/ui/PodcastHomeUpNextDestination.kt">
         <error line="22" column="5" source="compose:parameter-naming" />

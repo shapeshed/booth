@@ -274,9 +274,12 @@ internal fun PodcastGlobalSearchContent(
                 }
             }
         }
-        if (query.length >= 2 && filteredEpisodes.isEmpty() && localPodcasts.isEmpty() && discoverablePodcasts.isEmpty() &&
+        val showNoResults = query.length >= 2 &&
+            filteredEpisodes.isEmpty() &&
+            localPodcasts.isEmpty() &&
+            discoverablePodcasts.isEmpty() &&
             !isLoadingRemote
-        ) {
+        if (showNoResults) {
             item(key = "no-results") {
                 Text(
                     stringResource(R.string.no_results),

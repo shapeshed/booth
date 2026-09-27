@@ -1,3 +1,8 @@
+// PodcastHomeRouteState stores these ids as nullable Long, so the boxed
+// mutableStateOf is the correct type here and the autoboxing suggestion does
+// not apply. Waived for this file rather than widening the state to non-null.
+@file:Suppress("ktlint:compose:mutable-state-autoboxing")
+
 package com.shapeshed.booth.ui
 
 import androidx.compose.runtime.mutableStateOf

@@ -2,7 +2,7 @@ package com.shapeshed.booth.ui
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -21,7 +21,7 @@ class PodcastSwipeRowTest {
     @Test
     fun swipingPodcastRequiresConfirmation() {
         var removeCount = 0
-        var contentKey by mutableStateOf(0)
+        var contentKey by mutableIntStateOf(0)
         composeRule.setContent {
             BoothAppTheme {
                 key(contentKey) {

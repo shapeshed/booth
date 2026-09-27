@@ -104,9 +104,10 @@ internal fun PodcastHomeEpisodeActionsOverlay(
                         }
                     }
                     when (action) {
-                        is PodcastEpisodeAction.Subscribed -> viewModel.addToQueueFromInbox(action.episode.id, onError = {
-                            showAddError()
-                        })
+                        is PodcastEpisodeAction.Subscribed -> viewModel.addToQueueFromInbox(
+                            episodeId = action.episode.id,
+                            onError = { showAddError() },
+                        )
 
                         is PodcastEpisodeAction.Preview -> viewModel.addPreviewToQueue(
                             episode = action.episode,

@@ -1,3 +1,5 @@
+@file:Suppress("ktlint:standard:max-line-length")
+
 package com.shapeshed.booth.data
 
 import java.io.ByteArrayInputStream
