@@ -8,9 +8,19 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 
+    <!--
+      Backups are off deliberately. Booth is local-first and PRIVACY.md promises the library
+      never leaves the device, so cloud backup, adb backup and device-to-device transfer are
+      all excluded. allowBackup covers API 30 and below; dataExtractionRules is the Android 12+
+      mechanism and is what lint expects at targetSdk 37. The user-driven export/import in
+      Settings (PodcastBackupManager) is the only backup path. Do not re-enable either without
+      updating PRIVACY.md.
+    -->
     <application
         android:name=".BoothApp"
-        android:allowBackup="true"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="false"
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
