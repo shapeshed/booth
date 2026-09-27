@@ -89,6 +89,7 @@ import com.shapeshed.booth.data.DownloadAssetEntity
 import com.shapeshed.booth.data.DownloadAssetStatus
 import com.shapeshed.booth.data.DownloadProgress
 import com.shapeshed.booth.data.EpisodeEntity
+import com.shapeshed.booth.data.isDownloaded
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -134,9 +135,9 @@ internal fun EpisodeRow(
     modifier: Modifier = Modifier,
     isBuffering: Boolean = false,
     positionOverride: Long? = null,
-    downloaded: Boolean = episode.localUri != null,
     onDownload: () -> Unit,
     downloadProgress: DownloadProgress?,
+    downloaded: Boolean = episode.isDownloaded(downloadProgress),
 ) {
     Column(modifier.fillMaxWidth()) {
         Surface(
@@ -171,8 +172,7 @@ internal fun EpisodeRow(
                             isPlaying = active && isPlaying,
                             isBuffering = active && isBuffering,
                             positionOverride = positionOverride,
-                            showPlayback = episode.localUri != null ||
-                                downloadProgress?.completed == true ||
+                            showPlayback = episode.isDownloaded(downloadProgress) ||
                                 !episode.audioUrl.isNullOrBlank(),
                             onPlay = if (active) onTogglePlayPause else onPlay,
                             onActions = onLongPress,
@@ -196,8 +196,8 @@ internal fun EpisodeRow(
 internal fun EpisodeTitleBlock(
     episode: EpisodeEntity,
     active: Boolean,
-    downloaded: Boolean = episode.localUri != null,
     downloadProgress: DownloadProgress? = null,
+    downloaded: Boolean = episode.isDownloaded(downloadProgress),
     explicit: Boolean? = episode.explicit,
     trailingContent: (@Composable (() -> Unit))? = null,
 ) {
@@ -718,7 +718,7 @@ internal fun PodcastEpisodeDetail(
         downloadProgress = downloadProgress,
         isInQueue = isInQueue,
         onToggleQueue = onToggleQueue,
-        isDownloaded = episode.localUri != null || downloadProgress?.completed == true,
+        isDownloaded = episode.isDownloaded(downloadProgress),
         isFavorite = isFavorite,
         onToggleFavorite = onToggleFavorite,
         onOpenPodcast = onOpenPodcast,

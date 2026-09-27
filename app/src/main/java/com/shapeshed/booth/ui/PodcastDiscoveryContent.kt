@@ -7,6 +7,7 @@ import com.shapeshed.booth.data.DownloadProgress
 import com.shapeshed.booth.data.Episode
 import com.shapeshed.booth.data.EpisodeEntity
 import com.shapeshed.booth.data.PodcastDiscoveryCategory
+import com.shapeshed.booth.data.isDownloaded
 
 @Composable
 internal fun PodcastDiscoveryContent(
@@ -139,8 +140,8 @@ internal fun PodcastDiscoveryContent(
                         podcastTitle = previewResult.podcast.title,
                         podcastArtworkUrl = previewResult.podcast.artworkUrl,
                         linkUrl = episode.linkUrl ?: previewResult.podcast.siteUrl,
-                        isDownloaded = previewEpisodeEntities[episode.id]?.localUri != null ||
-                            downloadProgress[episode.id]?.completed == true,
+                        isDownloaded = previewEpisodeEntities[episode.id]
+                            ?.isDownloaded(downloadProgress[episode.id]) == true,
                         downloadSizeBytes = episode.audioSizeBytes ?: downloadProgress[episode.id]?.totalBytes,
                         isCompleted = previewEpisodeEntities[episode.id]?.completed == true,
                         isInQueue = episode.id in queueEpisodeIds,

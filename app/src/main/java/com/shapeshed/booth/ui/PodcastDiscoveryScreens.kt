@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import com.shapeshed.booth.R
 import com.shapeshed.booth.data.DownloadProgress
 import com.shapeshed.booth.data.EpisodeEntity
+import com.shapeshed.booth.data.isDownloaded
 import com.shapeshed.booth.data.relativeTime
 import java.util.Locale
 
@@ -282,9 +283,8 @@ internal fun PodcastDiscoveryPreview(
                                     EpisodeTitleBlock(
                                         episode,
                                         episode.id == activeEpisodeId,
-                                        downloaded =
-                                            savedEpisode?.localUri != null ||
-                                                downloadProgress[episode.id]?.completed == true,
+                                        downloaded = savedEpisode
+                                            ?.isDownloaded(downloadProgress[episode.id]) == true,
                                         downloadProgress = downloadProgress[episode.id],
                                     )
                                 },
@@ -294,8 +294,7 @@ internal fun PodcastDiscoveryPreview(
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
                                         if (
-                                            downloadProgress[episode.id]?.completed == true ||
-                                            savedEpisode?.localUri != null ||
+                                            savedEpisode?.isDownloaded(downloadProgress[episode.id]) == true ||
                                             !episode.audioUrl.isNullOrBlank() ||
                                             !episode.videoUrl.isNullOrBlank() ||
                                             episode.id == activeEpisodeId

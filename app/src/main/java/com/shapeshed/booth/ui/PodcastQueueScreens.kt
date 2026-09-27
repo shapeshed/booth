@@ -65,6 +65,7 @@ import com.shapeshed.booth.R
 import com.shapeshed.booth.data.DownloadProgress
 import com.shapeshed.booth.data.EpisodeEntity
 import com.shapeshed.booth.data.PodcastEntity
+import com.shapeshed.booth.data.isDownloaded
 import kotlinx.coroutines.launch
 
 @Composable
@@ -395,7 +396,7 @@ internal fun QueueEpisodeSwipeRow(
                             EpisodeTitleBlock(
                                 episode,
                                 active,
-                                downloaded = episode.localUri != null || downloadProgress?.completed == true,
+                                downloaded = episode.isDownloaded(downloadProgress),
                                 downloadProgress = downloadProgress,
                             )
                         }
@@ -620,7 +621,7 @@ internal fun InboxEpisodeSwipeRow(
                         EpisodeTitleBlock(
                             episode,
                             active,
-                            downloaded = episode.localUri != null || downloadProgress?.completed == true,
+                            downloaded = episode.isDownloaded(downloadProgress),
                             downloadProgress = downloadProgress,
                         )
                     },

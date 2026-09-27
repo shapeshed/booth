@@ -53,6 +53,7 @@ import com.shapeshed.booth.data.DownloadProgress
 import com.shapeshed.booth.data.EpisodeEntity
 import com.shapeshed.booth.data.PodcastEntity
 import com.shapeshed.booth.data.displayCategories
+import com.shapeshed.booth.data.isDownloaded
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
@@ -207,7 +208,7 @@ internal fun PodcastDetail(
                     playedFraction = playbackProgress.fraction,
                     episodeDurationMs = episode.durationMs,
                 ),
-                downloaded = episode.localUri != null || downloadProgress[episode.id]?.completed == true,
+                downloaded = episode.isDownloaded(downloadProgress[episode.id]),
                 onDownload = { onDownload(episode) },
                 downloadProgress = downloadProgress[episode.id],
             )

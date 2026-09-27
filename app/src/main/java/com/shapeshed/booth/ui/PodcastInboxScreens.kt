@@ -64,6 +64,7 @@ import com.shapeshed.booth.data.DownloadProgress
 import com.shapeshed.booth.data.EpisodeEntity
 import com.shapeshed.booth.data.PodcastDownloadManager
 import com.shapeshed.booth.data.PodcastEntity
+import com.shapeshed.booth.data.isDownloaded
 
 @Composable
 internal fun PodcastInbox(
@@ -413,7 +414,10 @@ internal fun PodcastDownloadsScreen(
         items(visibleAssets, key = { "download-${it.episodeId}" }) { asset ->
             val episode = episodes[asset.episodeId] ?: return@items
             val episodeProgress = downloadProgress[episode.id]
-            val isDownloaded = episode.localUri != null || asset.status == DownloadAssetStatus.COMPLETED
+            // The asset row is authoritative for this list, and the live progress covers the
+            // window between a transfer completing and that row being written.
+            val isDownloaded = episode.isDownloaded(episodeProgress) ||
+                asset.status == DownloadAssetStatus.COMPLETED
             val isCompleted = episode.completed
             val isActive = activeEpisodeId == episode.id
             val podcastTitle = podcastsById[episode.podcastId]?.title.orEmpty()
