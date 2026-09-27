@@ -10,7 +10,11 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
-class PodcastDownloadManager(private val context: Context, private val repository: PodcastRepository) {
+class PodcastDownloadManager(
+    private val context: Context,
+    private val repository: PodcastRepository,
+    private val progressStore: DownloadProgressStore,
+) {
     private val downloadManager = context.getSystemService(DownloadManager::class.java)
     private val enqueueMutex = Mutex()
 
@@ -83,7 +87,7 @@ class PodcastDownloadManager(private val context: Context, private val repositor
             downloadManager.remove(downloadId)
             throw error
         }
-        DownloadProgressStore.update(
+        progressStore.update(
             episode.id,
             DownloadProgress(0L, expectedBytes ?: 0L, android.os.SystemClock.elapsedRealtime()),
         )
@@ -164,14 +168,14 @@ class PodcastDownloadManager(private val context: Context, private val repositor
                         }
                     } else if (mappedStatus == DownloadAssetStatus.FAILED) {
                         clearLocalUri(asset)
-                        DownloadProgressStore.clear(asset.episodeId)
+                        progressStore.clear(asset.episodeId)
                     }
-                    DownloadProgressStore.update(
+                    progressStore.update(
                         asset.episodeId,
                         DownloadProgress(
                             bytesDownloaded = bytes,
                             totalBytes = total ?: 0L,
-                            startedAtElapsedMs = DownloadProgressStore.progress.value[asset.episodeId]
+                            startedAtElapsedMs = progressStore.progress.value[asset.episodeId]
                                 ?.startedAtElapsedMs
                                 ?: android.os.SystemClock.elapsedRealtime(),
                             completed = mappedStatus == DownloadAssetStatus.COMPLETED,
@@ -192,7 +196,7 @@ class PodcastDownloadManager(private val context: Context, private val repositor
             completedAtMillis = null,
         )
         clearLocalUri(asset)
-        DownloadProgressStore.clear(asset.episodeId)
+        progressStore.clear(asset.episodeId)
     }
 
     private suspend fun clearLocalUri(asset: DownloadAssetEntity) {
@@ -208,7 +212,7 @@ class PodcastDownloadManager(private val context: Context, private val repositor
             .filter { it.episodeId == episodeId }
             .forEach { downloadManager.remove(it.downloadId) }
         repository.removeDownloadAssets(episodeId)
-        DownloadProgressStore.clear(episodeId)
+        progressStore.clear(episodeId)
     }
 
     /** Frees safe downloads as needed and returns the candidates that fit within the limit. */

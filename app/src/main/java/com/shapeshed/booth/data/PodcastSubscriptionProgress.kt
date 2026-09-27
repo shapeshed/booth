@@ -1,5 +1,6 @@
 package com.shapeshed.booth.data
 
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,7 +28,14 @@ data class PodcastSubscriptionProgress(
     val errorMessage: String? = null,
 )
 
-object PodcastSubscriptionProgressStore {
+/**
+ * In-flight subscription progress, keyed by feed URL.
+ *
+ * A class rather than an `object` for the same reason as DownloadProgressStore: it is written
+ * from Dispatchers.IO in PodcastSubscribeWorker and from the main thread in the ViewModel, so it
+ * should be visible in the object graph and replaceable in a test.
+ */
+class PodcastSubscriptionProgressStore @Inject constructor() {
     private val _progress = MutableStateFlow<Map<String, PodcastSubscriptionProgress>>(emptyMap())
     val progress: StateFlow<Map<String, PodcastSubscriptionProgress>> = _progress.asStateFlow()
 

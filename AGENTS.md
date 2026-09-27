@@ -113,6 +113,12 @@ directory is intentionally ignored.
   a long hand-written chain is permanent carrying cost. The first real schema change is v2: add a
   `Migration`, add it to `create()`, and cover it with a `MigrationTestHelper` instrumented test in
   the same change. `room-testing` is kept as an androidTest dependency for exactly that.
+- Do not introduce a mutable `object` singleton for state that more than one component touches.
+  Bind it in `BoothModule` and reach it from `BoothWorkerEntryPoint` instead. A process-global is
+  invisible in the object graph, cannot be replaced in a test, and any lock it holds is per
+  instance rather than per process, so it silently provides no mutual exclusion.
+  `BoothWorkerEntryPointDeviceTest` pins the shared instances; keep it passing. The only remaining
+  `object` state is `SleepTimerStore`, which has a single writer, the playback service.
 
 ## UI notes
 

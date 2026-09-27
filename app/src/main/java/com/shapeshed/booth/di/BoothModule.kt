@@ -3,6 +3,7 @@ package com.shapeshed.booth.di
 import android.content.Context
 import com.shapeshed.booth.data.ApplePodcastSearchProvider
 import com.shapeshed.booth.data.DefaultPodcastSearchCatalog
+import com.shapeshed.booth.data.DownloadProgressStore
 import com.shapeshed.booth.data.FeedParser
 import com.shapeshed.booth.data.PodcastBackupManager
 import com.shapeshed.booth.data.PodcastDatabase
@@ -11,6 +12,7 @@ import com.shapeshed.booth.data.PodcastFeedProvider
 import com.shapeshed.booth.data.PodcastIndexCredentialsStore
 import com.shapeshed.booth.data.PodcastIndexSearchProvider
 import com.shapeshed.booth.data.PodcastRepository
+import com.shapeshed.booth.data.PodcastSubscriptionProgressStore
 import com.shapeshed.booth.data.PodcastSearchCatalog
 import com.shapeshed.booth.data.Prof18FeedParser
 import com.shapeshed.booth.data.RssPodcastFeedProvider
@@ -134,10 +136,20 @@ object BoothModule {
      */
     @Provides
     @Singleton
+    fun provideDownloadProgressStore(): DownloadProgressStore = DownloadProgressStore()
+
+    @Provides
+    @Singleton
+    fun providePodcastSubscriptionProgressStore(): PodcastSubscriptionProgressStore =
+        PodcastSubscriptionProgressStore()
+
+    @Provides
+    @Singleton
     fun providePodcastDownloadManager(
         @ApplicationContext context: Context,
         repository: PodcastRepository,
-    ): PodcastDownloadManager = PodcastDownloadManager(context, repository)
+        progressStore: DownloadProgressStore,
+    ): PodcastDownloadManager = PodcastDownloadManager(context, repository, progressStore)
 
     @Provides
     @Singleton

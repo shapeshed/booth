@@ -19,8 +19,9 @@ class EpisodeDownloadWorker(appContext: Context, workerParams: WorkerParameters)
         if (episodeId <= 0L) return@withContext Result.failure()
         val entryPoint = boothWorkerEntryPoint(applicationContext)
         val repository = entryPoint.podcastRepository
+        val progressStore = entryPoint.downloadProgressStore
         val episode = repository.episode(episodeId)
-            ?: return@withContext Result.failure().also { DownloadProgressStore.clear(episodeId) }
+            ?: return@withContext Result.failure().also { progressStore.clear(episodeId) }
         try {
             val manager = entryPoint.downloadManager
             if (episode.localUri == null) {
@@ -50,7 +51,7 @@ class EpisodeDownloadWorker(appContext: Context, workerParams: WorkerParameters)
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: IllegalArgumentException) {
-            DownloadProgressStore.clear(episodeId)
+            progressStore.clear(episodeId)
             Result.failure()
         } catch (_: Exception) {
             Result.retry()

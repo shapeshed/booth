@@ -63,7 +63,10 @@ class PodcastDownloadManagerDeviceTest {
             dao = database.podcastDao(),
             downloadDao = database.downloadAssetDao(),
         )
-        manager = PodcastDownloadManager(context, repository)
+        // The test builds its own instance, so it supplies its own progress store. That is the
+        // point of the store being an injectable class rather than an `object`: this test now
+        // owns the progress state it asserts on instead of sharing a process-global.
+        manager = PodcastDownloadManager(context, repository, DownloadProgressStore())
         episode = EpisodeEntity(
             id = 9_876_543_210L,
             podcastId = 1L,

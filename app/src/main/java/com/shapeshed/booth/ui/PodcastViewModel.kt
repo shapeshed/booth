@@ -166,6 +166,8 @@ class PodcastViewModel @Inject constructor(
     private val settings: SettingsStore,
     private val credentialsStore: PodcastIndexCredentialsStore,
     private val downloadManager: PodcastDownloadManager,
+    private val progressStore: DownloadProgressStore,
+    private val subscriptionProgressStore: PodcastSubscriptionProgressStore,
     private val backupManager: PodcastBackupManager,
     @ApplicationContext private val applicationContext: Context,
 ) : ViewModel() {
@@ -177,6 +179,17 @@ class PodcastViewModel @Inject constructor(
     private val categoryJobs = mutableMapOf<String, Deferred<PodcastDiscoveryShelfResult>>()
     val searchProviders: List<PodcastSearchProvider> = searchCatalog.providers
     val podcastIndexCredentials: StateFlow<PodcastIndexCredentials?> = credentialsStore.credentials
+
+    /**
+     * In-flight subscription progress, for the spinner on a subscribing podcast.
+     *
+     * Exposed here rather than read from the store directly by the home screen, so the UI does not
+     * reach into a process-global in the data layer. This ViewModel is already the writer for
+     * every transition the UI observes.
+     */
+    val subscriptionProgress: StateFlow<Map<String, PodcastSubscriptionProgress>> =
+        subscriptionProgressStore.progress
+
     val podcasts: StateFlow<List<PodcastEntity>> = repository.podcasts.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5_000),
@@ -370,7 +383,7 @@ class PodcastViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
     val downloadProgress: StateFlow<Map<Long, DownloadProgress>> = combine(
         downloadAssets,
-        DownloadProgressStore.progress,
+        progressStore.progress,
     ) { assets, liveProgress -> mergeDownloadProgress(assets, liveProgress) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
@@ -697,7 +710,7 @@ class PodcastViewModel @Inject constructor(
         appleCategoryIds: Map<String, String> = emptyMap(),
         categoryProviderId: String = APPLE_DIRECTORY_PROVIDER_ID,
     ) {
-        PodcastSubscriptionProgressStore.queued(feedUrl, title)
+        subscriptionProgressStore.queued(feedUrl, title)
         val request = OneTimeWorkRequestBuilder<PodcastSubscribeWorker>()
             .setInputData(
                 workDataOf(
@@ -1095,7 +1108,7 @@ class PodcastViewModel @Inject constructor(
     }
 
     fun remove(podcast: PodcastEntity) {
-        PodcastSubscriptionProgressStore.update(
+        subscriptionProgressStore.update(
             podcast.feedUrl,
             PodcastSubscriptionProgress(
                 stage = PodcastSubscriptionStage.UNSUBSCRIBING,
@@ -1105,12 +1118,12 @@ class PodcastViewModel @Inject constructor(
         viewModelScope.launch {
             runCancellableCatching { repository.remove(podcast) }
                 .onFailure { _state.value = state.value.copy(error = PodcastUiError.RemovePodcastFailed) }
-                .also { PodcastSubscriptionProgressStore.clear(podcast.feedUrl) }
+                .also { subscriptionProgressStore.clear(podcast.feedUrl) }
         }
     }
 
     fun markUnsubscribing(podcast: PodcastEntity) {
-        PodcastSubscriptionProgressStore.update(
+        subscriptionProgressStore.update(
             podcast.feedUrl,
             PodcastSubscriptionProgress(
                 stage = PodcastSubscriptionStage.UNSUBSCRIBING,
@@ -1120,7 +1133,7 @@ class PodcastViewModel @Inject constructor(
     }
 
     fun clearSubscriptionProgress(podcast: PodcastEntity) {
-        PodcastSubscriptionProgressStore.clear(podcast.feedUrl)
+        subscriptionProgressStore.clear(podcast.feedUrl)
     }
 
     fun updatePodcastSettings(
@@ -1242,7 +1255,7 @@ class PodcastViewModel @Inject constructor(
     fun download(context: android.content.Context, episodeId: Long) {
         // WorkManager and DownloadManager are intentionally asynchronous. Publish the
         // pending state now so every list view gives immediate feedback on the tap.
-        DownloadProgressStore.request(episodeId)
+        progressStore.request(episodeId)
         enqueueDownload(context, episodeId, PodcastDownloadNetwork.ANY_CONNECTION)
     }
 
@@ -1270,7 +1283,7 @@ class PodcastViewModel @Inject constructor(
     }
 
     private fun enqueueDownload(context: Context, episodeId: Long, network: PodcastDownloadNetwork) {
-        DownloadProgressStore.request(episodeId)
+        progressStore.request(episodeId)
         val request = OneTimeWorkRequestBuilder<EpisodeDownloadWorker>()
             .setInputData(workDataOf(EPISODE_ID_INPUT to episodeId))
             .setConstraints(

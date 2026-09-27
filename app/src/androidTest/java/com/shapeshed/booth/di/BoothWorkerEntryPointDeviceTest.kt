@@ -2,6 +2,7 @@ package com.shapeshed.booth.di
 
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.shapeshed.booth.data.DownloadProgressStore
 import com.shapeshed.booth.data.PodcastBackupManager
 import com.shapeshed.booth.data.PodcastDownloadManager
 import com.shapeshed.booth.data.PodcastRepository
@@ -32,6 +33,9 @@ class BoothWorkerEntryPointDeviceTest {
 
     @Inject
     lateinit var backupManager: PodcastBackupManager
+
+    @Inject
+    lateinit var progressStore: DownloadProgressStore
 
     @Before
     fun injectDependencies() {
@@ -91,5 +95,18 @@ class BoothWorkerEntryPointDeviceTest {
         val application = ApplicationProvider.getApplicationContext<android.app.Application>()
 
         assertSame(backupManager, boothWorkerEntryPoint(application).backupManager)
+    }
+
+    /**
+     * DownloadProgressStore was a process-global `object` written from Dispatchers.IO in the
+     * download workers, the reconciliation worker and the broadcast receiver, and from the main
+     * thread in the ViewModel. Beyond being invisible in the graph, that made it impossible for a
+     * test to hand a component its own instance and assert on the progress it produced.
+     */
+    @Test
+    fun downloadProgressStoreIsInjectedRatherThanGlobal() {
+        val application = ApplicationProvider.getApplicationContext<android.app.Application>()
+
+        assertSame(progressStore, boothWorkerEntryPoint(application).downloadProgressStore)
     }
 }

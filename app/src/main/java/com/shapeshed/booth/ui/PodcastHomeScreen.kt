@@ -95,7 +95,6 @@ import com.shapeshed.booth.data.PodcastDiscoveryCategory
 import com.shapeshed.booth.data.PodcastEntity
 import com.shapeshed.booth.data.PodcastEpisodeSearchResult
 import com.shapeshed.booth.data.PodcastSearchResult
-import com.shapeshed.booth.data.PodcastSubscriptionProgressStore
 import com.shapeshed.booth.data.PodcastSubscriptionStage
 import com.shapeshed.booth.data.canonicalFeedUrl
 import com.shapeshed.booth.data.isAdded
@@ -244,7 +243,7 @@ fun PodcastHomeScreen(
     val globalSearchQuery by viewModel.globalSearchQuery.collectAsStateWithLifecycle()
     val globalSearchEpisodes by viewModel.globalSearchEpisodes.collectAsStateWithLifecycle()
     val globalSearchState by viewModel.globalSearchState.collectAsStateWithLifecycle()
-    val subscriptionProgress by PodcastSubscriptionProgressStore.progress.collectAsStateWithLifecycle()
+    val subscriptionProgress by viewModel.subscriptionProgress.collectAsStateWithLifecycle()
     val refreshing = homeUiState.refreshing
     val subscriptionsViewMode = homeUiState.subscriptionsViewMode
     val playback = homeUiState.playback

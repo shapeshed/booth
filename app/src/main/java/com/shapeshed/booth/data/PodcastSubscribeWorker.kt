@@ -35,11 +35,12 @@ class PodcastSubscribeWorker(appContext: Context, workerParams: WorkerParameters
             ?.takeIf(String::isNotBlank)
             ?: APPLE_DIRECTORY_PROVIDER_ID
         val entryPoint = boothWorkerEntryPoint(applicationContext)
+        val progressStore = entryPoint.subscriptionProgressStore
         try {
             // A retained preview may contain only episodes explicitly selected by the user.
             // Always complete a fresh parse before promoting a podcast to a subscription.
             // This keeps streamed discovery chunks from becoming an incomplete subscription.
-            PodcastSubscriptionProgressStore.update(
+            progressStore.update(
                 feedUrl,
                 PodcastSubscriptionProgress(PodcastSubscriptionStage.FETCHING, title = requestedTitle),
             )
@@ -50,7 +51,7 @@ class PodcastSubscribeWorker(appContext: Context, workerParams: WorkerParameters
                 appleCategoryIds = appleCategoryIds,
                 categoryProviderId = categoryProviderId,
                 onEpisodeProgress = { processed, total ->
-                    PodcastSubscriptionProgressStore.update(
+                    progressStore.update(
                         feedUrl,
                         PodcastSubscriptionProgress(
                             PodcastSubscriptionStage.PARSING,
@@ -61,13 +62,13 @@ class PodcastSubscribeWorker(appContext: Context, workerParams: WorkerParameters
                     )
                 },
                 onSaving = {
-                    PodcastSubscriptionProgressStore.update(
+                    progressStore.update(
                         feedUrl,
                         PodcastSubscriptionProgress(PodcastSubscriptionStage.SAVING, title = requestedTitle),
                     )
                 },
             )
-            PodcastSubscriptionProgressStore.update(
+            progressStore.update(
                 feedUrl,
                 PodcastSubscriptionProgress(
                     PodcastSubscriptionStage.ADDED,
@@ -80,7 +81,7 @@ class PodcastSubscribeWorker(appContext: Context, workerParams: WorkerParameters
         } catch (error: Exception) {
             if (runAttemptCount >= MAX_ATTEMPTS - 1) {
                 Log.w(TAG, "Subscription failed after $MAX_ATTEMPTS attempts: $feedUrl", error)
-                PodcastSubscriptionProgressStore.update(
+                progressStore.update(
                     feedUrl,
                     PodcastSubscriptionProgress(
                         stage = PodcastSubscriptionStage.FAILED,

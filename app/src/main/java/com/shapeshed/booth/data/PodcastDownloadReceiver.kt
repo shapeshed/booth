@@ -13,6 +13,7 @@ import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
+import com.shapeshed.booth.di.BoothWorkerEntryPoint
 import com.shapeshed.booth.di.boothWorkerEntryPoint
 import java.io.File
 import kotlinx.coroutines.CancellationException
@@ -28,11 +29,12 @@ class PodcastDownloadReceiver : BroadcastReceiver() {
         val downloadId = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L)
         if (downloadId < 0L) return
         val appContext = context.applicationContext
+        val entryPoint = boothWorkerEntryPoint(appContext)
         val pendingResult = goAsync()
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         scope.launch {
             try {
-                reconcile(appContext, downloadId)
+                reconcile(appContext, downloadId, entryPoint)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
@@ -52,8 +54,13 @@ class PodcastDownloadReceiver : BroadcastReceiver() {
         }
     }
 
-    private suspend fun reconcile(appContext: Context, downloadId: Long) {
-        val repository = boothWorkerEntryPoint(appContext).podcastRepository
+    private suspend fun reconcile(
+        appContext: Context,
+        downloadId: Long,
+        entryPoint: BoothWorkerEntryPoint,
+    ) {
+        val repository = entryPoint.podcastRepository
+        val progressStore = entryPoint.downloadProgressStore
         val asset = repository.downloadAssetById(downloadId) ?: return
         val manager = appContext.getSystemService(DownloadManager::class.java)
         val cursor = manager.query(DownloadManager.Query().setFilterById(downloadId)) ?: return
@@ -86,7 +93,7 @@ class PodcastDownloadReceiver : BroadcastReceiver() {
                     )
                     clearLocalUri(repository, asset)
                     file.delete()
-                    DownloadProgressStore.clear(asset.episodeId)
+                    progressStore.clear(asset.episodeId)
                     return
                 }
                 repository.updateDownloadAsset(
@@ -103,7 +110,7 @@ class PodcastDownloadReceiver : BroadcastReceiver() {
                 } else {
                     repository.setLocalUri(asset.episodeId, asset.destinationUri)
                 }
-                DownloadProgressStore.update(
+                progressStore.update(
                     asset.episodeId,
                     DownloadProgress(
                         file.length(),
@@ -136,7 +143,7 @@ class PodcastDownloadReceiver : BroadcastReceiver() {
                         ExistingWorkPolicy.REPLACE,
                         retryRequest,
                     )
-                    DownloadProgressStore.clear(asset.episodeId)
+                    progressStore.clear(asset.episodeId)
                     return
                 }
                 repository.updateDownloadAsset(
@@ -148,7 +155,7 @@ class PodcastDownloadReceiver : BroadcastReceiver() {
                     errorMessage,
                 )
                 clearLocalUri(repository, asset)
-                DownloadProgressStore.clear(asset.episodeId)
+                progressStore.clear(asset.episodeId)
             }
         }
     }
