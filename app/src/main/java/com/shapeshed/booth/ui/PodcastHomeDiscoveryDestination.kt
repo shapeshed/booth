@@ -7,6 +7,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.shapeshed.booth.data.Episode
 import com.shapeshed.booth.data.PodcastDiscoveryCategory
 import com.shapeshed.booth.data.PodcastSearchResult
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Adapts home state and route events to the discovery screen.
@@ -69,7 +70,7 @@ internal fun PodcastHomeDiscoveryDestination(
 internal fun ScopedPodcastHomeDiscoveryDestination(
     homeUiState: PodcastHomeUiState,
     actions: PodcastDiscoveryActions,
-    playbackViewModel: PodcastPlaybackViewModel,
+    playbackProgressFlow: StateFlow<PlaybackProgress>,
     queueEpisodeIds: List<Long>,
     subscribedFeedUrls: Set<String>,
     twoPane: Boolean,
@@ -84,7 +85,7 @@ internal fun ScopedPodcastHomeDiscoveryDestination(
     onEpisode: (Episode) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val progress by playbackViewModel.progress.collectAsStateWithLifecycle()
+    val progress by playbackProgressFlow.collectAsStateWithLifecycle()
     PodcastHomeDiscoveryDestination(
         homeUiState = homeUiState,
         actions = actions,

@@ -78,7 +78,7 @@ internal fun PodcastQueueScreen(
     isBuffering: Boolean,
     onOpen: (EpisodeEntity) -> Unit,
     onRemove: suspend (Long) -> Result<Unit>,
-    onRemoveFailed: (EpisodeEntity) -> Unit,
+    onRemoveError: (EpisodeEntity) -> Unit,
     onReorder: (List<Long>) -> Unit,
     reorderMode: Boolean,
     onPlay: (EpisodeEntity) -> Unit,
@@ -220,7 +220,7 @@ internal fun PodcastQueueScreen(
                                 }
                                 pendingRemovalIds = pendingRemovalIds - episode.id
                                 removalBackups = removalBackups - episode.id
-                                onRemoveFailed(episode)
+                                onRemoveError(episode)
                             }
                             result
                         }

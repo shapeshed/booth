@@ -849,7 +849,7 @@ fun PodcastHomeScreen(
         ScopedPodcastHomeDiscoveryDestination(
             homeUiState = homeUiState,
             actions = discoveryActions,
-            playbackViewModel = playbackViewModel,
+            playbackProgressFlow = playbackViewModel.progress,
             queueEpisodeIds = queueEpisodeIds,
             subscribedFeedUrls = subscribedFeedUrls,
             onSubscribe = { result -> enqueueSubscription(result) },
@@ -1300,11 +1300,11 @@ fun PodcastHomeScreen(
                                 @Composable
                                 fun RootTabContent(tab: PodcastTab) {
                                     if (tab == PodcastTab.HOME) {
-                                        PodcastHomeInboxDestination(
+                                        ScopedPodcastHomeInboxDestination(
                                             inbox = inbox,
                                             podcastsById = podcastsById,
                                             playback = playback,
-                                            playbackViewModel = playbackViewModel,
+                                            playbackProgressFlow = playbackViewModel.progress,
                                             selectionMode = inboxSelectionMode,
                                             selectedEpisodeIds = selectedInboxIds,
                                             onSelectedEpisodeIdsChange = { selectedInboxIds = it },
@@ -1349,14 +1349,14 @@ fun PodcastHomeScreen(
                                             modifier = Modifier.fillMaxSize(),
                                         )
                                     } else if (tab == PodcastTab.UP_NEXT) {
-                                        PodcastHomeUpNextDestination(
+                                        ScopedPodcastHomeUpNextDestination(
                                             episodes = queueEpisodes,
                                             podcastsById = allPodcastsById,
                                             playback = playback,
-                                            playbackViewModel = playbackViewModel,
+                                            playbackProgressFlow = playbackViewModel.progress,
                                             downloadProgress = downloadProgress,
-                                            viewModel = viewModel,
-                                            context = context,
+                                            onRemoveFromQueue = viewModel::removeFromQueueAwait,
+                                            onDownload = { viewModel.download(context, it.id) },
                                             reorderMode = queueReorderMode,
                                             filter = queueFilter,
                                             onFilterChange = { queueFilter = it },
@@ -1382,7 +1382,7 @@ fun PodcastHomeScreen(
                                                     queueEpisodeIds = queueEpisodeIds,
                                                 )
                                             },
-                                            onRemoveFailed = {
+                                            onRemoveError = {
                                                 scope.launch { snackbarHostState.showSnackbar(removeUpNextFailed) }
                                             },
                                             onReorder = viewModel::reorderQueue,

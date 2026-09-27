@@ -71,19 +71,13 @@
         <error line="725" column="5" source="compose:vm-forwarding-check" />
         <error line="757" column="5" source="compose:vm-forwarding-check" />
         <error line="838" column="9" source="compose:vm-forwarding-check" />
-        <error line="849" column="9" source="compose:vm-forwarding-check" />
         <error line="1088" column="41" source="compose:vm-forwarding-check" />
-        <error line="1303" column="41" source="compose:vm-forwarding-check" />
-        <error line="1352" column="41" source="compose:vm-forwarding-check" />
         <error line="1748" column="37" source="compose:vm-forwarding-check" />
         <error line="1803" column="45" source="compose:vm-forwarding-check" />
         <error line="1894" column="29" source="compose:vm-forwarding-check" />
         <error line="1905" column="29" source="compose:vm-forwarding-check" />
         <error line="1921" column="29" source="compose:vm-forwarding-check" />
         <error line="1942" column="9" source="compose:vm-forwarding-check" />
-    </file>
-    <file name="src/main/java/com/shapeshed/booth/ui/PodcastHomeUpNextDestination.kt">
-        <error line="25" column="5" source="compose:parameter-naming" />
     </file>
     <file name="src/main/java/com/shapeshed/booth/ui/PodcastInboxScreens.kt">
         <error line="186" column="5" source="compose:lambda-param-in-effect" />
@@ -99,7 +93,6 @@
         <error line="23" column="5" source="compose:parameter-naming" />
     </file>
     <file name="src/main/java/com/shapeshed/booth/ui/PodcastQueueScreens.kt">
-        <error line="81" column="5" source="compose:parameter-naming" />
         <error line="297" column="14" source="compose:param-order-check" />
         <error line="475" column="5" source="compose:lambda-param-in-effect" />
         <error line="476" column="5" source="compose:lambda-param-in-effect" />
@@ -107,8 +100,5 @@
     <file name="src/main/java/com/shapeshed/booth/ui/PodcastSubscriptionsContent.kt">
         <error line="9" column="14" source="compose:param-order-check" />
         <error line="37" column="5" source="compose:parameter-naming" />
-    </file>
-    <file name="src/main/java/com/shapeshed/booth/ui/PodcastUpNextContent.kt">
-        <error line="19" column="5" source="compose:parameter-naming" />
     </file>
 </baseline>
