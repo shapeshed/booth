@@ -30,7 +30,15 @@ internal fun PodcastHomeInboxSelectionActions(
     inbox: List<EpisodeEntity>,
     selectedIds: Set<Long>,
     menuExpanded: Boolean,
-    viewModel: PodcastViewModel,
+    /**
+     * The four bulk actions, hoisted. Each takes an episode id because the selection is filtered
+     * here, where the inbox and the selected ids both are, rather than being handed a pre-filtered
+     * list the caller had to build four times over.
+     */
+    addToQueueFromInbox: (episodeId: Long, onError: () -> Unit) -> Unit,
+    downloadEpisode: (episodeId: Long) -> Unit,
+    markEpisodePlayed: (episodeId: Long) -> Unit,
+    markEpisodeUnplayed: (episodeId: Long) -> Unit,
     undoActions: PodcastHomeUndoActions,
     podcastsById: Map<Long, PodcastEntity>,
     downloadProgress: Map<Long, DownloadProgress>,
@@ -40,18 +48,17 @@ internal fun PodcastHomeInboxSelectionActions(
     onMenuExpandedChange: (Boolean) -> Unit,
     onClearSelection: () -> Unit,
     onPendingAction: (PodcastEpisodeAction) -> Unit,
-    context: Context = LocalContext.current,
 ) {
     val addToUpNextError = stringResource(R.string.error_add_up_next)
 
     IconButton(onClick = {
         val selected = inbox.filter { it.id in selectedIds }
         selected.forEach {
-            viewModel.addToQueueFromInbox(it.id, onError = {
+            addToQueueFromInbox(it.id) {
                 scope.launch {
                     snackbarHostState.showSnackbar(addToUpNextError)
                 }
-            })
+            }
         }
         onClearSelection()
     }) {
@@ -61,7 +68,7 @@ internal fun PodcastHomeInboxSelectionActions(
         )
     }
     IconButton(onClick = {
-        inbox.filter { it.id in selectedIds }.forEach { viewModel.download(context, it.id) }
+        inbox.filter { it.id in selectedIds }.forEach { downloadEpisode(it.id) }
         onClearSelection()
     }) {
         Icon(Icons.Rounded.FileDownload, contentDescription = stringResource(R.string.download_selected))
@@ -84,7 +91,7 @@ internal fun PodcastHomeInboxSelectionActions(
                 trailingIcon = { Icon(Icons.Rounded.CheckCircle, contentDescription = null) },
                 onClick = {
                     onMenuExpandedChange(false)
-                    inbox.filter { it.id in selectedIds }.forEach { viewModel.markPlayed(it.id) }
+                    inbox.filter { it.id in selectedIds }.forEach { markEpisodePlayed(it.id) }
                     onClearSelection()
                 },
             )
@@ -93,7 +100,7 @@ internal fun PodcastHomeInboxSelectionActions(
                 trailingIcon = { Icon(Icons.Rounded.Block, contentDescription = null) },
                 onClick = {
                     onMenuExpandedChange(false)
-                    inbox.filter { it.id in selectedIds }.forEach { viewModel.markUnplayed(it.id) }
+                    inbox.filter { it.id in selectedIds }.forEach { markEpisodeUnplayed(it.id) }
                     onClearSelection()
                 },
             )

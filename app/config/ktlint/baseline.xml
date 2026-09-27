@@ -67,17 +67,14 @@
     <file name="src/main/java/com/shapeshed/booth/ui/PodcastHomeScreen.kt">
         <error line="202" column="14" source="compose:compositionlocal-allowlist" />
         <error line="216" column="5" source="compose:lambda-param-in-effect" />
-        <error line="703" column="9" source="compose:vm-forwarding-check" />
-        <error line="725" column="5" source="compose:vm-forwarding-check" />
-        <error line="757" column="5" source="compose:vm-forwarding-check" />
-        <error line="838" column="9" source="compose:vm-forwarding-check" />
-        <error line="1088" column="41" source="compose:vm-forwarding-check" />
-        <error line="1748" column="37" source="compose:vm-forwarding-check" />
-        <error line="1803" column="45" source="compose:vm-forwarding-check" />
-        <error line="1894" column="29" source="compose:vm-forwarding-check" />
-        <error line="1905" column="29" source="compose:vm-forwarding-check" />
-        <error line="1921" column="29" source="compose:vm-forwarding-check" />
-        <error line="1942" column="9" source="compose:vm-forwarding-check" />
+        <error line="731" column="5" source="compose:vm-forwarding-check" />
+        <error line="763" column="5" source="compose:vm-forwarding-check" />
+        <error line="844" column="9" source="compose:vm-forwarding-check" />
+        <error line="1758" column="37" source="compose:vm-forwarding-check" />
+        <error line="1904" column="29" source="compose:vm-forwarding-check" />
+        <error line="1915" column="29" source="compose:vm-forwarding-check" />
+        <error line="1931" column="29" source="compose:vm-forwarding-check" />
+        <error line="1952" column="9" source="compose:vm-forwarding-check" />
     </file>
     <file name="src/main/java/com/shapeshed/booth/ui/PodcastInboxScreens.kt">
         <error line="186" column="5" source="compose:lambda-param-in-effect" />

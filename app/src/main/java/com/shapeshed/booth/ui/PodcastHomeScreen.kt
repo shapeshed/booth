@@ -453,6 +453,7 @@ fun PodcastHomeScreen(
     } else {
         0.dp
     }
+    val managementActions = rememberManagementActions(viewModel)
     val discoveryActions = rememberPodcastDiscoveryActions(context, viewModel, playbackViewModel)
     val platformActions = rememberPodcastHomePlatformActions(context, viewModel) {
         topLevelBackStack.clear()
@@ -704,7 +705,12 @@ fun PodcastHomeScreen(
             context = context,
             scope = scope,
             snackbarHostState = snackbarHostState,
-            viewModel = viewModel,
+            removePodcast = viewModel::remove,
+            addToQueueFromInbox = { episodeId, onError ->
+                viewModel.addToQueueFromInbox(episodeId, onError = onError)
+            },
+            dismissFromInbox = viewModel::dismissFromInbox,
+            restoreToInbox = viewModel::restoreToInbox,
         )
     }
     val windowSizeClass = currentWindowAdaptiveInfoV2().windowSizeClass
@@ -1089,7 +1095,12 @@ fun PodcastHomeScreen(
                                             inbox = inboxSnapshot,
                                             selectedIds = selectedInboxIds,
                                             menuExpanded = inboxSelectionMenuExpanded,
-                                            viewModel = viewModel,
+                                            addToQueueFromInbox = { episodeId, onError ->
+                                                viewModel.addToQueueFromInbox(episodeId, onError = onError)
+                                            },
+                                            downloadEpisode = { viewModel.download(context, it) },
+                                            markEpisodePlayed = viewModel::markPlayed,
+                                            markEpisodeUnplayed = viewModel::markUnplayed,
                                             undoActions = undoActions,
                                             podcastsById = podcastsById,
                                             downloadProgress = downloadProgress,
@@ -1099,7 +1110,6 @@ fun PodcastHomeScreen(
                                             onMenuExpandedChange = { inboxSelectionMenuExpanded = it },
                                             onClearSelection = { selectedInboxIds = emptySet() },
                                             onPendingAction = { pendingEpisodeAction = it },
-                                            context = context,
                                         )
                                     } else if (atRoot) {
                                         PodcastHomeRootActions(
@@ -1803,7 +1813,7 @@ fun PodcastHomeScreen(
                                             PodcastHomeManagementDestination(
                                                 destination = destination,
                                                 podcasts = allPodcasts,
-                                                viewModel = viewModel,
+                                                actions = managementActions,
                                                 modifier = Modifier.fillMaxSize(),
                                             )
                                         }
