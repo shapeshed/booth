@@ -99,13 +99,13 @@ internal fun PlaybackSpeedSheet(
     onSpeedChange: (Float) -> Unit,
     onSkipSilenceChange: (Boolean) -> Unit,
     onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
     inherited: Boolean = false,
     globalSpeed: Float = speed,
     onUseGlobal: (() -> Unit)? = null,
     inheritedSkipSilence: Boolean = false,
     globalSkipSilence: Boolean = skipSilence,
     onUseGlobalSkipSilence: (() -> Unit)? = null,
-    modifier: Modifier = Modifier,
 ) {
     var sliderSpeed by remember(speed) { mutableFloatStateOf(speed) }
     ModalBottomSheet(onDismissRequest = onDismiss) {
@@ -161,10 +161,10 @@ internal fun PlaybackSpeedSheet(
             }
             Slider(
                 value = sliderSpeed,
-                onValueChange = {
-                    sliderSpeed = it
-                    onSpeedChange(it)
-                },
+                // Persist on release, not per frame. onSpeedChange reaches a Room UPDATE, and a
+                // drag fires this at display refresh rate. Same shape as SleepTimerSheet.
+                onValueChange = { sliderSpeed = it },
+                onValueChangeFinished = { onSpeedChange(sliderSpeed) },
                 valueRange = MIN_PLAYBACK_SPEED..MAX_PLAYBACK_SPEED,
                 steps = 24,
                 modifier = Modifier.fillMaxWidth(),

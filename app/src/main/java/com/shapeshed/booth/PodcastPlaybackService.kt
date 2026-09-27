@@ -45,6 +45,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 
 @UnstableApi
 class PodcastPlaybackService : MediaLibraryService() {
@@ -62,6 +63,12 @@ class PodcastPlaybackService : MediaLibraryService() {
 
     private companion object {
         const val TAG = "PodcastPlayback"
+
+        /** How often the player position is flushed to Room while the service lives. */
+        const val PROGRESS_SAVE_INTERVAL_MS = 5_000L
+
+        /** Ceiling for the one blocking write in onDestroy, so a locked database cannot ANR. */
+        const val FINAL_PROGRESS_SAVE_TIMEOUT_MS = 250L
     }
 
     override fun onCreate() {
@@ -87,7 +94,7 @@ class PodcastPlaybackService : MediaLibraryService() {
         player.addListener(progressListener)
         progressSaveJob = serviceScope.launch {
             while (isActive) {
-                delay(5_000L)
+                delay(PROGRESS_SAVE_INTERVAL_MS)
                 maybeSkipEnding()
                 saveCurrentProgress()
             }
@@ -327,9 +334,10 @@ class PodcastPlaybackService : MediaLibraryService() {
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        runCatching {
-            runBlocking(Dispatchers.IO) { saveCurrentProgress() }
-        }
+        // No write here. progressSaveJob already persists every PROGRESS_SAVE_INTERVAL_MS, so
+        // the worst case here is that much staleness. A blocking Room write on the main thread
+        // would contend with the refresh worker's SQLite lock at exactly the moment the platform
+        // is tearing the task down, which is the worst possible time to risk an ANR.
         super.onTaskRemoved(rootIntent)
     }
 
@@ -339,8 +347,11 @@ class PodcastPlaybackService : MediaLibraryService() {
         sleepTimerJob?.cancel()
         sleepTimerJob = null
         SleepTimerStore.set(null)
+        // Bounded so a contended SQLite lock cannot stall the main thread indefinitely. Losing
+        // this final write costs at most PROGRESS_SAVE_INTERVAL_MS of playback position, which
+        // is a much better trade than an ANR during service teardown.
         runCatching {
-            runBlocking(Dispatchers.IO) { saveCurrentProgress() }
+            runBlocking { withTimeoutOrNull(FINAL_PROGRESS_SAVE_TIMEOUT_MS) { saveCurrentProgress() } }
         }
         if (::player.isInitialized) player.removeListener(progressListener)
         if (::session.isInitialized) session.release()

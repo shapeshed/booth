@@ -124,27 +124,38 @@ class PodcastDownloadManager(private val context: Context, private val repositor
                     if (invalidCompletedFile) {
                         mappedStatus = DownloadAssetStatus.FAILED
                     }
-                    repository.updateDownloadAsset(
-                        episodeId = asset.episodeId,
-                        assetType = asset.assetType,
-                        status = mappedStatus,
-                        bytesDownloaded = bytes,
-                        totalBytes = total,
-                        errorMessage = when {
-                            invalidCompletedFile -> "Download completed but the local file was invalid."
+                    // Only write when something actually changed. updateDownloadAsset always
+                    // stamps updatedAtMillis, so an unconditional write makes every row differ
+                    // on every tick, which re-emits the observed download_assets Flow and
+                    // invalidates every episodes observer. Completed assets stay in this set on
+                    // purpose: the poll is the safety net for a missed DOWNLOAD_COMPLETE
+                    // broadcast, and a completed row no longer costs a write.
+                    if (mappedStatus != asset.status ||
+                        bytes != asset.bytesDownloaded ||
+                        total != asset.totalBytes
+                    ) {
+                        repository.updateDownloadAsset(
+                            episodeId = asset.episodeId,
+                            assetType = asset.assetType,
+                            status = mappedStatus,
+                            bytesDownloaded = bytes,
+                            totalBytes = total,
+                            errorMessage = when {
+                                invalidCompletedFile -> "Download completed but the local file was invalid."
 
-                            mappedStatus == DownloadAssetStatus.FAILED -> downloadManagerFailureMessage(
-                                cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON)),
-                            )
+                                mappedStatus == DownloadAssetStatus.FAILED -> downloadManagerFailureMessage(
+                                    cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON)),
+                                )
 
-                            else -> null
-                        },
-                        completedAtMillis = if (mappedStatus == DownloadAssetStatus.COMPLETED) {
-                            System.currentTimeMillis()
-                        } else {
-                            null
-                        },
-                    )
+                                else -> null
+                            },
+                            completedAtMillis = if (mappedStatus == DownloadAssetStatus.COMPLETED) {
+                                System.currentTimeMillis()
+                            } else {
+                                null
+                            },
+                        )
+                    }
                     if (mappedStatus == DownloadAssetStatus.COMPLETED) {
                         if (asset.assetType == DownloadAssetType.VIDEO) {
                             repository.setLocalVideoUri(asset.episodeId, asset.destinationUri)

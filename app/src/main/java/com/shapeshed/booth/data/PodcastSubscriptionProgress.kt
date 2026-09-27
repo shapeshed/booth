@@ -3,6 +3,7 @@ package com.shapeshed.booth.data
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 
 enum class PodcastSubscriptionStage { QUEUED, FETCHING, PARSING, SAVING, UNSUBSCRIBING, ADDED, FAILED }
 
@@ -35,11 +36,14 @@ object PodcastSubscriptionProgressStore {
         PodcastSubscriptionProgress(PodcastSubscriptionStage.QUEUED, title = title),
     )
 
+    // Written from Dispatchers.IO in PodcastSubscribeWorker and from the main thread in the
+    // ViewModel, so the read-modify-write must be a compare-and-set. A lost update here strands
+    // a subscription spinner or hides an in-flight subscription.
     fun update(feedUrl: String, value: PodcastSubscriptionProgress) {
-        _progress.value = _progress.value + (feedUrl to value)
+        _progress.update { it + (feedUrl to value) }
     }
 
     fun clear(feedUrl: String) {
-        _progress.value = _progress.value - feedUrl
+        _progress.update { it - feedUrl }
     }
 }

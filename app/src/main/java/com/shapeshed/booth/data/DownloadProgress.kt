@@ -4,6 +4,7 @@ import android.os.SystemClock
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 
 data class DownloadProgress(
     val bytesDownloaded: Long,
@@ -19,8 +20,12 @@ object DownloadProgressStore {
     private val _progress = MutableStateFlow<Map<Long, DownloadProgress>>(emptyMap())
     val progress: StateFlow<Map<Long, DownloadProgress>> = _progress.asStateFlow()
 
+    // Both mutators are called from Dispatchers.IO (the download workers, the reconciliation
+    // worker, the broadcast receiver) and from the main thread, so the read-modify-write has to
+    // be a compare-and-set. A plain `_progress.value + entry` can lose a concurrent update,
+    // which would drop another episode's entry and stall shouldSyncDownloads.
     fun update(episodeId: Long, value: DownloadProgress) {
-        _progress.value = _progress.value + (episodeId to value)
+        _progress.update { it + (episodeId to value) }
     }
 
     /** Publishes the pending state before WorkManager starts the downloader. */
@@ -39,7 +44,7 @@ object DownloadProgressStore {
     }
 
     fun clear(episodeId: Long) {
-        _progress.value = _progress.value - episodeId
+        _progress.update { it - episodeId }
     }
 }
 

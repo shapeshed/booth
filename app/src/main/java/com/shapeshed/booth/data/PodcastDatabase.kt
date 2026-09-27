@@ -429,10 +429,16 @@ interface PodcastDao {
         removeFromQueue(episodeId)
     }
 
-    @Query("UPDATE episodes SET localUri = :localUri WHERE id = :episodeId")
+    // The `IS NOT` guards make these writes genuinely idempotent. Room invalidates a table via
+    // per-row AFTER UPDATE triggers, so an UPDATE that matches zero rows fires no trigger and
+    // emits nothing. Without the guard the once-a-second download poll rewrites every completed
+    // episode row and re-emits every observed episodes Flow.
+    @Query("UPDATE episodes SET localUri = :localUri WHERE id = :episodeId AND localUri IS NOT :localUri")
     suspend fun setLocalUri(episodeId: Long, localUri: String?)
 
-    @Query("UPDATE episodes SET localVideoUri = :localVideoUri WHERE id = :episodeId")
+    @Query(
+        "UPDATE episodes SET localVideoUri = :localVideoUri WHERE id = :episodeId AND localVideoUri IS NOT :localVideoUri",
+    )
     suspend fun setLocalVideoUri(episodeId: Long, localVideoUri: String?)
 
     @Query(
