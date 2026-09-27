@@ -28,6 +28,7 @@ import com.shapeshed.booth.data.PodcastCatalogIndex
 import com.shapeshed.booth.data.PodcastDiscoveryCatalog
 import com.shapeshed.booth.data.PodcastDiscoveryCategory
 import com.shapeshed.booth.data.PodcastDiscoveryProvider
+import com.shapeshed.booth.data.PodcastDownloadManager
 import com.shapeshed.booth.data.PodcastDiscoveryShelf
 import com.shapeshed.booth.data.PodcastDiscoveryShelfResult
 import com.shapeshed.booth.data.PodcastDownloadNetwork
@@ -164,6 +165,8 @@ class PodcastViewModel @Inject constructor(
     private val discoveryProviders: @JvmSuppressWildcards List<PodcastDiscoveryProvider>,
     private val settings: SettingsStore,
     private val credentialsStore: PodcastIndexCredentialsStore,
+    private val downloadManager: PodcastDownloadManager,
+    private val backupManager: PodcastBackupManager,
     @ApplicationContext private val applicationContext: Context,
 ) : ViewModel() {
     private val mediaSizeChecks = ConcurrentHashMap.newKeySet<Long>()
@@ -935,7 +938,7 @@ class PodcastViewModel @Inject constructor(
     fun exportBackup(context: Context, uri: Uri) {
         viewModelScope.launch {
             runCancellableCatching {
-                val body = com.shapeshed.booth.data.PodcastBackupManager(repository, settings).export()
+                val body = backupManager.export()
                 withContext(Dispatchers.IO) {
                     context.contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { writer ->
                         writer.write(body)
@@ -952,7 +955,7 @@ class PodcastViewModel @Inject constructor(
     fun exportBackupZip(context: Context, uri: Uri) {
         viewModelScope.launch {
             runCancellableCatching {
-                val body = PodcastBackupManager(repository, settings).exportZip()
+                val body = backupManager.exportZip()
                 withContext(Dispatchers.IO) {
                     context.contentResolver.openOutputStream(uri)?.use { it.write(body) }
                         ?: error("Could not open backup destination")
@@ -977,9 +980,9 @@ class PodcastViewModel @Inject constructor(
             }
             runCancellableCatching {
                 if (body.size >= 2 && body[0] == 'P'.code.toByte() && body[1] == 'K'.code.toByte()) {
-                    PodcastBackupManager(repository, settings, context).importZip(body)
+                    backupManager.importZip(body)
                 } else {
-                    PodcastBackupManager(repository, settings, context).import(body.toString(Charsets.UTF_8))
+                    backupManager.import(body.toString(Charsets.UTF_8))
                 }
             }.onSuccess { imported ->
                 _state.value = state.value.copy(error = PodcastUiError.BackupImportCompleted(imported))
@@ -1255,10 +1258,7 @@ class PodcastViewModel @Inject constructor(
         val network = settings.podcastDownloadNetwork.first()
         val allEpisodes = repository.podcasts.first()
             .flatMap { subscribed -> repository.episodes(subscribed.id).first() }
-        val downloadsToEnqueue = com.shapeshed.booth.data.PodcastDownloadManager(
-            context.applicationContext,
-            repository,
-        ).downloadsWithinLimit(
+        val downloadsToEnqueue = downloadManager.downloadsWithinLimit(
             candidates = episodes,
             downloadedEpisodes = allEpisodes,
             downloadAssets = repository.downloadAssets.first(),
@@ -1288,18 +1288,12 @@ class PodcastViewModel @Inject constructor(
     }
 
     suspend fun syncDownloads(context: android.content.Context) = withContext(Dispatchers.IO) {
-        com.shapeshed.booth.data.PodcastDownloadManager(
-            context.applicationContext,
-            repository,
-        ).syncActiveDownloads()
+        downloadManager.syncActiveDownloads()
     }
 
     fun removeDownload(context: android.content.Context, episodeId: Long) {
         viewModelScope.launch(Dispatchers.IO) {
-            com.shapeshed.booth.data.PodcastDownloadManager(
-                context.applicationContext,
-                repository,
-            ).removeEpisodeDownloads(episodeId)
+            downloadManager.removeEpisodeDownloads(episodeId)
         }
     }
 }

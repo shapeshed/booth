@@ -22,7 +22,7 @@ class EpisodeDownloadWorker(appContext: Context, workerParams: WorkerParameters)
         val episode = repository.episode(episodeId)
             ?: return@withContext Result.failure().also { DownloadProgressStore.clear(episodeId) }
         try {
-            val manager = PodcastDownloadManager(applicationContext, repository)
+            val manager = entryPoint.downloadManager
             if (episode.localUri == null) {
                 manager.enqueue(
                     episode = episode,

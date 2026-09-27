@@ -1,6 +1,8 @@
 package com.shapeshed.booth.di
 
 import android.content.Context
+import com.shapeshed.booth.data.PodcastBackupManager
+import com.shapeshed.booth.data.PodcastDownloadManager
 import com.shapeshed.booth.data.PodcastRepository
 import com.shapeshed.booth.data.SettingsStore
 import dagger.hilt.EntryPoint
@@ -21,6 +23,11 @@ interface BoothWorkerEntryPoint {
      * `BoothApp.okHttpClient`, which was a second client sharing the same cache directory.
      */
     val okHttpClient: OkHttpClient
+
+    /** Singleton, so its enqueue mutex is shared rather than per instance. */
+    val downloadManager: PodcastDownloadManager
+
+    val backupManager: PodcastBackupManager
 }
 
 fun boothWorkerEntryPoint(context: Context): BoothWorkerEntryPoint =

@@ -2,6 +2,8 @@ package com.shapeshed.booth.di
 
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.shapeshed.booth.data.PodcastBackupManager
+import com.shapeshed.booth.data.PodcastDownloadManager
 import com.shapeshed.booth.data.PodcastRepository
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -24,6 +26,12 @@ class BoothWorkerEntryPointDeviceTest {
 
     @Inject
     lateinit var okHttpClient: OkHttpClient
+
+    @Inject
+    lateinit var downloadManager: PodcastDownloadManager
+
+    @Inject
+    lateinit var backupManager: PodcastBackupManager
 
     @Before
     fun injectDependencies() {
@@ -63,5 +71,25 @@ class BoothWorkerEntryPointDeviceTest {
         // Two Cache objects over one directory is the failure mode: OkHttp requires exclusive
         // access, and the rebuildJournal() fallback deletes the directory.
         assertSame(okHttpClient, boothWorkerEntryPoint(application).okHttpClient)
+    }
+
+    /**
+     * PodcastDownloadManager was constructed by hand at eight call sites, so its enqueue mutex was
+     * per instance and provided no mutual exclusion at all between the worker that enqueues and
+     * the reconciliation worker that inspects the same rows. One instance per process makes the
+     * lock mean what it looks like it means.
+     */
+    @Test
+    fun downloadManagerIsSharedRatherThanPerCallSite() {
+        val application = ApplicationProvider.getApplicationContext<android.app.Application>()
+
+        assertSame(downloadManager, boothWorkerEntryPoint(application).downloadManager)
+    }
+
+    @Test
+    fun backupManagerIsSharedRatherThanPerCallSite() {
+        val application = ApplicationProvider.getApplicationContext<android.app.Application>()
+
+        assertSame(backupManager, boothWorkerEntryPoint(application).backupManager)
     }
 }

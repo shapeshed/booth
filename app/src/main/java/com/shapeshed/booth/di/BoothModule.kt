@@ -4,7 +4,9 @@ import android.content.Context
 import com.shapeshed.booth.data.ApplePodcastSearchProvider
 import com.shapeshed.booth.data.DefaultPodcastSearchCatalog
 import com.shapeshed.booth.data.FeedParser
+import com.shapeshed.booth.data.PodcastBackupManager
 import com.shapeshed.booth.data.PodcastDatabase
+import com.shapeshed.booth.data.PodcastDownloadManager
 import com.shapeshed.booth.data.PodcastFeedProvider
 import com.shapeshed.booth.data.PodcastIndexCredentialsStore
 import com.shapeshed.booth.data.PodcastIndexSearchProvider
@@ -120,4 +122,29 @@ object BoothModule {
         apple: ApplePodcastSearchProvider,
         podcastIndex: PodcastIndexSearchProvider,
     ): PodcastSearchCatalog = DefaultPodcastSearchCatalog(listOf(apple, podcastIndex))
+
+    /**
+     * Singleton because its enqueue mutex is per instance.
+     *
+     * `enqueue` is a read-then-act over the download_assets row for an episode, and
+     * `downloadsWithinLimit` reads the same table to decide whether more may start. When this
+     * class was constructed by hand at each call site, every caller got its own Mutex, so the
+     * mutual exclusion it appears to provide was between calls on the same object only, which
+     * never happened in practice. One instance per process makes it real.
+     */
+    @Provides
+    @Singleton
+    fun providePodcastDownloadManager(
+        @ApplicationContext context: Context,
+        repository: PodcastRepository,
+    ): PodcastDownloadManager = PodcastDownloadManager(context, repository)
+
+    @Provides
+    @Singleton
+    fun providePodcastBackupManager(
+        repository: PodcastRepository,
+        settings: SettingsStore,
+        downloadManager: PodcastDownloadManager,
+        @ApplicationContext context: Context,
+    ): PodcastBackupManager = PodcastBackupManager(repository, settings, context, downloadManager)
 }

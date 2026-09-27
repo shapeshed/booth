@@ -19,7 +19,7 @@ class PodcastDownloadReconciliationWorker(appContext: Context, workerParams: Wor
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         try {
             val entryPoint = boothWorkerEntryPoint(applicationContext)
-            PodcastDownloadManager(applicationContext, entryPoint.podcastRepository).syncActiveDownloads()
+            entryPoint.downloadManager.syncActiveDownloads()
             Result.success()
         } catch (cancelled: CancellationException) {
             throw cancelled

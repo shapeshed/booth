@@ -100,7 +100,7 @@ class PodcastRefreshWorker(context: Context, workerParams: WorkerParameters) : C
         }
         val allEpisodes = repository.podcasts.first()
             .flatMap { subscribed -> repository.episodes(subscribed.id).first() }
-        val downloadsToEnqueue = PodcastDownloadManager(applicationContext, repository).downloadsWithinLimit(
+        val downloadsToEnqueue = entryPoint.downloadManager.downloadsWithinLimit(
             candidates = queuedDownloadCandidates,
             downloadedEpisodes = allEpisodes,
             downloadAssets = repository.downloadAssets.first(),
