@@ -108,6 +108,11 @@ directory is intentionally ignored.
   (`boothWorkerEntryPoint`, `boothPlaybackEntryPoint`). A second `PodcastDatabase` or `OkHttpClient`
   silently breaks Room flow invalidation and corrupts the shared HTTP cache directory.
   `BoothWorkerEntryPointDeviceTest` pins this; keep it passing.
+- The Room schema is at version 1. Versions 1 to 27 were squashed before the first release, because
+  Booth is local-first with no server-side copy, so a bad migration is unrecoverable data loss and
+  a long hand-written chain is permanent carrying cost. The first real schema change is v2: add a
+  `Migration`, add it to `create()`, and cover it with a `MigrationTestHelper` instrumented test in
+  the same change. `room-testing` is kept as an androidTest dependency for exactly that.
 
 ## UI notes
 

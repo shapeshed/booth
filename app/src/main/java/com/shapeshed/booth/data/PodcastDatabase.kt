@@ -490,7 +490,7 @@ interface PodcastDao {
         CategoryEntity::class,
         CategoryPodcastEntity::class,
     ],
-    version = 27,
+    version = 1,
     exportSchema = true,
 )
 abstract class PodcastDatabase : RoomDatabase() {
@@ -498,254 +498,20 @@ abstract class PodcastDatabase : RoomDatabase() {
     abstract fun downloadAssetDao(): DownloadAssetDao
 
     companion object {
+        /**
+         * Note for anyone with Booth already installed: the schema was squashed from v27 to v1
+         * before the first release, so an existing database file is at a *higher* version than this
+         * code declares. Room treats that as a downgrade and throws on open rather than migrating
+         * backwards. Uninstall before running, which drops the old file and lets v1 be created.
+         *
+         * `fallbackToDestructiveMigration` would paper over that, and must not be added: it would
+         * silently wipe a real library the first time a genuine v2 migration was needed. The first
+         * post-release schema change is a normal v1 to v2 Migration.
+         */
         fun create(context: Context): PodcastDatabase = Room.databaseBuilder(
             context,
             PodcastDatabase::class.java,
             "podcasts.db",
-        ).addMigrations(*ALL_MIGRATIONS)
-            .build()
+        ).build()
     }
 }
-
-private val MIGRATION_1_2 = object : androidx.room.migration.Migration(1, 2) {
-    override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
-        database.execSQL("ALTER TABLE episodes ADD COLUMN inInbox INTEGER NOT NULL DEFAULT 0")
-        database.execSQL("ALTER TABLE episodes ADD COLUMN firstSeenAtMillis INTEGER")
-    }
-}
-
-private val MIGRATION_2_3 = object : androidx.room.migration.Migration(2, 3) {
-    override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
-        database.execSQL("ALTER TABLE episodes ADD COLUMN linkUrl TEXT")
-    }
-}
-
-private val MIGRATION_3_4 = object : androidx.room.migration.Migration(3, 4) {
-    override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
-        database.execSQL("ALTER TABLE podcasts ADD COLUMN tags TEXT NOT NULL DEFAULT ''")
-    }
-}
-
-private val MIGRATION_4_5 = object : androidx.room.migration.Migration(4, 5) {
-    override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
-        database.execSQL("ALTER TABLE podcasts ADD COLUMN skipStartSeconds INTEGER NOT NULL DEFAULT 0")
-        database.execSQL("ALTER TABLE podcasts ADD COLUMN skipEndSeconds INTEGER NOT NULL DEFAULT 0")
-    }
-}
-
-private val MIGRATION_5_6 = object : androidx.room.migration.Migration(5, 6) {
-    override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
-        database.execSQL("ALTER TABLE podcasts ADD COLUMN includeInAutoRefresh INTEGER NOT NULL DEFAULT 1")
-        database.execSQL("ALTER TABLE podcasts ADD COLUMN includeInAutoDownload INTEGER NOT NULL DEFAULT 0")
-    }
-}
-
-private val MIGRATION_6_7 = object : androidx.room.migration.Migration(6, 7) {
-    override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
-        database.execSQL("ALTER TABLE episodes ADD COLUMN videoUrl TEXT")
-        database.execSQL("ALTER TABLE episodes ADD COLUMN videoMimeType TEXT")
-    }
-}
-
-private val MIGRATION_7_8 = object : androidx.room.migration.Migration(7, 8) {
-    override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
-        database.execSQL("ALTER TABLE episodes ADD COLUMN localVideoUri TEXT")
-    }
-}
-
-private val MIGRATION_8_9 = object : androidx.room.migration.Migration(8, 9) {
-    override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
-        database.execSQL("ALTER TABLE episodes ADD COLUMN audioSizeBytes INTEGER")
-        database.execSQL("ALTER TABLE episodes ADD COLUMN videoSizeBytes INTEGER")
-    }
-}
-
-private val MIGRATION_9_10 = object : androidx.room.migration.Migration(9, 10) {
-    override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
-        database.execSQL("ALTER TABLE episodes ADD COLUMN audioSizeChecked INTEGER NOT NULL DEFAULT 0")
-        database.execSQL("ALTER TABLE episodes ADD COLUMN videoSizeChecked INTEGER NOT NULL DEFAULT 0")
-    }
-}
-
-private val MIGRATION_10_11 = object : androidx.room.migration.Migration(10, 11) {
-    override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
-        database.execSQL("ALTER TABLE episodes ADD COLUMN preferVideo INTEGER NOT NULL DEFAULT 0")
-    }
-}
-
-private val MIGRATION_11_12 = object : androidx.room.migration.Migration(11, 12) {
-    override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
-        database.execSQL("ALTER TABLE episodes ADD COLUMN videoPreferenceSet INTEGER NOT NULL DEFAULT 0")
-    }
-}
-
-private val MIGRATION_12_13 = object : androidx.room.migration.Migration(12, 13) {
-    override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
-        database.execSQL(
-            "CREATE TABLE IF NOT EXISTS download_assets (" +
-                "episodeId INTEGER NOT NULL, " +
-                "assetType TEXT NOT NULL, " +
-                "downloadId INTEGER NOT NULL, " +
-                "sourceUrl TEXT NOT NULL, " +
-                "destinationUri TEXT NOT NULL, " +
-                "status TEXT NOT NULL, " +
-                "bytesDownloaded INTEGER NOT NULL, " +
-                "totalBytes INTEGER, " +
-                "errorMessage TEXT, " +
-                "retryCount INTEGER NOT NULL, " +
-                "createdAtMillis INTEGER NOT NULL, " +
-                "updatedAtMillis INTEGER NOT NULL, " +
-                "completedAtMillis INTEGER, " +
-                "PRIMARY KEY(episodeId, assetType)" +
-                ")",
-        )
-        database.execSQL(
-            "CREATE UNIQUE INDEX IF NOT EXISTS index_download_assets_downloadId ON download_assets(downloadId)",
-        )
-    }
-}
-
-private val MIGRATION_13_14 = object : androidx.room.migration.Migration(13, 14) {
-    override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
-        database.execSQL("ALTER TABLE podcasts ADD COLUMN includeInNotifications INTEGER NOT NULL DEFAULT 1")
-    }
-}
-
-private val MIGRATION_14_15 = object : androidx.room.migration.Migration(14, 15) {
-    override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
-        database.execSQL("ALTER TABLE podcasts ADD COLUMN explicit INTEGER")
-        database.execSQL("ALTER TABLE episodes ADD COLUMN explicit INTEGER")
-    }
-}
-
-private val MIGRATION_15_16 = object : androidx.room.migration.Migration(15, 16) {
-    override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
-        database.execSQL("ALTER TABLE episodes ADD COLUMN favorite INTEGER NOT NULL DEFAULT 0")
-    }
-}
-
-private val MIGRATION_16_17 = object : androidx.room.migration.Migration(16, 17) {
-    override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
-        database.execSQL(
-            "CREATE INDEX IF NOT EXISTS index_episodes_published_first_seen " +
-                "ON episodes(publishedAtMillis, firstSeenAtMillis)",
-        )
-        database.execSQL(
-            "CREATE INDEX IF NOT EXISTS index_episodes_podcast_published_first_seen " +
-                "ON episodes(podcastId, publishedAtMillis, firstSeenAtMillis)",
-        )
-        database.execSQL(
-            "CREATE INDEX IF NOT EXISTS index_episodes_inbox_published_first_seen " +
-                "ON episodes(inInbox, publishedAtMillis, firstSeenAtMillis)",
-        )
-        database.execSQL(
-            "CREATE INDEX IF NOT EXISTS index_queue_position ON queue(position)",
-        )
-    }
-}
-
-private val MIGRATION_17_18 = object : androidx.room.migration.Migration(17, 18) {
-    override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
-        database.execSQL("ALTER TABLE podcasts ADD COLUMN feedEtag TEXT")
-        database.execSQL("ALTER TABLE podcasts ADD COLUMN feedLastModified TEXT")
-        database.execSQL("ALTER TABLE podcasts ADD COLUMN lastRefreshAttemptMillis INTEGER")
-        database.execSQL("ALTER TABLE podcasts ADD COLUMN lastRefreshError TEXT")
-    }
-}
-
-private val MIGRATION_18_19 = object : androidx.room.migration.Migration(18, 19) {
-    override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
-        database.execSQL(
-            "CREATE VIRTUAL TABLE IF NOT EXISTS episode_search_fts USING FTS4(" +
-                "title, descriptionHtml, podcastId)",
-        )
-        database.execSQL(
-            "INSERT INTO episode_search_fts(rowid, title, descriptionHtml, podcastId) " +
-                "SELECT id, title, COALESCE(descriptionHtml, ''), CAST(podcastId AS TEXT) FROM episodes",
-        )
-    }
-}
-
-private val MIGRATION_19_20 = object : androidx.room.migration.Migration(19, 20) {
-    override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
-        database.execSQL("ALTER TABLE podcasts ADD COLUMN isSubscribed INTEGER NOT NULL DEFAULT 1")
-    }
-}
-
-private val MIGRATION_20_21 = object : androidx.room.migration.Migration(20, 21) {
-    override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
-        database.execSQL("ALTER TABLE podcasts ADD COLUMN playbackSpeed REAL")
-    }
-}
-
-private val MIGRATION_21_22 = object : androidx.room.migration.Migration(21, 22) {
-    override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
-        database.execSQL("ALTER TABLE podcasts ADD COLUMN includeInVideoDownload INTEGER NOT NULL DEFAULT 1")
-    }
-}
-
-private val MIGRATION_22_23 = object : androidx.room.migration.Migration(22, 23) {
-    override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
-        database.execSQL("ALTER TABLE podcasts ADD COLUMN includeInAutoQueue INTEGER NOT NULL DEFAULT 0")
-    }
-}
-
-private val MIGRATION_23_24 = object : androidx.room.migration.Migration(23, 24) {
-    override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
-        database.execSQL("ALTER TABLE podcasts ADD COLUMN appleCategories TEXT NOT NULL DEFAULT ''")
-    }
-}
-
-private val MIGRATION_24_25 = object : androidx.room.migration.Migration(24, 25) {
-    override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
-        database.execSQL("ALTER TABLE podcasts ADD COLUMN appleCategoryIds TEXT NOT NULL DEFAULT ''")
-    }
-}
-
-internal val MIGRATION_25_26 = object : androidx.room.migration.Migration(25, 26) {
-    override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
-        database.execSQL(
-            "CREATE TABLE IF NOT EXISTS directory_providers (id TEXT NOT NULL PRIMARY KEY, name TEXT NOT NULL)",
-        )
-        database.execSQL(
-            "CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, providerId TEXT NOT NULL, name TEXT NOT NULL, externalId TEXT, parentId INTEGER, FOREIGN KEY(providerId) REFERENCES directory_providers(id) ON UPDATE NO ACTION ON DELETE CASCADE)",
-        )
-        database.execSQL(
-            "CREATE UNIQUE INDEX IF NOT EXISTS index_categories_providerId_name ON categories(providerId, name)",
-        )
-        database.execSQL(
-            "CREATE TABLE IF NOT EXISTS categories_podcasts (categoryId INTEGER NOT NULL, podcastId INTEGER NOT NULL, PRIMARY KEY(categoryId, podcastId), FOREIGN KEY(categoryId) REFERENCES categories(id) ON UPDATE NO ACTION ON DELETE CASCADE, FOREIGN KEY(podcastId) REFERENCES podcasts(id) ON UPDATE NO ACTION ON DELETE CASCADE)",
-        )
-        database.execSQL(
-            "CREATE INDEX IF NOT EXISTS index_categories_podcasts_podcastId ON categories_podcasts(podcastId)",
-        )
-        database.execSQL(
-            "INSERT OR IGNORE INTO directory_providers(id, name) VALUES ('local', 'Local'), ('apple', 'Apple Podcasts'), ('podcast-index', 'Podcast Index')",
-        )
-    }
-}
-
-private val MIGRATION_26_27 = object : androidx.room.migration.Migration(26, 27) {
-    override fun migrate(database: androidx.sqlite.db.SupportSQLiteDatabase) {
-        database.execSQL("ALTER TABLE podcasts ADD COLUMN skipSilence INTEGER")
-    }
-}
-
-/**
- * Every migration in schema order. Passing this to
- * `addMigrations(*ALL_MIGRATIONS)` keeps the call site readable as the
- * schema grows; an unlisted migration still fails at runtime, because
- * Room validates the expected and actual schema on open.
- *
- * Internal rather than private so PodcastDatabaseMigrationDeviceTest can walk the whole chain.
- * A wrong execSQL in any of these is a crash on upgrade for every existing install, and Booth
- * is local-first with no server-side copy, so a bad migration is unrecoverable data loss.
- */
-internal val ALL_MIGRATIONS = arrayOf(
-    MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6,
-    MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11,
-    MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16,
-    MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21,
-    MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26,
-    MIGRATION_26_27,
-)
