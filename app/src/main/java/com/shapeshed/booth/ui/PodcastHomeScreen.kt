@@ -598,37 +598,36 @@ fun PodcastHomeScreen(
     val removeUpNextFailed = stringResource(R.string.error_remove_up_next)
     val addUpNextFailed = stringResource(R.string.error_add_up_next)
     var notifiedSubscriptionFailures by remember { mutableStateOf<Set<String>>(emptySet()) }
-    // Resolved during composition rather than inside the effect. pluralStringResource is
-    // configuration-aware, so this follows a locale change instead of reading a Context's
-    // Resources behind a LaunchedEffect, which lint flags as a stale-configuration read.
-    val importCompletedMessage = (state.error as? PodcastUiError.ImportCompleted)?.let { result ->
-        if (result.imported == result.total) {
-            pluralStringResource(R.plurals.imported_podcasts, result.imported, result.imported)
-        } else {
-            pluralStringResource(
-                R.plurals.imported_podcasts_partial,
-                result.imported,
-                result.imported,
-                result.total,
-            )
-        }
-    }
-    LaunchedEffect(importCompletedMessage) {
-        importCompletedMessage
-            ?.let { snackbarHostState.showSnackbar(it, duration = SnackbarDuration.Short) }
-    }
+    // Collected as an event rather than read off the state. A Channel delivers each outcome once,
+    // so rotating the device no longer re-announces the last completed import, which is what
+    // happened when the confirmation lived in PodcastHomeUiState.error and was never cleared.
     LaunchedEffect(viewModel) {
-        viewModel.backupEvents.collect { event ->
+        viewModel.uiEvents.collect { event ->
             val message = when (event) {
-                PodcastBackupEvent.ImportStarted -> resources.getString(R.string.backup_import_started)
+                PodcastUiEvent.ImportStarted -> resources.getString(R.string.backup_import_started)
 
-                PodcastBackupEvent.Exported -> resources.getString(R.string.backup_export_completed)
+                PodcastUiEvent.Exported -> resources.getString(R.string.backup_export_completed)
 
-                is PodcastBackupEvent.Imported -> resources.getQuantityString(
+                is PodcastUiEvent.Imported -> resources.getQuantityString(
                     R.plurals.backup_import_completed,
                     event.subscriptions,
                     event.subscriptions,
                 )
+
+                is PodcastUiEvent.OpmlImported -> if (event.imported == event.total) {
+                    resources.getQuantityString(
+                        R.plurals.imported_podcasts,
+                        event.imported,
+                        event.imported,
+                    )
+                } else {
+                    resources.getQuantityString(
+                        R.plurals.imported_podcasts_partial,
+                        event.imported,
+                        event.imported,
+                        event.total,
+                    )
+                }
             }
             snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short)
         }

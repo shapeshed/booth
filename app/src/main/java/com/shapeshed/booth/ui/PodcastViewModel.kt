@@ -121,10 +121,19 @@ data class PodcastHomeState(
     val error: PodcastUiError? = null,
 )
 
-sealed interface PodcastBackupEvent {
-    data object ImportStarted : PodcastBackupEvent
-    data object Exported : PodcastBackupEvent
-    data class Imported(val subscriptions: Int) : PodcastBackupEvent
+/**
+ * A one-shot outcome the user should be told about once.
+ *
+ * These are successes. Failures stay on [PodcastHomeUiState.error] because a failed screen load is
+ * a state the screen should keep showing, whereas a completed import is a thing that happened and
+ * stops being true the moment it has been said. Putting successes on the state as well is what made
+ * the OPML import confirmation replay every time the device was rotated.
+ */
+sealed interface PodcastUiEvent {
+    data object ImportStarted : PodcastUiEvent
+    data object Exported : PodcastUiEvent
+    data class Imported(val subscriptions: Int) : PodcastUiEvent
+    data class OpmlImported(val imported: Int, val total: Int) : PodcastUiEvent
 }
 
 private const val OPML_IMPORT_WORK_NAME = "podcast-opml-import"
@@ -397,8 +406,8 @@ class PodcastViewModel @Inject constructor(
 
     private val _state = MutableStateFlow(PodcastHomeState())
     val state: StateFlow<PodcastHomeState> = _state.asStateFlow()
-    private val _backupEvents = Channel<PodcastBackupEvent>(Channel.BUFFERED)
-    val backupEvents: Flow<PodcastBackupEvent> = _backupEvents.receiveAsFlow()
+    private val _uiEvents = Channel<PodcastUiEvent>(Channel.BUFFERED)
+    val uiEvents: Flow<PodcastUiEvent> = _uiEvents.receiveAsFlow()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val previewEpisodeEntities: StateFlow<Map<Long, EpisodeEntity>> = state
@@ -928,16 +937,15 @@ class PodcastViewModel @Inject constructor(
         val info = terminalInfo
         val imported = info.outputData.getInt(com.shapeshed.booth.data.OPML_IMPORT_IMPORTED, 0)
         val total = info.outputData.getInt(com.shapeshed.booth.data.OPML_IMPORT_TOTAL, 0)
+        val succeeded = info.state == androidx.work.WorkInfo.State.SUCCEEDED
         _state.value = state.value.copy(
             isImporting = false,
             importProgress = null,
             importFirstPodcastSaved = state.value.importFirstPodcastSaved || importHasSavedPodcast(imported),
-            error = if (info.state == androidx.work.WorkInfo.State.SUCCEEDED) {
-                PodcastUiError.ImportCompleted(imported, total)
-            } else {
-                PodcastUiError.OpmlReadFailed
-            },
+            // A failure is a state the screen should keep showing; a success is a one-shot event.
+            error = if (succeeded) null else PodcastUiError.OpmlReadFailed,
         )
+        if (succeeded) _uiEvents.send(PodcastUiEvent.OpmlImported(imported, total))
     }
 
     fun exportOpml(context: Context, uri: Uri) {
@@ -965,8 +973,7 @@ class PodcastViewModel @Inject constructor(
                         writer.write(body)
                     } ?: error("Could not open backup destination")
                 }
-                _state.value = state.value.copy(error = PodcastUiError.BackupExportCompleted)
-                _backupEvents.send(PodcastBackupEvent.Exported)
+                _uiEvents.send(PodcastUiEvent.Exported)
             }.onFailure {
                 _state.value = state.value.copy(error = PodcastUiError.ExportFailed)
             }
@@ -981,15 +988,14 @@ class PodcastViewModel @Inject constructor(
                     context.contentResolver.openOutputStream(uri)?.use { it.write(body) }
                         ?: error("Could not open backup destination")
                 }
-                _state.value = state.value.copy(error = PodcastUiError.BackupExportCompleted)
-                _backupEvents.send(PodcastBackupEvent.Exported)
+                _uiEvents.send(PodcastUiEvent.Exported)
             }.onFailure { _state.value = state.value.copy(error = PodcastUiError.ExportFailed) }
         }
     }
 
     fun importBackup(context: Context, uri: Uri) {
         viewModelScope.launch {
-            _backupEvents.send(PodcastBackupEvent.ImportStarted)
+            _uiEvents.send(PodcastUiEvent.ImportStarted)
             val body = runCancellableCatching {
                 withContext(Dispatchers.IO) {
                     context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
@@ -1006,8 +1012,7 @@ class PodcastViewModel @Inject constructor(
                     backupManager.import(body.toString(Charsets.UTF_8))
                 }
             }.onSuccess { imported ->
-                _state.value = state.value.copy(error = PodcastUiError.BackupImportCompleted(imported))
-                _backupEvents.send(PodcastBackupEvent.Imported(imported))
+                _uiEvents.send(PodcastUiEvent.Imported(imported))
                 com.shapeshed.booth.data.PodcastRefreshWorker.enqueueNow(context)
             }.onFailure {
                 _state.value = state.value.copy(error = PodcastUiError.BackupImportFailed)
