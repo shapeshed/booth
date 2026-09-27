@@ -453,6 +453,7 @@ fun PodcastHomeScreen(
     } else {
         0.dp
     }
+    val discoveryActions = rememberPodcastDiscoveryActions(context, viewModel, playbackViewModel)
     val platformActions = rememberPodcastHomePlatformActions(context, viewModel) {
         topLevelBackStack.clear()
         topLevelBackStack.add(PodcastNavigationKey.Subscriptions)
@@ -845,11 +846,10 @@ fun PodcastHomeScreen(
 
     @Composable
     fun DiscoveryContent() {
-        PodcastHomeDiscoveryDestination(
+        ScopedPodcastHomeDiscoveryDestination(
             homeUiState = homeUiState,
-            viewModel = viewModel,
+            actions = discoveryActions,
             playbackViewModel = playbackViewModel,
-            context = context,
             queueEpisodeIds = queueEpisodeIds,
             subscribedFeedUrls = subscribedFeedUrls,
             onSubscribe = { result -> enqueueSubscription(result) },

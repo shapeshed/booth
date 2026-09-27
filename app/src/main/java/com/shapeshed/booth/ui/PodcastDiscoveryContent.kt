@@ -2,12 +2,92 @@ package com.shapeshed.booth.ui
 
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.shapeshed.booth.data.DownloadProgress
 import com.shapeshed.booth.data.Episode
 import com.shapeshed.booth.data.EpisodeEntity
+import com.shapeshed.booth.data.Podcast
 import com.shapeshed.booth.data.PodcastDiscoveryCategory
+import com.shapeshed.booth.data.PodcastSearchResult
 import com.shapeshed.booth.data.isDownloaded
+
+/**
+ * What the discovery screen can ask the app to do.
+ *
+ * This screen used to take both ViewModels and call them inline, which meant it could not be
+ * rendered without Hilt and could not be exercised in a test. Each entry is a whole user intent
+ * rather than one ViewModel method, because most of them are two steps: a preview episode has to be
+ * resolved to a saved row before it can be played, queued, downloaded or favourited. Splitting
+ * those into separate callbacks would push the sequencing back into the composable, which is the
+ * thing being taken out.
+ *
+ * [watchPreview] and [addToQueue] take their completion callback as an argument instead of closing
+ * over one. That keeps this class free of captured lambdas, so it can be remembered against the
+ * ViewModels alone and stay stable while the screen recomposes.
+ */
+internal class PodcastDiscoveryActions(
+    val togglePlayPause: () -> Unit,
+    val playPreview: (episode: Episode, podcast: Podcast) -> Unit,
+    val watchPreview: (episode: Episode, podcast: Podcast, onWatched: () -> Unit) -> Unit,
+    val downloadPreview: (episode: Episode, podcast: Podcast) -> Unit,
+    val removeDownload: (episode: Episode, podcast: Podcast) -> Unit,
+    val removeFromQueue: (episodeId: Long) -> Unit,
+    val addToQueue: (episode: Episode, podcast: Podcast, onError: () -> Unit) -> Unit,
+    val toggleFavorite: (episode: Episode) -> Unit,
+    val browse: (result: PodcastSearchResult) -> Unit,
+    val loadMore: () -> Unit,
+)
+
+/**
+ * Builds the discovery screen's actions where the ViewModels are in scope.
+ *
+ * Keyed on the ViewModels alone, which is sound because [PodcastDiscoveryActions] captures no
+ * caller lambda. Keying on the callbacks as well would rebuild this object on every recomposition
+ * of the home screen, because those lambdas are recreated there each time.
+ */
+@Composable
+internal fun rememberPodcastDiscoveryActions(
+    context: Context,
+    viewModel: PodcastViewModel,
+    playbackViewModel: PodcastPlaybackViewModel,
+): PodcastDiscoveryActions = remember(viewModel, playbackViewModel, context) {
+    PodcastDiscoveryActions(
+        togglePlayPause = playbackViewModel::togglePlayPause,
+        playPreview = { episode, podcast ->
+            viewModel.preparePreviewEpisode(episode, podcast) { saved ->
+                playbackViewModel.play(saved, podcast.title)
+            }
+        },
+        watchPreview = { episode, podcast, onWatched ->
+            viewModel.preparePreviewEpisode(episode, podcast) { saved ->
+                playbackViewModel.watch(saved, podcast.title)
+                onWatched()
+            }
+        },
+        downloadPreview = { episode, podcast ->
+            viewModel.downloadPreview(context, episode, podcast)
+        },
+        removeDownload = { episode, podcast ->
+            viewModel.preparePreviewEpisode(episode, podcast) { saved ->
+                viewModel.removeDownload(context, saved.id)
+            }
+        },
+        removeFromQueue = { episodeId -> viewModel.removeFromQueue(episodeId) },
+        addToQueue = { episode, podcast, onError ->
+            viewModel.preparePreviewEpisode(episode, podcast) { saved ->
+                viewModel.addToQueueFromInbox(saved.id, onError = onError)
+            }
+        },
+        toggleFavorite = { episode ->
+            viewModel.preparePreviewEpisode(episode) { saved ->
+                viewModel.toggleFavorite(saved.id)
+            }
+        },
+        browse = { result -> viewModel.preview(result) },
+        loadMore = { viewModel.loadMoreCategory() },
+    )
+}
 
 @Composable
 internal fun PodcastDiscoveryContent(
@@ -15,9 +95,7 @@ internal fun PodcastDiscoveryContent(
     previewEpisodeEntities: Map<Long, EpisodeEntity>,
     playback: PlaybackUiState,
     playbackProgress: PlaybackProgress,
-    viewModel: PodcastViewModel,
-    playbackViewModel: PodcastPlaybackViewModel,
-    context: Context,
+    actions: PodcastDiscoveryActions,
     downloadProgress: Map<Long, DownloadProgress>,
     queueEpisodeIds: List<Long>,
     subscribedFeedUrls: Set<String>,
@@ -52,44 +130,31 @@ internal fun PodcastDiscoveryContent(
             completed = previewEpisodeEntities[previewEpisode.id]?.completed == true,
             onPlay = {
                 if (playback.episode?.id == previewEpisode.id) {
-                    playbackViewModel.togglePlayPause()
+                    actions.togglePlayPause()
                 } else {
-                    viewModel.preparePreviewEpisode(previewEpisode, previewResult.podcast) { savedEpisode ->
-                        playbackViewModel.play(savedEpisode, previewResult.podcast.title)
-                    }
+                    actions.playPreview(previewEpisode, previewResult.podcast)
                 }
             },
             onWatch = previewEpisode.videoUrl?.let {
                 {
-                    viewModel.preparePreviewEpisode(previewEpisode, previewResult.podcast) { savedEpisode ->
-                        playbackViewModel.watch(savedEpisode, previewResult.podcast.title)
+                    actions.watchPreview(previewEpisode, previewResult.podcast) {
                         onShowNowPlayingChange(true)
                     }
                 }
             },
-            onDownload = { viewModel.downloadPreview(context, previewEpisode, previewResult.podcast) },
-            onRemoveDownload = {
-                viewModel.preparePreviewEpisode(previewEpisode, previewResult.podcast) { savedEpisode ->
-                    viewModel.removeDownload(context, savedEpisode.id)
-                }
-            },
+            onDownload = { actions.downloadPreview(previewEpisode, previewResult.podcast) },
+            onRemoveDownload = { actions.removeDownload(previewEpisode, previewResult.podcast) },
             downloadProgress = downloadProgress[previewEpisode.id],
             isInQueue = previewEpisodeEntities[previewEpisode.id]?.id in queueEpisodeIds,
             onToggleQueue = {
                 val savedEpisodeId = previewEpisodeEntities[previewEpisode.id]?.id
                 if (savedEpisodeId != null && savedEpisodeId in queueEpisodeIds) {
-                    viewModel.removeFromQueue(savedEpisodeId)
+                    actions.removeFromQueue(savedEpisodeId)
                 } else {
-                    viewModel.preparePreviewEpisode(previewEpisode, previewResult.podcast) { savedEpisode ->
-                        viewModel.addToQueueFromInbox(savedEpisode.id, onError = onQueueError)
-                    }
+                    actions.addToQueue(previewEpisode, previewResult.podcast, onQueueError)
                 }
             },
-            onToggleFavorite = {
-                viewModel.preparePreviewEpisode(previewEpisode) { savedEpisode ->
-                    viewModel.toggleFavorite(savedEpisode.id)
-                }
-            },
+            onToggleFavorite = { actions.toggleFavorite(previewEpisode) },
             onOpenPodcast = onOpenPodcast,
             isSubscribed = previewResult.podcast.feedUrl in subscribedFeedUrls,
             twoPane = twoPane,
@@ -98,8 +163,8 @@ internal fun PodcastDiscoveryContent(
     } else if (categoryResult != null && (state.categoryFromPreview || previewResult == null)) {
         PodcastCategoryListScreen(
             category = categoryResult,
-            onBrowse = viewModel::preview,
-            onLoadMore = viewModel::loadMoreCategory,
+            onBrowse = { result -> actions.browse(result) },
+            onLoadMore = { actions.loadMore() },
             isLoadingMore = state.isLoadingMoreCategory,
             hasMore = state.hasMoreCategory,
             modifier = modifier,
@@ -125,11 +190,9 @@ internal fun PodcastDiscoveryContent(
             playbackProgress = playback.episode?.let { playbackProgress.fraction },
             onPlay = { episode ->
                 if (playback.episode?.id == episode.id) {
-                    playbackViewModel.togglePlayPause()
+                    actions.togglePlayPause()
                 } else {
-                    viewModel.preparePreviewEpisode(episode, previewResult.podcast) { savedEpisode ->
-                        playbackViewModel.play(savedEpisode, previewResult.podcast.title)
-                    }
+                    actions.playPreview(episode, previewResult.podcast)
                 }
             },
             onLongPress = { episode ->
@@ -149,7 +212,7 @@ internal fun PodcastDiscoveryContent(
                     ),
                 )
             },
-            onDownload = { episode -> viewModel.downloadPreview(context, episode, previewResult.podcast) },
+            onDownload = { episode -> actions.downloadPreview(episode, previewResult.podcast) },
             downloadProgress = downloadProgress,
             savedEpisodes = previewEpisodeEntities,
             modifier = modifier,
