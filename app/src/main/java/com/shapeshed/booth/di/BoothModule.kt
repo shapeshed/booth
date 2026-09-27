@@ -12,8 +12,8 @@ import com.shapeshed.booth.data.PodcastFeedProvider
 import com.shapeshed.booth.data.PodcastIndexCredentialsStore
 import com.shapeshed.booth.data.PodcastIndexSearchProvider
 import com.shapeshed.booth.data.PodcastRepository
-import com.shapeshed.booth.data.PodcastSubscriptionProgressStore
 import com.shapeshed.booth.data.PodcastSearchCatalog
+import com.shapeshed.booth.data.PodcastSubscriptionProgressStore
 import com.shapeshed.booth.data.Prof18FeedParser
 import com.shapeshed.booth.data.RssPodcastFeedProvider
 import com.shapeshed.booth.data.SaxStreamingFeedParser
@@ -140,8 +140,7 @@ object BoothModule {
 
     @Provides
     @Singleton
-    fun providePodcastSubscriptionProgressStore(): PodcastSubscriptionProgressStore =
-        PodcastSubscriptionProgressStore()
+    fun providePodcastSubscriptionProgressStore(): PodcastSubscriptionProgressStore = PodcastSubscriptionProgressStore()
 
     @Provides
     @Singleton

@@ -48,10 +48,7 @@ import kotlinx.coroutines.launch
  * the PodcastHomeUiState snapshot. Only the few components that actually draw a progress bar or a
  * scrubber need this, so they collect it on their own.
  */
-data class PlaybackProgress(
-    val positionMs: Long = 0L,
-    val durationMs: Long = 0L,
-) {
+data class PlaybackProgress(val positionMs: Long = 0L, val durationMs: Long = 0L) {
     /** Played fraction in 0f..1f, or null while the duration is unknown. */
     val fraction: Float?
         get() = durationMs.takeIf { it > 0L }?.let { (positionMs.toFloat() / it).coerceIn(0f, 1f) }

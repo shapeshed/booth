@@ -54,11 +54,7 @@ class PodcastDownloadReceiver : BroadcastReceiver() {
         }
     }
 
-    private suspend fun reconcile(
-        appContext: Context,
-        downloadId: Long,
-        entryPoint: BoothWorkerEntryPoint,
-    ) {
+    private suspend fun reconcile(appContext: Context, downloadId: Long, entryPoint: BoothWorkerEntryPoint) {
         val repository = entryPoint.podcastRepository
         val progressStore = entryPoint.downloadProgressStore
         val asset = repository.downloadAssetById(downloadId) ?: return

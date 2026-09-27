@@ -28,9 +28,9 @@ import com.shapeshed.booth.data.PodcastCatalogIndex
 import com.shapeshed.booth.data.PodcastDiscoveryCatalog
 import com.shapeshed.booth.data.PodcastDiscoveryCategory
 import com.shapeshed.booth.data.PodcastDiscoveryProvider
-import com.shapeshed.booth.data.PodcastDownloadManager
 import com.shapeshed.booth.data.PodcastDiscoveryShelf
 import com.shapeshed.booth.data.PodcastDiscoveryShelfResult
+import com.shapeshed.booth.data.PodcastDownloadManager
 import com.shapeshed.booth.data.PodcastDownloadNetwork
 import com.shapeshed.booth.data.PodcastEntity
 import com.shapeshed.booth.data.PodcastFeed

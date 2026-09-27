@@ -103,8 +103,7 @@ class DownloadAssetConverters {
  * Blank counts as absent, since an empty string names no file. Nothing writes one today, but
  * retention would then skip that episode forever and leak it.
  */
-internal fun EpisodeEntity.hasLocalMedia(): Boolean =
-    !localUri.isNullOrBlank() || !localVideoUri.isNullOrBlank()
+internal fun EpisodeEntity.hasLocalMedia(): Boolean = !localUri.isNullOrBlank() || !localVideoUri.isNullOrBlank()
 
 /**
  * Whether to offer the UI a downloaded affordance for this episode.

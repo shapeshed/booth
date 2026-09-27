@@ -51,5 +51,4 @@ class PlayedDownloadCleanupWorker(appContext: Context, workerParams: WorkerParam
     }
 }
 
-internal fun shouldRemovePlayedDownload(episode: EpisodeEntity): Boolean =
-    episode.completed && episode.hasLocalMedia()
+internal fun shouldRemovePlayedDownload(episode: EpisodeEntity): Boolean = episode.completed && episode.hasLocalMedia()
