@@ -9,7 +9,6 @@ import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.FileDownload
-import androidx.compose.material.icons.rounded.Replay10
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -92,15 +91,6 @@ internal fun PodcastHomeInboxSelectionActions(
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.mark_unplayed)) },
                 trailingIcon = { Icon(Icons.Rounded.Block, contentDescription = null) },
-                onClick = {
-                    onMenuExpandedChange(false)
-                    inbox.filter { it.id in selectedIds }.forEach { viewModel.markUnplayed(it.id) }
-                    onClearSelection()
-                },
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.reset_playback_position)) },
-                trailingIcon = { Icon(Icons.Rounded.Replay10, contentDescription = null) },
                 onClick = {
                     onMenuExpandedChange(false)
                     inbox.filter { it.id in selectedIds }.forEach { viewModel.markUnplayed(it.id) }
