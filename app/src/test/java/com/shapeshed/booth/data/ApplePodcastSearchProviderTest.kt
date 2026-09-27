@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets
 import java.util.Locale
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
+import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
@@ -54,6 +55,101 @@ class ApplePodcastSearchProviderTest {
         assertEquals("Apple Podcasts", provider.displayName)
         assertEquals(true, provider.supportsCategoryPaging)
         assertEquals(true, provider.supportsPopularPodcasts)
+    }
+
+    // These three need a real org.json on the unit-test classpath. android.jar's org.json is a
+    // stub, so before testImplementation 'org.json:json' every one of them passed vacuously
+    // against a parser that returned empty for any input.
+
+    @Test
+    fun parseLookupResultsReadsFeedTitleAuthorAndArtwork() {
+        val results = provider.parseLookupResults(
+            JSONObject(
+                """
+                {"results":[{
+                  "feedUrl":"https://example.com/feed.xml",
+                  "collectionName":"Example Show",
+                  "artistName":"Example Author",
+                  "collectionViewUrl":"https://podcasts.apple.com/us/podcast/x/id42",
+                  "artworkUrl600":"https://example.com/600.png",
+                  "artworkUrl100":"https://example.com/100.png",
+                  "primaryGenreName":"Technology",
+                  "primaryGenreId":"1311",
+                  "genres":["Technology","News"],
+                  "genreIds":["1311","1316"]
+                }]}
+                """.trimIndent(),
+            ),
+        )
+
+        assertEquals(1, results.size)
+        val podcast = results.single().podcast
+        assertEquals("Example Show", podcast.title)
+        assertEquals("Example Author", podcast.author)
+        assertEquals("https://example.com/600.png", podcast.artworkUrl)
+        assertEquals("https://podcasts.apple.com/us/podcast/x/id42", podcast.siteUrl)
+        assertEquals(listOf("Technology", "News"), podcast.categories)
+        assertEquals(
+            mapOf("Technology" to "1311", "News" to "1316"),
+            podcast.categoryIds,
+        )
+    }
+
+    @Test
+    fun parseLookupResultsSkipsEntriesWithoutAFeedUrl() {
+        val results = provider.parseLookupResults(
+            JSONObject(
+                """
+                {"results":[
+                  {"collectionName":"No Feed"},
+                  {"feedUrl":"   ","collectionName":"Blank Feed"},
+                  {"feedUrl":"https://example.com/keep.xml","collectionName":"Kept"}
+                ]}
+                """.trimIndent(),
+            ),
+        )
+
+        assertEquals(listOf("Kept"), results.map { it.podcast.title })
+    }
+
+    @Test
+    fun parseLookupResultsFallsBackToArtworkUrl100() {
+        val results = provider.parseLookupResults(
+            JSONObject(
+                """
+                {"results":[{
+                  "feedUrl":"https://example.com/feed.xml",
+                  "collectionName":"Example Show",
+                  "artworkUrl600":"",
+                  "artworkUrl100":"https://example.com/100.png"
+                }]}
+                """.trimIndent(),
+            ),
+        )
+
+        assertEquals("https://example.com/100.png", results.single().podcast.artworkUrl)
+    }
+
+    @Test
+    fun searchReturnsParsedResultsFromTheResponse() = runBlocking {
+        server.createContext("/search") { exchange ->
+            respond(
+                exchange,
+                200,
+                """
+                {"results":[{
+                  "feedUrl":"https://example.com/feed.xml",
+                  "collectionName":"Example Show",
+                  "artistName":"Example Author"
+                }]}
+                """.trimIndent(),
+            )
+        }
+
+        val results = provider.search("news")
+
+        assertEquals(1, results.size)
+        assertEquals("Example Show", results.single().podcast.title)
     }
 
     private fun url(path: String): String = "http://127.0.0.1:${server.address.port}$path"

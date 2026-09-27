@@ -5,6 +5,8 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import dagger.hilt.android.testing.HiltAndroidRule
+import dagger.hilt.android.testing.HiltAndroidTest
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.net.Inet4Address
@@ -20,11 +22,20 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assume.assumeTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
+// HiltAndroidRule is required because cancelling a system download makes DownloadManager fire
+// DOWNLOAD_COMPLETE, which PodcastDownloadReceiver handles. That receiver resolves its repository
+// from the Hilt graph, and without the rule the component does not exist. The test asserts against
+// its own in-memory database, so the receiver's work is incidental.
+@HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class PodcastDownloadManagerDeviceTest {
+    @get:Rule
+    val hiltRule = HiltAndroidRule(this)
+
     private lateinit var database: PodcastDatabase
     private lateinit var repository: PodcastRepository
     private lateinit var manager: PodcastDownloadManager
@@ -33,6 +44,7 @@ class PodcastDownloadManagerDeviceTest {
 
     @Before
     fun setUp() {
+        hiltRule.inject()
         val context = ApplicationProvider.getApplicationContext<Context>()
         val address = deviceAddress()
         assumeTrue("No routable device address available", address != null)
