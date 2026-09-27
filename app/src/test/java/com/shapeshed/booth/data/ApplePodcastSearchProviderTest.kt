@@ -50,6 +50,94 @@ class ApplePodcastSearchProviderTest {
     }
 
     @Test
+    fun searchReturnsParsedResultsFromTheResponse() = runBlocking {
+        server.createContext("/search") { exchange ->
+            respond(
+                exchange,
+                200,
+                """
+                {"results":[{
+                  "feedUrl":"https://example.com/feed.xml",
+                  "collectionName":"Example Show",
+                  "artistName":"Example Author"
+                }]}
+                """.trimIndent(),
+            )
+        }
+
+        val results = provider.search("news")
+
+        assertEquals(1, results.size)
+        assertEquals("Example Show", results.single().podcast.title)
+    }
+
+    /**
+     * Ids are matched by parsing them out of the collectionViewUrl, not by substring.
+     *
+     * "id123456" is a prefix of "id1234567", so the old `contains("id$id")` matched the longer id
+     * first and paired the wrong show with the requested one. A Top-Shows lookup sends a batch of
+     * ids at once, which is exactly where that bites.
+     */
+    @Test
+    fun lookupPairsEachIdWithItsOwnEntryWhenIdsShareAPrefix() = runBlocking {
+        server.createContext("/lookup") { exchange ->
+            respond(
+                exchange,
+                200,
+                """
+                {"results":[
+                  {"feedUrl":"https://example.com/long.xml","collectionName":"Long","collectionViewUrl":"https://podcasts.apple.com/us/podcast/long/id1234567"},
+                  {"feedUrl":"https://example.com/short.xml","collectionName":"Short","collectionViewUrl":"https://podcasts.apple.com/us/podcast/short/id123456"}
+                ]}
+                """.trimIndent(),
+            )
+        }
+
+        val results = provider.lookup(listOf("123456", "1234567"))
+
+        assertEquals(listOf("Short", "Long"), results.map { it.podcast.title })
+    }
+
+    @Test
+    fun lookupIgnoresTheEpisodeIdQueryParameter() = runBlocking {
+        server.createContext("/lookup") { exchange ->
+            respond(
+                exchange,
+                200,
+                """
+                {"results":[
+                  {"feedUrl":"https://example.com/one.xml","collectionName":"One","collectionViewUrl":"https://podcasts.apple.com/us/podcast/one/id42?i=999"}
+                ]}
+                """.trimIndent(),
+            )
+        }
+
+        val results = provider.lookup(listOf("42"))
+
+        assertEquals(listOf("One"), results.map { it.podcast.title })
+    }
+
+    @Test
+    fun lookupOmitsIdsWithNoMatchingEntry() = runBlocking {
+        server.createContext("/lookup") { exchange ->
+            respond(
+                exchange,
+                200,
+                """
+                {"results":[
+                  {"feedUrl":"https://example.com/one.xml","collectionName":"One","collectionViewUrl":"https://podcasts.apple.com/us/podcast/one/id1"}
+                ]}
+                """.trimIndent(),
+            )
+        }
+
+        // "2" has no entry, so it is dropped rather than paired with "1". The result is shorter
+        // than the request, which is the pre-existing contract: lookup is best effort and callers
+        // treat a short list as "some of these are not on the directory".
+        assertEquals(listOf("One"), provider.lookup(listOf("1", "2")).map { it.podcast.title })
+    }
+
+    @Test
     fun providerExposesApplePagingContract() {
         assertEquals("apple", provider.id)
         assertEquals("Apple Podcasts", provider.displayName)
@@ -128,28 +216,6 @@ class ApplePodcastSearchProviderTest {
         )
 
         assertEquals("https://example.com/100.png", results.single().podcast.artworkUrl)
-    }
-
-    @Test
-    fun searchReturnsParsedResultsFromTheResponse() = runBlocking {
-        server.createContext("/search") { exchange ->
-            respond(
-                exchange,
-                200,
-                """
-                {"results":[{
-                  "feedUrl":"https://example.com/feed.xml",
-                  "collectionName":"Example Show",
-                  "artistName":"Example Author"
-                }]}
-                """.trimIndent(),
-            )
-        }
-
-        val results = provider.search("news")
-
-        assertEquals(1, results.size)
-        assertEquals("Example Show", results.single().podcast.title)
     }
 
     private fun url(path: String): String = "http://127.0.0.1:${server.address.port}$path"
