@@ -55,6 +55,8 @@ class SettingsStore(private val context: Context) {
     private val removePlayedDownloadsKey = booleanPreferencesKey("podcast_remove_played_downloads")
     private val downloadVideosKey = booleanPreferencesKey("podcast_download_videos")
     private val searchProviderKey = stringPreferencesKey("podcast_search_provider")
+    private val sleepTimerRemainingMsKey = longPreferencesKey("podcast_sleep_timer_remaining_ms")
+    private val sleepTimerTotalMsKey = longPreferencesKey("podcast_sleep_timer_total_ms")
 
     val podcastSubscriptionsViewMode: Flow<PodcastSubscriptionsViewMode> = context.dataStore.data.map { prefs ->
         prefs[subscriptionsViewModeKey]
@@ -73,6 +75,34 @@ class SettingsStore(private val context: Context) {
     }
 
     val podcastLastEpisodeId: Flow<Long?> = context.dataStore.data.map { it[lastEpisodeIdKey] }
+
+    /**
+     * The sleep timer as it stood when the process last ran.
+     *
+     * Persisted because the timer lives in the media service, and a process death mid-playback
+     * would otherwise silently drop it: the service restarts, playback resumes, and the user
+     * listens indefinitely past the point they asked to stop at. The value is the remaining
+     * *playback* time, not a wall-clock deadline, because paused time must not count against it.
+     */
+    val sleepTimer: Flow<SleepTimerState?> = context.dataStore.data.map { prefs ->
+        val total = prefs[sleepTimerTotalMsKey] ?: return@map null
+        val remaining = prefs[sleepTimerRemainingMsKey] ?: return@map null
+        SleepTimerState(totalMs = total, remainingMs = remaining)
+    }
+
+    suspend fun setSleepTimer(state: SleepTimerState) {
+        context.dataStore.edit {
+            it[sleepTimerTotalMsKey] = state.totalMs
+            it[sleepTimerRemainingMsKey] = state.remainingMs
+        }
+    }
+
+    suspend fun clearSleepTimer() {
+        context.dataStore.edit {
+            it.remove(sleepTimerTotalMsKey)
+            it.remove(sleepTimerRemainingMsKey)
+        }
+    }
 
     suspend fun setPodcastLastEpisodeId(episodeId: Long) {
         context.dataStore.edit { it[lastEpisodeIdKey] = episodeId }

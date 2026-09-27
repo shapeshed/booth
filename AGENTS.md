@@ -103,6 +103,15 @@ directory is intentionally ignored.
 - Keep application-scoped services explicit and test-replaceable. Hilt is now used for ViewModel
   construction and app-scoped repository/provider bindings because it provides a concrete
   maintenance and testability benefit; do not add additional abstraction without similar value.
+- Do not set `followSslRedirects(false)` on the shared OkHttp client. Feeds, enclosures and radio
+  streams legitimately use plain HTTP, and a number of feeds publish an `https://` URL that
+  redirects to `http://`; blocking that would break real subscriptions. A network attacker forcing
+  a downgrade is possible in principle, but the same attacker can already observe and alter the
+  plain-HTTP traffic these feeds use anyway, so the downgrade adds little that is not already the
+  case. The one genuinely sensitive request is the Podcast Index API, which is hardcoded to
+  `https://api.podcastindex.org` and carries the key and secret. If that ever needs protecting,
+  scope it by giving that provider its own client rather than tightening the shared one — and give
+  it no shared `Cache` directory, per the single-graph rule below.
 - There must be exactly one object graph. `BoothApp` must not construct dependencies itself, and
   workers, receivers and services must resolve them from the Hilt entry points
   (`boothWorkerEntryPoint`, `boothPlaybackEntryPoint`). A second `PodcastDatabase` or `OkHttpClient`

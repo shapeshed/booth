@@ -30,6 +30,8 @@ import com.shapeshed.booth.data.PlaybackSkipPolicy
 import com.shapeshed.booth.data.PodcastRepository
 import com.shapeshed.booth.data.SKIP_SILENCE_ENABLED
 import com.shapeshed.booth.data.SLEEP_TIMER_DURATION_MS
+import com.shapeshed.booth.data.SettingsStore
+import com.shapeshed.booth.data.SleepTimerBudget
 import com.shapeshed.booth.data.SleepTimerState
 import com.shapeshed.booth.data.SleepTimerStore
 import com.shapeshed.booth.data.orderedResumptionIds
@@ -40,7 +42,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -53,6 +59,7 @@ class PodcastPlaybackService : MediaLibraryService() {
     private lateinit var player: ExoPlayer
     private lateinit var session: MediaLibrarySession
     private lateinit var repository: PodcastRepository
+    private var settings: SettingsStore? = null
     private var sleepTimerJob: Job? = null
     private var progressSaveJob: Job? = null
     private var currentMediaId: Long? = null
@@ -69,6 +76,15 @@ class PodcastPlaybackService : MediaLibraryService() {
 
         /** Ceiling for the one blocking write in onDestroy, so a locked database cannot ANR. */
         const val FINAL_PROGRESS_SAVE_TIMEOUT_MS = 250L
+
+        /** How often the sleep timer samples playback progress. */
+        const val SLEEP_TIMER_TICK_MS = 250L
+
+        /**
+         * How often the sleep timer checkpoints itself to settings. Bounds how much of the budget a
+         * process death can lose.
+         */
+        const val SLEEP_TIMER_CHECKPOINT_MS = 10_000L
     }
 
     override fun onCreate() {
@@ -78,7 +94,9 @@ class PodcastPlaybackService : MediaLibraryService() {
                 it.setSmallIcon(R.drawable.ic_notification)
             },
         )
-        repository = boothPlaybackEntryPoint(application).podcastRepository
+        val entryPoint = boothPlaybackEntryPoint(application)
+        repository = entryPoint.podcastRepository
+        settings = entryPoint.settings
         player = ExoPlayer.Builder(this)
             .setSeekBackIncrementMs(10_000L)
             .setSeekForwardIncrementMs(30_000L)
@@ -92,6 +110,7 @@ class PodcastPlaybackService : MediaLibraryService() {
             .setHandleAudioBecomingNoisy(true)
             .build()
         player.addListener(progressListener)
+        restoreSleepTimer()
         progressSaveJob = serviceScope.launch {
             while (isActive) {
                 delay(PROGRESS_SAVE_INTERVAL_MS)
@@ -344,9 +363,7 @@ class PodcastPlaybackService : MediaLibraryService() {
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession = session
 
     override fun onDestroy() {
-        sleepTimerJob?.cancel()
-        sleepTimerJob = null
-        SleepTimerStore.set(null)
+        cancelSleepTimerForTeardown()
         // Bounded so a contended SQLite lock cannot stall the main thread indefinitely. Losing
         // this final write costs at most PROGRESS_SAVE_INTERVAL_MS of playback position, which
         // is a much better trade than an ANR during service teardown.
@@ -442,29 +459,116 @@ class PodcastPlaybackService : MediaLibraryService() {
     private fun startSleepTimer(durationMs: Long) {
         sleepTimerJob?.cancel()
         sleepTimerJob = serviceScope.launch {
-            var remainingMs = durationMs
-            SleepTimerStore.set(SleepTimerState(durationMs, remainingMs))
-            while (remainingMs > 0L) {
-                val wasPlaying = player.isPlaying
-                val tickStartedAt = android.os.SystemClock.elapsedRealtime()
-                delay(250L)
-                if (wasPlaying) {
-                    remainingMs -= android.os.SystemClock.elapsedRealtime() - tickStartedAt
+            val budget = SleepTimerBudget(durationMs)
+            publishSleepTimer(budget, persist = true)
+            var sinceCheckpointMs = 0L
+            while (isActive && !budget.isExhausted) {
+                if (!player.isPlaying) {
+                    // A sleep timer measures playback time, so paused time does not count. Wait for
+                    // playback to resume instead of polling: the previous loop woke four times a
+                    // second for as long as the user left it paused, and never returned.
+                    awaitPlaying()
+                    continue
                 }
-                if (remainingMs > 0L) {
-                    SleepTimerStore.set(SleepTimerState(durationMs, remainingMs))
+                val startedAt = android.os.SystemClock.elapsedRealtime()
+                delay(SLEEP_TIMER_TICK_MS)
+                val elapsed = android.os.SystemClock.elapsedRealtime() - startedAt
+                sinceCheckpointMs += elapsed
+                val finished = budget.consume(elapsed)
+                if (sinceCheckpointMs >= SLEEP_TIMER_CHECKPOINT_MS) {
+                    sinceCheckpointMs = 0L
+                    publishSleepTimer(budget, persist = true)
+                } else {
+                    publishSleepTimer(budget, persist = false)
                 }
+                if (finished) break
             }
-            SleepTimerStore.set(null)
-            player.pause()
+            finishSleepTimer()
         }
     }
 
+    private suspend fun awaitPlaying() {
+        if (player.isPlaying) return
+        player.playingState().first { it }
+    }
+
+    private fun publishSleepTimer(budget: SleepTimerBudget, persist: Boolean) {
+        val state = budget.state()
+        SleepTimerStore.set(state)
+        if (persist) {
+            serviceScope.launch { settings?.setSleepTimer(state) }
+        }
+    }
+
+    private fun finishSleepTimer() {
+        sleepTimerJob = null
+        SleepTimerStore.clear()
+        serviceScope.launch { settings?.clearSleepTimer() }
+        player.pause()
+    }
+
     private fun cancelSleepTimer() {
+        stopSleepTimer(clearPersisted = true)
+    }
+
+    /** Teardown path: stop the in-memory timer but keep the persisted budget for a restart. */
+    private fun cancelSleepTimerForTeardown() {
+        stopSleepTimer(clearPersisted = false)
+    }
+
+    /**
+     * Stops the in-memory timer.
+     *
+     * [clearPersisted] is false when the service is being torn down. The persisted budget is what
+     * [restoreSleepTimer] reads back, so clearing it here would discard the timer on every service
+     * restart, which is exactly the case it exists to survive. It is cleared when the timer
+     * actually expires or when the user cancels it.
+     */
+    private fun stopSleepTimer(clearPersisted: Boolean) {
         sleepTimerJob?.cancel()
         sleepTimerJob = null
-        SleepTimerStore.set(null)
+        SleepTimerStore.clear()
+        if (clearPersisted) {
+            serviceScope.launch { settings?.clearSleepTimer() }
+        }
+    }
+
+    /**
+     * Resumes a timer that was set before the process died.
+     *
+     * The persisted value is remaining *playback* time, not a wall-clock deadline, so a timer set
+     * for 30 minutes resumes with the time that was left rather than expiring while the app was not
+     * running.
+     */
+    private fun restoreSleepTimer() {
+        serviceScope.launch {
+            val persisted = settings?.sleepTimer?.first() ?: return@launch
+            if (persisted.remainingMs <= 0L) {
+                settings?.clearSleepTimer()
+                return@launch
+            }
+            startSleepTimer(persisted.remainingMs)
+        }
     }
 }
 
 private fun Int?.orZero(): Int = this ?: 0
+
+/**
+ * Bridges [Player.isPlaying] to a Flow.
+ *
+ * The sleep timer needs to suspend until playback resumes rather than poll for it, and polling
+ * four times a second for as long as the user leaves the app paused is a busy loop that never
+ * returns. The listener is removed in [awaitClose], so cancelling the collecting coroutine,
+ * including when the service tears the timer down, does not leak it.
+ */
+private fun Player.playingState(): Flow<Boolean> = callbackFlow {
+    val listener = object : Player.Listener {
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            trySend(isPlaying)
+        }
+    }
+    addListener(listener)
+    trySend(isPlaying)
+    awaitClose { removeListener(listener) }
+}.distinctUntilChanged()
