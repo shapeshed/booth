@@ -34,6 +34,38 @@ Instrumentation uses the `deviceTest` build type and the isolated application ID
 normal application ID. Keep `installDebug` for normal development. Never run connected tests
 against `com.shapeshed.booth` when it contains personal listening data.
 
+### Stale build state looks like a regression
+
+An interrupted Gradle build — a killed daemon, a cancelled task, a machine restart — can leave
+`app/build` in a state that produces a convincing false failure. The observed signature is every
+Compose UI test failing while every non-Compose test passes:
+
+```text
+java.lang.IllegalStateException: No compose hierarchies found in the app.
+```
+
+with no `FATAL EXCEPTION` in logcat, no crash, and the host `androidx.activity.ComponentActivity`
+visibly launching once per test method. The activity comes up and the semantics tree never
+registers, so any `onNodeWith...` call throws before reaching the code under test.
+
+Do not investigate the application when you see this. Clear the build and run again:
+
+```sh
+./gradlew clean
+ANDROID_SERIAL=<test-device-serial> ./gradlew :app:connectedDeviceTestAndroidTest
+```
+
+Two traps, both of which cost real time here:
+
+- **Do not bisect across it.** `git bisect` with a stale `app/build` measures noise rather than
+  changes, and will confidently blame a commit that cannot possibly be responsible, such as one
+  that only edits documentation. If a bisect result is absurd, suspect the measurement.
+- **A clean build at the current commit is the discriminator.** It settles the question in about a
+  minute and needs no bisect.
+
+Note that `./gradlew quality` does not clear this, and neither does `--rerun-tasks` on the Kotlin
+compile alone. The generated Compose and Hilt code has to be regenerated too.
+
 ## Hilt test bindings
 
 Directory providers are replaceable in instrumentation tests with
