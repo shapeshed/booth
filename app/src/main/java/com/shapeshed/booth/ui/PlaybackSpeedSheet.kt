@@ -62,10 +62,10 @@ internal fun PlaybackPresetButton(
 }
 
 private fun standardSpeedIcon(speed: Float): androidx.compose.ui.graphics.vector.ImageVector? = when (speed) {
-    0.75f -> speed_0_75
-    1.25f -> speed_1_25
-    1.5f -> speed_1_5
-    2f -> speed_2x
+    0.75f -> speed075
+    1.25f -> speed125
+    1.5f -> speed15
+    2f -> speed2x
     else -> null
 }
 
