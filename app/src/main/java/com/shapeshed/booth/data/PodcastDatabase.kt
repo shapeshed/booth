@@ -736,8 +736,12 @@ private val MIGRATION_26_27 = object : androidx.room.migration.Migration(26, 27)
  * `addMigrations(*ALL_MIGRATIONS)` keeps the call site readable as the
  * schema grows; an unlisted migration still fails at runtime, because
  * Room validates the expected and actual schema on open.
+ *
+ * Internal rather than private so PodcastDatabaseMigrationDeviceTest can walk the whole chain.
+ * A wrong execSQL in any of these is a crash on upgrade for every existing install, and Booth
+ * is local-first with no server-side copy, so a bad migration is unrecoverable data loss.
  */
-private val ALL_MIGRATIONS = arrayOf(
+internal val ALL_MIGRATIONS = arrayOf(
     MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6,
     MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11,
     MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16,
