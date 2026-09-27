@@ -103,6 +103,11 @@ directory is intentionally ignored.
 - Keep application-scoped services explicit and test-replaceable. Hilt is now used for ViewModel
   construction and app-scoped repository/provider bindings because it provides a concrete
   maintenance and testability benefit; do not add additional abstraction without similar value.
+- There must be exactly one object graph. `BoothApp` must not construct dependencies itself, and
+  workers, receivers and services must resolve them from the Hilt entry points
+  (`boothWorkerEntryPoint`, `boothPlaybackEntryPoint`). A second `PodcastDatabase` or `OkHttpClient`
+  silently breaks Room flow invalidation and corrupts the shared HTTP cache directory.
+  `BoothWorkerEntryPointDeviceTest` pins this; keep it passing.
 
 ## UI notes
 

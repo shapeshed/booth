@@ -34,7 +34,6 @@ import java.io.InputStream
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.util.concurrent.TimeUnit
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -44,7 +43,6 @@ import okhttp3.Request
 
 class PodcastRefreshWorker(context: Context, workerParams: WorkerParameters) : CoroutineWorker(context, workerParams) {
     override suspend fun doWork(): Result {
-        val app = applicationContext as com.shapeshed.booth.BoothApp
         val entryPoint = boothWorkerEntryPoint(applicationContext)
         val repository = entryPoint.podcastRepository
         val settings = entryPoint.settings
@@ -133,7 +131,7 @@ class PodcastRefreshWorker(context: Context, workerParams: WorkerParameters) : C
             )
         }
         if (newEpisodes.isNotEmpty()) {
-            applicationContext.postPodcastNotifications(newEpisodes, app.okHttpClient)
+            applicationContext.postPodcastNotifications(newEpisodes, entryPoint.okHttpClient)
         }
         return if (retryableFailure) Result.retry() else Result.success()
     }

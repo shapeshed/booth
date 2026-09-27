@@ -6,6 +6,7 @@ import com.shapeshed.booth.data.PodcastRepository
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import javax.inject.Inject
+import okhttp3.OkHttpClient
 import org.junit.Assert.assertSame
 import org.junit.Before
 import org.junit.Rule
@@ -21,6 +22,9 @@ class BoothWorkerEntryPointDeviceTest {
     @Inject
     lateinit var repository: PodcastRepository
 
+    @Inject
+    lateinit var okHttpClient: OkHttpClient
+
     @Before
     fun injectDependencies() {
         hiltRule.inject()
@@ -32,5 +36,32 @@ class BoothWorkerEntryPointDeviceTest {
             .podcastRepository
 
         assertSame(repository, workerRepository)
+    }
+
+    /**
+     * There used to be a second object graph built by hand in BoothApp, so workers, the download
+     * receiver and the playback service each got their own Room instance and their own OkHttp
+     * client sharing one cache directory. Room's invalidation tracker is per instance, so writes
+     * through one graph never reached flows observed on the other. These two tests pin the
+     * invariant that made that possible in the first place.
+     */
+    @Test
+    fun playbackAndWorkerComponentsShareOneRepositoryInstance() {
+        val application = ApplicationProvider.getApplicationContext<android.app.Application>()
+
+        val workerRepository = boothWorkerEntryPoint(application).podcastRepository
+        val playbackRepository = boothPlaybackEntryPoint(application).podcastRepository
+
+        assertSame(repository, workerRepository)
+        assertSame(workerRepository, playbackRepository)
+    }
+
+    @Test
+    fun everyComponentSharesOneHttpClient() {
+        val application = ApplicationProvider.getApplicationContext<android.app.Application>()
+
+        // Two Cache objects over one directory is the failure mode: OkHttp requires exclusive
+        // access, and the rebuildJournal() fallback deletes the directory.
+        assertSame(okHttpClient, boothWorkerEntryPoint(application).okHttpClient)
     }
 }

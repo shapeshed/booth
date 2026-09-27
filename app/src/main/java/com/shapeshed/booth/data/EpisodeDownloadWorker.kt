@@ -3,7 +3,7 @@ package com.shapeshed.booth.data
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.shapeshed.booth.BoothApp
+import com.shapeshed.booth.di.boothWorkerEntryPoint
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -17,11 +17,12 @@ class EpisodeDownloadWorker(appContext: Context, workerParams: WorkerParameters)
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val episodeId = inputData.getLong(EPISODE_ID_INPUT, 0L)
         if (episodeId <= 0L) return@withContext Result.failure()
-        val app = applicationContext as BoothApp
-        val episode = app.podcastRepository.episode(episodeId)
+        val entryPoint = boothWorkerEntryPoint(applicationContext)
+        val repository = entryPoint.podcastRepository
+        val episode = repository.episode(episodeId)
             ?: return@withContext Result.failure().also { DownloadProgressStore.clear(episodeId) }
         try {
-            val manager = PodcastDownloadManager(applicationContext, app.podcastRepository)
+            val manager = PodcastDownloadManager(applicationContext, repository)
             if (episode.localUri == null) {
                 manager.enqueue(
                     episode = episode,
@@ -31,8 +32,8 @@ class EpisodeDownloadWorker(appContext: Context, workerParams: WorkerParameters)
                     expectedBytes = episode.audioSizeBytes,
                 )
             }
-            val downloadVideo = app.settings.podcastDownloadVideos.first()
-            val podcastAllowsVideo = app.podcastRepository.podcast(episode.podcastId)?.includeInVideoDownload ?: true
+            val downloadVideo = entryPoint.settings.podcastDownloadVideos.first()
+            val podcastAllowsVideo = repository.podcast(episode.podcastId)?.includeInVideoDownload ?: true
             if (downloadVideo && podcastAllowsVideo && !episode.videoUrl.isNullOrBlank() &&
                 episode.localVideoUri == null && episode.videoUrl != episode.audioUrl &&
                 !isHls(episode.videoUrl, episode.videoMimeType)

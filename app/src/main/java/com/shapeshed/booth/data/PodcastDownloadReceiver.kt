@@ -4,6 +4,7 @@ import android.app.DownloadManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import androidx.core.net.toUri
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
@@ -12,8 +13,9 @@ import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
-import com.shapeshed.booth.BoothApp
+import com.shapeshed.booth.di.boothWorkerEntryPoint
 import java.io.File
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -25,22 +27,35 @@ class PodcastDownloadReceiver : BroadcastReceiver() {
         if (intent.action != DownloadManager.ACTION_DOWNLOAD_COMPLETE) return
         val downloadId = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L)
         if (downloadId < 0L) return
-        val app = context.applicationContext as? BoothApp ?: return
+        val appContext = context.applicationContext
         val pendingResult = goAsync()
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         scope.launch {
             try {
-                reconcile(app, downloadId)
+                reconcile(appContext, downloadId)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                // This scope is a root SupervisorJob with no parent, so an escaping exception
+                // reaches the default handler and kills the process. That is a disproportionate
+                // outcome for a background completion broadcast, and it means one transient
+                // database error can take down playback. A missed reconciliation is recoverable
+                // via PodcastDownloadReconciliationWorker; a crash is not.
+                Log.w(TAG, "Download reconciliation failed for id=$downloadId", error)
             } finally {
-                pendingResult.finish()
-                scope.cancel()
+                // Wrapped because a throw from finish() on the broadcast path would also crash.
+                runCatching {
+                    pendingResult.finish()
+                    scope.cancel()
+                }
             }
         }
     }
 
-    private suspend fun reconcile(app: BoothApp, downloadId: Long) {
-        val asset = app.podcastRepository.downloadAssetById(downloadId) ?: return
-        val manager = app.getSystemService(DownloadManager::class.java)
+    private suspend fun reconcile(appContext: Context, downloadId: Long) {
+        val repository = boothWorkerEntryPoint(appContext).podcastRepository
+        val asset = repository.downloadAssetById(downloadId) ?: return
+        val manager = appContext.getSystemService(DownloadManager::class.java)
         val cursor = manager.query(DownloadManager.Query().setFilterById(downloadId)) ?: return
         cursor.use {
             if (!it.moveToFirst()) return
@@ -57,7 +72,7 @@ class PodcastDownloadReceiver : BroadcastReceiver() {
                 val hasExpectedSizeMismatch = expectedBytes != null &&
                     expectedBytes > 0L && file.length() != expectedBytes
                 if (!isValidDownloadedFile(file, expectedBytes)) {
-                    app.podcastRepository.updateDownloadAsset(
+                    repository.updateDownloadAsset(
                         asset.episodeId,
                         asset.assetType,
                         DownloadAssetStatus.FAILED,
@@ -69,12 +84,12 @@ class PodcastDownloadReceiver : BroadcastReceiver() {
                             "The downloaded file was not available."
                         },
                     )
-                    clearLocalUri(app, asset)
+                    clearLocalUri(repository, asset)
                     file.delete()
                     DownloadProgressStore.clear(asset.episodeId)
                     return
                 }
-                app.podcastRepository.updateDownloadAsset(
+                repository.updateDownloadAsset(
                     asset.episodeId,
                     asset.assetType,
                     DownloadAssetStatus.COMPLETED,
@@ -84,9 +99,9 @@ class PodcastDownloadReceiver : BroadcastReceiver() {
                     System.currentTimeMillis(),
                 )
                 if (asset.assetType == DownloadAssetType.VIDEO) {
-                    app.podcastRepository.setLocalVideoUri(asset.episodeId, asset.destinationUri)
+                    repository.setLocalVideoUri(asset.episodeId, asset.destinationUri)
                 } else {
-                    app.podcastRepository.setLocalUri(asset.episodeId, asset.destinationUri)
+                    repository.setLocalUri(asset.episodeId, asset.destinationUri)
                 }
                 DownloadProgressStore.update(
                     asset.episodeId,
@@ -102,7 +117,7 @@ class PodcastDownloadReceiver : BroadcastReceiver() {
                 File(asset.destinationUri.toUri().path.orEmpty()).delete()
                 val errorMessage = downloadManagerFailureMessage(reason)
                 if (shouldRetryDownload(reason, asset.retryCount)) {
-                    app.podcastRepository.markDownloadRetrying(
+                    repository.markDownloadRetrying(
                         episodeId = asset.episodeId,
                         assetType = asset.assetType,
                         errorMessage = errorMessage,
@@ -116,7 +131,7 @@ class PodcastDownloadReceiver : BroadcastReceiver() {
                         )
                         .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, java.util.concurrent.TimeUnit.SECONDS)
                         .build()
-                    WorkManager.getInstance(app).enqueueUniqueWork(
+                    WorkManager.getInstance(appContext).enqueueUniqueWork(
                         "podcast-download-${asset.episodeId}",
                         ExistingWorkPolicy.REPLACE,
                         retryRequest,
@@ -124,7 +139,7 @@ class PodcastDownloadReceiver : BroadcastReceiver() {
                     DownloadProgressStore.clear(asset.episodeId)
                     return
                 }
-                app.podcastRepository.updateDownloadAsset(
+                repository.updateDownloadAsset(
                     asset.episodeId,
                     asset.assetType,
                     DownloadAssetStatus.FAILED,
@@ -132,13 +147,14 @@ class PodcastDownloadReceiver : BroadcastReceiver() {
                     total,
                     errorMessage,
                 )
-                clearLocalUri(app, asset)
+                clearLocalUri(repository, asset)
                 DownloadProgressStore.clear(asset.episodeId)
             }
         }
     }
 }
 
+private const val TAG = "PodcastDownloadReceiver"
 private const val MAX_DOWNLOAD_RETRIES = 3
 
 internal fun shouldRetryDownload(reason: Int, retryCount: Int): Boolean =
@@ -147,10 +163,10 @@ internal fun shouldRetryDownload(reason: Int, retryCount: Int): Boolean =
         DownloadManager.ERROR_HTTP_DATA_ERROR,
     )
 
-private suspend fun clearLocalUri(app: BoothApp, asset: DownloadAssetEntity) {
+private suspend fun clearLocalUri(repository: PodcastRepository, asset: DownloadAssetEntity) {
     if (asset.assetType == DownloadAssetType.VIDEO) {
-        app.podcastRepository.setLocalVideoUri(asset.episodeId, null)
+        repository.setLocalVideoUri(asset.episodeId, null)
     } else {
-        app.podcastRepository.setLocalUri(asset.episodeId, null)
+        repository.setLocalUri(asset.episodeId, null)
     }
 }

@@ -2,13 +2,9 @@ package com.shapeshed.booth.data
 
 import android.content.Context
 import android.util.Log
-import androidx.work.BackoffPolicy
-import androidx.work.Constraints
 import androidx.work.CoroutineWorker
-import androidx.work.NetworkType
 import androidx.work.WorkerParameters
-import com.shapeshed.booth.BoothApp
-import java.util.concurrent.TimeUnit
+import com.shapeshed.booth.di.boothWorkerEntryPoint
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -38,7 +34,7 @@ class PodcastSubscribeWorker(appContext: Context, workerParams: WorkerParameters
         val categoryProviderId = inputData.getString(SUBSCRIBE_CATEGORY_PROVIDER_ID_INPUT)
             ?.takeIf(String::isNotBlank)
             ?: APPLE_DIRECTORY_PROVIDER_ID
-        val app = applicationContext as BoothApp
+        val entryPoint = boothWorkerEntryPoint(applicationContext)
         try {
             // A retained preview may contain only episodes explicitly selected by the user.
             // Always complete a fresh parse before promoting a podcast to a subscription.
@@ -47,7 +43,7 @@ class PodcastSubscribeWorker(appContext: Context, workerParams: WorkerParameters
                 feedUrl,
                 PodcastSubscriptionProgress(PodcastSubscriptionStage.FETCHING, title = requestedTitle),
             )
-            val feed = app.podcastRepository.subscribe(
+            val feed = entryPoint.podcastRepository.subscribe(
                 feedUrl,
                 fallbackDescriptionHtml = fallbackDescriptionHtml,
                 appleCategories = appleCategories,
