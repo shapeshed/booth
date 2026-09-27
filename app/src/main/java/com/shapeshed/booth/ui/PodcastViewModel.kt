@@ -177,6 +177,14 @@ class PodcastViewModel @Inject constructor(
     private var discoveryJob: Job? = null
     private var previewJob: Job? = null
     private val categoryJobs = mutableMapOf<String, Deferred<PodcastDiscoveryShelfResult>>()
+
+    init {
+        // The FTS index is now written inline with the episodes table, so it cannot drift within a
+        // run. This is the recovery pass for episodes indexed by an older build, whose asynchronous
+        // indexing could lose a batch to a process death with nothing able to repair it.
+        viewModelScope.launch { runCancellableCatching { repository.rebuildSearchIndex() } }
+    }
+
     val searchProviders: List<PodcastSearchProvider> = searchCatalog.providers
     val podcastIndexCredentials: StateFlow<PodcastIndexCredentials?> = credentialsStore.credentials
 

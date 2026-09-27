@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -46,6 +47,34 @@ class PodcastRepositoryStateDeviceTest {
     @After
     fun tearDown() {
         database.close()
+    }
+
+    /**
+     * The search index used to be written by a coroutine draining a Channel, so an episode could
+     * be persisted and still be unfindable, and a process death in that window lost the batch for
+     * good because nothing ever sent the rebuild request. Indexing is inline now, so a search
+     * immediately after a subscribe must find the episode.
+     */
+    @Test
+    fun subscribedEpisodesAreSearchableImmediately() = runBlocking {
+        repository.subscribe(FEED_URL)
+
+        val results = repository.searchEpisodes("episode").first()
+
+        assertTrue(results.isNotEmpty())
+        assertTrue(results.any { it.episode.title.contains("Episode") })
+    }
+
+    @Test
+    fun rebuildRestoresAnIndexThatWasClearedOutFromUnderIt() = runBlocking {
+        repository.subscribe(FEED_URL)
+        assertTrue(repository.searchEpisodes("episode").first().isNotEmpty())
+
+        database.podcastDao().clearEpisodeSearch()
+
+        repository.rebuildSearchIndex()
+
+        assertTrue(repository.searchEpisodes("episode").first().isNotEmpty())
     }
 
     @Test
