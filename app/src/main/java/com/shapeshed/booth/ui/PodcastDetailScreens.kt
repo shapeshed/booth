@@ -65,7 +65,7 @@ internal fun PodcastDetail(
     activeEpisodeId: Long?,
     isPlaying: Boolean,
     isBuffering: Boolean,
-    positionMs: Long,
+    playbackProgress: PlaybackProgress,
     onTogglePlayPause: () -> Unit,
     showDescription: Boolean,
     onShowDescriptionChange: (Boolean) -> Unit,
@@ -162,7 +162,7 @@ internal fun PodcastDetail(
                                 modifier = actionModifier,
                                 durationMs = latestEpisode.durationMs,
                                 positionMs = if (latestEpisode.id == activeEpisodeId) {
-                                    positionMs
+                                    playbackProgress.positionMs
                                 } else {
                                     latestEpisode.positionMs
                                 },
@@ -201,7 +201,8 @@ internal fun PodcastDetail(
                 active = episode.id == activeEpisodeId,
                 isPlaying = isPlaying,
                 isBuffering = episode.id == activeEpisodeId && isBuffering,
-                positionOverride = episode.id.takeIf { it == activeEpisodeId }?.let { positionMs },
+                positionOverride = episode.id.takeIf { it == activeEpisodeId }
+                    ?.let { playbackProgress.positionMs },
                 downloaded = episode.localUri != null || downloadProgress[episode.id]?.completed == true,
                 onDownload = { onDownload(episode) },
                 downloadProgress = downloadProgress[episode.id],

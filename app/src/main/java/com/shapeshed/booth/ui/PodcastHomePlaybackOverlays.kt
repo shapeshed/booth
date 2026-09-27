@@ -21,7 +21,9 @@ import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -126,6 +128,9 @@ internal fun PodcastHomeNowPlayingOverlay(
     podcastTitlesById: Map<Long, String>,
     onDismiss: () -> Unit,
 ) {
+    // Collected here rather than passed in: this is the only overlay that draws a scrubber, and
+    // routing the 2 Hz position through a parent would recompose that parent's whole subtree.
+    val progress by playbackViewModel.progress.collectAsStateWithLifecycle()
     AnimatedVisibility(
         visible = visible && playback.episode != null,
         enter = fadeIn() + slideInVertically(initialOffsetY = { it }),
@@ -138,8 +143,8 @@ internal fun PodcastHomeNowPlayingOverlay(
                 podcastTitle = podcastTitle,
                 onOpenPodcast = { onOpenPodcast(episode.podcastId) },
                 isPlaying = playback.isPlaying,
-                positionMs = playback.positionMs,
-                durationMs = playback.durationMs,
+                positionMs = progress.positionMs,
+                durationMs = progress.durationMs,
                 player = playbackViewModel.player,
                 videoMode = playback.isVideoMode,
                 isBuffering = playback.isBuffering,
@@ -162,9 +167,7 @@ internal fun PodcastHomeNowPlayingOverlay(
                 onDismiss = onDismiss,
                 queueEpisodes = queueEpisodes,
                 queuePodcasts = podcastsById,
-                queueActiveProgress = playback.durationMs.takeIf { it > 0L }?.let {
-                    (playback.positionMs.toFloat() / it).coerceIn(0f, 1f)
-                },
+                queueActiveProgress = playback.episode?.let { progress.fraction },
                 onQueuePlay = { queued ->
                     playbackViewModel.playQueue(
                         episodes = queueEpisodes,

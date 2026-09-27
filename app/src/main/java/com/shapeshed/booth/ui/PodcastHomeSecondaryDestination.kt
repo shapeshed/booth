@@ -2,8 +2,10 @@ package com.shapeshed.booth.ui
 
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.shapeshed.booth.data.DownloadAssetEntity
 import com.shapeshed.booth.data.DownloadProgress
@@ -50,10 +52,12 @@ internal fun PodcastHomeSecondaryDestination(
             val allEpisodes = remember {
                 viewModel.allEpisodes(null)
             }.collectAsLazyPagingItems()
+            val progress by playbackViewModel.progress.collectAsStateWithLifecycle()
             PodcastAllEpisodesContent(
                 episodes = allEpisodes,
                 podcastsById = allPodcastsById,
                 playback = playback,
+                playbackProgress = progress,
                 onOpen = { onOpen(it, EpisodeNavigationOrigin.AllEpisodes) },
                 onAddToQueue = { viewModel.addToQueueFromInbox(it.id) },
                 onActions = onAction,

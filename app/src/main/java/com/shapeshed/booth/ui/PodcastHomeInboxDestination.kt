@@ -1,7 +1,9 @@
 package com.shapeshed.booth.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.LazyPagingItems
 import com.shapeshed.booth.data.DownloadProgress
 import com.shapeshed.booth.data.EpisodeEntity
@@ -12,6 +14,7 @@ internal fun PodcastHomeInboxDestination(
     inbox: LazyPagingItems<EpisodeEntity>,
     podcastsById: Map<Long, PodcastEntity>,
     playback: PlaybackUiState,
+    playbackViewModel: PodcastPlaybackViewModel,
     selectionMode: Boolean,
     selectedEpisodeIds: Set<Long>,
     onSelectedEpisodeIdsChange: (Set<Long>) -> Unit,
@@ -26,10 +29,12 @@ internal fun PodcastHomeInboxDestination(
     downloadProgress: Map<Long, DownloadProgress>,
     modifier: Modifier = Modifier,
 ) {
+    val progress by playbackViewModel.progress.collectAsStateWithLifecycle()
     PodcastHomeInboxContent(
         inbox = inbox,
         podcastsById = podcastsById,
         playback = playback,
+        playbackProgress = progress,
         inboxSelectionMode = selectionMode,
         selectedInboxIds = selectedEpisodeIds,
         onSelectedInboxIdsChange = onSelectedEpisodeIdsChange,

@@ -1,7 +1,9 @@
 package com.shapeshed.booth.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.shapeshed.booth.data.DownloadProgress
 import com.shapeshed.booth.data.EpisodeEntity
 import com.shapeshed.booth.data.PodcastEntity
@@ -13,6 +15,7 @@ internal fun PodcastHomeUpNextDestination(
     playback: PlaybackUiState,
     downloadProgress: Map<Long, DownloadProgress>,
     viewModel: PodcastViewModel,
+    playbackViewModel: PodcastPlaybackViewModel,
     context: android.content.Context,
     reorderMode: Boolean,
     filter: QueueFilter,
@@ -24,13 +27,12 @@ internal fun PodcastHomeUpNextDestination(
     onPlay: (EpisodeEntity) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val progress by playbackViewModel.progress.collectAsStateWithLifecycle()
     PodcastUpNextContent(
         episodes = episodes,
         podcastsById = podcastsById,
         activeEpisodeId = playback.episode?.id,
-        activeProgress = playback.durationMs.takeIf { it > 0L }?.let { duration ->
-            (playback.positionMs.toFloat() / duration).coerceIn(0f, 1f)
-        },
+        activeProgress = progress.fraction,
         isPlaying = playback.isPlaying,
         isBuffering = playback.isBuffering,
         onOpen = onOpen,

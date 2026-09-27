@@ -1295,6 +1295,7 @@ fun PodcastHomeScreen(
                                             inbox = inbox,
                                             podcastsById = podcastsById,
                                             playback = playback,
+                                            playbackViewModel = playbackViewModel,
                                             selectionMode = inboxSelectionMode,
                                             selectedEpisodeIds = selectedInboxIds,
                                             onSelectedEpisodeIdsChange = { selectedInboxIds = it },
@@ -1343,6 +1344,7 @@ fun PodcastHomeScreen(
                                             episodes = queueEpisodes,
                                             podcastsById = allPodcastsById,
                                             playback = playback,
+                                            playbackViewModel = playbackViewModel,
                                             downloadProgress = downloadProgress,
                                             viewModel = viewModel,
                                             context = context,
@@ -1657,6 +1659,10 @@ fun PodcastHomeScreen(
                                                 onPodcastSelected = { podcastDetailPageId = it.id },
                                                 modifier = Modifier.fillMaxSize(),
                                             ) { pagePodcast ->
+                                                // Scoped to the page: the position ticks twice a
+                                                // second and must not reach the home screen body.
+                                                val progress by playbackViewModel.progress
+                                                    .collectAsStateWithLifecycle()
                                                 val pageEpisodes by remember(pagePodcast.id) {
                                                     viewModel.episodes(pagePodcast.id)
                                                 }.collectAsStateWithLifecycle(emptyList())
@@ -1679,7 +1685,7 @@ fun PodcastHomeScreen(
                                                     activeEpisodeId = playback.episode?.id,
                                                     isPlaying = playback.isPlaying,
                                                     isBuffering = playback.isBuffering,
-                                                    positionMs = playback.positionMs,
+                                                    playbackProgress = progress,
                                                     onTogglePlayPause = playbackViewModel::togglePlayPause,
                                                     showDescription = showPodcastDescription,
                                                     onShowDescriptionChange = { showPodcastDescription = it },

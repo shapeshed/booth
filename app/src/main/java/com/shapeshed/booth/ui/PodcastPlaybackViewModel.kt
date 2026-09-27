@@ -39,13 +39,28 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
+/**
+ * Playback position and duration, kept out of [PlaybackUiState] on purpose.
+ *
+ * The player position is polled twice a second. When it lived in PlaybackUiState every tick
+ * produced a new state object, which invalidated the whole home-screen composition scope through
+ * the PodcastHomeUiState snapshot. Only the few components that actually draw a progress bar or a
+ * scrubber need this, so they collect it on their own.
+ */
+data class PlaybackProgress(
+    val positionMs: Long = 0L,
+    val durationMs: Long = 0L,
+) {
+    /** Played fraction in 0f..1f, or null while the duration is unknown. */
+    val fraction: Float?
+        get() = durationMs.takeIf { it > 0L }?.let { (positionMs.toFloat() / it).coerceIn(0f, 1f) }
+}
+
 data class PlaybackUiState(
     val episode: EpisodeEntity? = null,
     val isPlaying: Boolean = false,
     val speed: Float = 1f,
     val skipSilence: Boolean = false,
-    val positionMs: Long = 0L,
-    val durationMs: Long = 0L,
     val isVideoMode: Boolean = false,
     val isBuffering: Boolean = false,
     val playbackError: PodcastUiError? = null,
@@ -83,6 +98,8 @@ class PodcastPlaybackViewModel @Inject constructor(
     val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
     private val _state = MutableStateFlow(PlaybackUiState())
     val state: StateFlow<PlaybackUiState> = _state.asStateFlow()
+    private val _progress = MutableStateFlow(PlaybackProgress())
+    val progress: StateFlow<PlaybackProgress> = _progress.asStateFlow()
 
     val player: Player?
         get() = controller
@@ -135,11 +152,11 @@ class PodcastPlaybackViewModel @Inject constructor(
                             displayedPositionMs = rawPositionMs
                         }
                         rawDurationMs?.let { displayedDurationMs = it }
-                        _state.value = _state.value.copy(
+                        _progress.value = PlaybackProgress(
                             positionMs = if (preparing) displayedPositionMs else rawPositionMs,
                             durationMs = rawDurationMs ?: displayedDurationMs,
-                            isBuffering = buffering,
                         )
+                        _state.value = _state.value.copy(isBuffering = buffering)
                     }
                     delay(500L)
                 }
@@ -170,12 +187,14 @@ class PodcastPlaybackViewModel @Inject constructor(
                         playlistEpisodes = playlistEpisodes + (episode.id to episode)
                         val effectiveSpeed = repository?.podcast(episode.podcastId)?.playbackSpeed ?: preferredSpeed
                         controller?.setPlaybackSpeed(effectiveSpeed)
+                        _progress.value = PlaybackProgress(
+                            positionMs = displayedPositionMs,
+                            durationMs = displayedDurationMs.takeIf { it > 0L } ?: episode.durationMs ?: 0L,
+                        )
                         _state.value = _state.value.copy(
                             episode = episode,
                             speed = effectiveSpeed,
                             isPlaying = controller?.isPlaying == true,
-                            positionMs = displayedPositionMs,
-                            durationMs = displayedDurationMs.takeIf { it > 0L } ?: episode.durationMs ?: 0L,
                             // The polling loop clears buffering once the source is ready. Do not
                             // clear it here while a remote source may still be preparing.
                             isBuffering = _state.value.isBuffering,
@@ -232,13 +251,15 @@ class PodcastPlaybackViewModel @Inject constructor(
         activeSourceIsVideo = useVideo
         displayedPositionMs = playbackStartPositionMs(selectedEpisode)
         displayedDurationMs = selectedEpisode.durationMs ?: 0L
+        _progress.value = PlaybackProgress(
+            positionMs = playbackStartPositionMs(selectedEpisode),
+            durationMs = selectedEpisode.durationMs ?: 0L,
+        )
         _state.value = PlaybackUiState(
             episode = selectedEpisode,
             isPlaying = true,
             speed = preferredSpeed,
             skipSilence = _state.value.skipSilence,
-            positionMs = playbackStartPositionMs(selectedEpisode),
-            durationMs = selectedEpisode.durationMs ?: 0L,
             isVideoMode = useVideo,
             // Publish buffering before Media3's first polling tick so remote playback does not
             // briefly show Play/equalizer on the episode detail button.
@@ -256,8 +277,8 @@ class PodcastPlaybackViewModel @Inject constructor(
                 ?: settings?.podcastSkipSilence?.first()
                 ?: false
             displayedPositionMs = persistedPosition
+            _progress.value = _progress.value.copy(positionMs = persistedPosition)
             _state.value = _state.value.copy(
-                positionMs = persistedPosition,
                 speed = effectiveSpeed,
                 skipSilence = effectiveSkipSilence,
             )
@@ -283,13 +304,15 @@ class PodcastPlaybackViewModel @Inject constructor(
         activeSourceIsVideo = false
         displayedPositionMs = episode.positionMs
         displayedDurationMs = episode.durationMs ?: 0L
+        _progress.value = PlaybackProgress(
+            positionMs = episode.positionMs,
+            durationMs = episode.durationMs ?: 0L,
+        )
         _state.value = PlaybackUiState(
             episode = episode,
             isPlaying = false,
             speed = preferredSpeed,
             skipSilence = _state.value.skipSilence,
-            positionMs = episode.positionMs,
-            durationMs = episode.durationMs ?: 0L,
             isVideoMode = false,
         )
         viewModelScope.launch {
@@ -321,11 +344,13 @@ class PodcastPlaybackViewModel @Inject constructor(
         playlistEpisodes = playlistEpisodes + (episode.id to episode)
         displayedPositionMs = mediaController.currentPosition.coerceAtLeast(0L)
         displayedDurationMs = mediaController.duration.takeIf { it > 0L } ?: episode.durationMs ?: 0L
+        _progress.value = PlaybackProgress(
+            positionMs = displayedPositionMs,
+            durationMs = displayedDurationMs,
+        )
         _state.value = _state.value.copy(
             episode = episode,
             isPlaying = mediaController.isPlaying,
-            positionMs = displayedPositionMs,
-            durationMs = displayedDurationMs,
             speed = effectiveSpeed,
             skipSilence = effectiveSkipSilence,
             isBuffering = mediaController.playbackState == Player.STATE_BUFFERING &&
@@ -475,6 +500,7 @@ class PodcastPlaybackViewModel @Inject constructor(
         activeSourceIsVideo = false
         displayedPositionMs = 0L
         displayedDurationMs = 0L
+        _progress.value = PlaybackProgress()
         _state.value = PlaybackUiState(speed = preferredSpeed, skipSilence = _state.value.skipSilence)
         _isPlaying.value = false
     }
@@ -574,8 +600,8 @@ class PodcastPlaybackViewModel @Inject constructor(
         mediaController.pause()
         mediaController.seekTo(0L)
         _isPlaying.value = false
+        _progress.value = PlaybackProgress()
         _state.value = _state.value.copy(
-            positionMs = 0L,
             isPlaying = false,
             isBuffering = false,
         )

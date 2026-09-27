@@ -13,6 +13,7 @@ internal fun PodcastDiscoveryContent(
     state: PodcastHomeState,
     previewEpisodeEntities: Map<Long, EpisodeEntity>,
     playback: PlaybackUiState,
+    playbackProgress: PlaybackProgress,
     viewModel: PodcastViewModel,
     playbackViewModel: PodcastPlaybackViewModel,
     context: Context,
@@ -43,7 +44,7 @@ internal fun PodcastDiscoveryContent(
             isPlaying = playback.episode?.id == previewEpisode.id && playback.isPlaying,
             isBuffering = playback.episode?.id == previewEpisode.id && playback.isBuffering,
             positionMs = if (playback.episode?.id == previewEpisode.id) {
-                playback.positionMs
+                playbackProgress.positionMs
             } else {
                 previewEpisodeEntities[previewEpisode.id]?.positionMs ?: 0L
             },
@@ -119,12 +120,8 @@ internal fun PodcastDiscoveryContent(
             activeEpisodeId = playback.episode?.id,
             isPlaying = playback.isPlaying,
             isBuffering = playback.isBuffering,
-            positionMs = playback.positionMs,
-            playbackProgress = playback.episode?.let {
-                playback.durationMs.takeIf { it > 0L }?.let { duration ->
-                    (playback.positionMs.toFloat() / duration).coerceIn(0f, 1f)
-                }
-            },
+            positionMs = playbackProgress.positionMs,
+            playbackProgress = playback.episode?.let { playbackProgress.fraction },
             onPlay = { episode ->
                 if (playback.episode?.id == episode.id) {
                     playbackViewModel.togglePlayPause()

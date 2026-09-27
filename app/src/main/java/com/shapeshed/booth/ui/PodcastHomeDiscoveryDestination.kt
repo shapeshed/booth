@@ -2,7 +2,9 @@ package com.shapeshed.booth.ui
 
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.shapeshed.booth.data.Episode
 import com.shapeshed.booth.data.PodcastDiscoveryCategory
 import com.shapeshed.booth.data.PodcastSearchResult
@@ -28,10 +30,12 @@ internal fun PodcastHomeDiscoveryDestination(
     onEpisode: (Episode) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val progress by playbackViewModel.progress.collectAsStateWithLifecycle()
     PodcastDiscoveryContent(
         state = homeUiState.homeState,
         previewEpisodeEntities = homeUiState.previewEpisodeEntities,
         playback = homeUiState.playback,
+        playbackProgress = progress,
         viewModel = viewModel,
         playbackViewModel = playbackViewModel,
         context = context,

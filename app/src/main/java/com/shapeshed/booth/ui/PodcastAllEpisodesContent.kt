@@ -31,6 +31,7 @@ internal fun PodcastAllEpisodesContent(
     episodes: LazyPagingItems<EpisodeEntity>,
     podcastsById: Map<Long, PodcastEntity>,
     playback: PlaybackUiState,
+    playbackProgress: PlaybackProgress,
     onOpen: (EpisodeEntity) -> Unit,
     onAddToQueue: (EpisodeEntity) -> Unit,
     onActions: (EpisodeEntity) -> Unit,
@@ -101,8 +102,9 @@ internal fun PodcastAllEpisodesContent(
                     isPlaying = playback.isPlaying,
                     isBuffering = playback.isBuffering,
                     positionOverride = if (episode.id == playback.episode?.id) {
-                        playback.durationMs.takeIf { it > 0L }?.let { duration ->
-                            (playback.positionMs.toFloat() / duration * (episode.durationMs ?: duration)).toLong()
+                        playbackProgress.durationMs.takeIf { it > 0L }?.let { duration ->
+                            (playbackProgress.positionMs.toFloat() / duration *
+                                (episode.durationMs ?: duration)).toLong()
                         }
                     } else {
                         null
