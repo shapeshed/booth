@@ -101,14 +101,12 @@ internal fun PodcastAllEpisodesContent(
                     onDownload = { onDownload(episode) },
                     isPlaying = playback.isPlaying,
                     isBuffering = playback.isBuffering,
-                    positionOverride = if (episode.id == playback.episode?.id) {
-                        playbackProgress.durationMs.takeIf { it > 0L }?.let { duration ->
-                            (playbackProgress.positionMs.toFloat() / duration *
-                                (episode.durationMs ?: duration)).toLong()
-                        }
-                    } else {
-                        null
-                    },
+                    positionOverride = activeEpisodePositionOverride(
+                        episodeId = episode.id,
+                        activeEpisodeId = playback.episode?.id,
+                        playedFraction = playbackProgress.fraction,
+                        episodeDurationMs = episode.durationMs,
+                    ),
                     downloadProgress = downloadProgress[episode.id],
                     swipeEnabled = false,
                 )

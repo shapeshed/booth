@@ -156,13 +156,12 @@ internal fun PodcastInbox(
                     onDownload = { onDownload(episode) },
                     isPlaying = isPlaying,
                     isBuffering = isBuffering,
-                    positionOverride = if (episode.id == activeEpisodeId) {
-                        activeProgress?.let { fraction ->
-                            (episode.durationMs?.takeIf { it > 0L }?.times(fraction))?.toLong()
-                        }
-                    } else {
-                        null
-                    },
+                    positionOverride = activeEpisodePositionOverride(
+                        episodeId = episode.id,
+                        activeEpisodeId = activeEpisodeId,
+                        playedFraction = activeProgress,
+                        episodeDurationMs = episode.durationMs,
+                    ),
                     downloadProgress = downloadProgress[episode.id],
                     swipeEnabled = true,
                 )

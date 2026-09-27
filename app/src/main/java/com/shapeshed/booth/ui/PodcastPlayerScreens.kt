@@ -1153,14 +1153,12 @@ internal fun PodcastNowPlayingQueueSheet(
                         active = episode.id == activeEpisodeId,
                         dragging = isDragging,
                         progressOverride = episode.id.takeIf { it == activeEpisodeId }?.let { activeProgress },
-                        positionOverride = episode.id.takeIf { it == activeEpisodeId }?.let { id ->
-                            activeProgress?.let { fraction ->
-                                orderedEpisodes.firstOrNull { it.id == id }?.durationMs
-                                    ?.takeIf { it > 0L }
-                                    ?.times(fraction)
-                                    ?.toLong()
-                            }
-                        },
+                        positionOverride = activeEpisodePositionOverride(
+                            episodeId = episode.id,
+                            activeEpisodeId = activeEpisodeId,
+                            playedFraction = activeProgress,
+                            episodeDurationMs = episode.durationMs,
+                        ),
                         isPlaying = isPlaying,
                         isBuffering = episode.id == activeEpisodeId && isBuffering,
                         downloadProgress = null,

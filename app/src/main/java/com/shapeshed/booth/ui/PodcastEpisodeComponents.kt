@@ -94,6 +94,34 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+/**
+ * The position to draw on [episodeId]'s row, given how far through the active episode playback is.
+ *
+ * The player tracks one position and one duration, both measured against whichever episode is
+ * playing. Every row is drawn against its *own* duration, so the active row needs the played
+ * fraction rescaled onto that duration. Passing the player's milliseconds straight through instead
+ * draws, for example, ten minutes of progress on a two-hour episode, which is a fraction of the way
+ * along that the listener is not.
+ *
+ * Null in every case where there is no honest position to draw: this row is not the active one, the
+ * active episode's duration is unknown so the fraction is undefined, or this episode has no usable
+ * duration to scale onto.
+ *
+ * The fraction is clamped to 0f..1f. `PlaybackProgress.fraction` already clamps it, but this takes a
+ * bare [Float] and a position outside the episode cannot be drawn on it.
+ */
+internal fun activeEpisodePositionOverride(
+    episodeId: Long,
+    activeEpisodeId: Long?,
+    playedFraction: Float?,
+    episodeDurationMs: Long?,
+): Long? {
+    if (episodeId != activeEpisodeId) return null
+    val duration = episodeDurationMs?.takeIf { it > 0L } ?: return null
+    val fraction = playedFraction?.coerceIn(0f, 1f) ?: return null
+    return (duration * fraction).toLong()
+}
+
 @Composable
 internal fun EpisodeRow(
     episode: EpisodeEntity,

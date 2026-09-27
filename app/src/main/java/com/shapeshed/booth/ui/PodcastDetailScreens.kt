@@ -201,8 +201,12 @@ internal fun PodcastDetail(
                 active = episode.id == activeEpisodeId,
                 isPlaying = isPlaying,
                 isBuffering = episode.id == activeEpisodeId && isBuffering,
-                positionOverride = episode.id.takeIf { it == activeEpisodeId }
-                    ?.let { playbackProgress.positionMs },
+                positionOverride = activeEpisodePositionOverride(
+                    episodeId = episode.id,
+                    activeEpisodeId = activeEpisodeId,
+                    playedFraction = playbackProgress.fraction,
+                    episodeDurationMs = episode.durationMs,
+                ),
                 downloaded = episode.localUri != null || downloadProgress[episode.id]?.completed == true,
                 onDownload = { onDownload(episode) },
                 downloadProgress = downloadProgress[episode.id],

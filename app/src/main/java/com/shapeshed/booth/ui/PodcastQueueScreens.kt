@@ -189,13 +189,12 @@ internal fun PodcastQueueScreen(
                 podcastTitle = podcastTitle,
                 active = episode.id == activeEpisodeId,
                 progressOverride = if (episode.id == activeEpisodeId) activeProgress else null,
-                positionOverride = if (episode.id == activeEpisodeId) {
-                    activeProgress?.let { fraction ->
-                        (episode.durationMs?.takeIf { it > 0L }?.times(fraction))?.toLong()
-                    }
-                } else {
-                    null
-                },
+                positionOverride = activeEpisodePositionOverride(
+                    episodeId = episode.id,
+                    activeEpisodeId = activeEpisodeId,
+                    playedFraction = activeProgress,
+                    episodeDurationMs = episode.durationMs,
+                ),
                 dragging = isDragging,
                 isPlaying = isPlaying,
                 isBuffering = isBuffering,
