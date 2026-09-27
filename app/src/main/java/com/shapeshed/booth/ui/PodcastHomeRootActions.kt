@@ -28,7 +28,6 @@ internal fun PodcastHomeRootActions(
     queueReorderMode: Boolean,
     queueHasItems: Boolean,
     menuExpanded: Boolean,
-    showSearchAction: Boolean = true,
     onClearInbox: () -> Unit,
     onClearQueue: () -> Unit,
     onQueueReorderDone: () -> Unit,
@@ -38,6 +37,7 @@ internal fun PodcastHomeRootActions(
     onOpenDownloads: () -> Unit,
     onOpenAllEpisodes: () -> Unit,
     onOpenSettings: () -> Unit,
+    showSearchAction: Boolean = true,
 ) {
     val showClearQueueConfirmation = rememberSaveable { mutableStateOf(false) }
     if (selectedTab == PodcastTab.UP_NEXT && queueReorderMode) {

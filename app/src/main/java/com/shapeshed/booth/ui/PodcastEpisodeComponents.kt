@@ -132,11 +132,11 @@ internal fun EpisodeRow(
     onTogglePlayPause: () -> Unit,
     active: Boolean,
     isPlaying: Boolean,
+    onDownload: () -> Unit,
+    downloadProgress: DownloadProgress?,
     modifier: Modifier = Modifier,
     isBuffering: Boolean = false,
     positionOverride: Long? = null,
-    onDownload: () -> Unit,
-    downloadProgress: DownloadProgress?,
     downloaded: Boolean = episode.isDownloaded(downloadProgress),
 ) {
     Column(modifier.fillMaxWidth()) {
@@ -338,11 +338,11 @@ internal fun EpisodeTitleBlock(
 internal fun EpisodeActionRow(
     episode: EpisodeEntity,
     isPlaying: Boolean,
-    isBuffering: Boolean = false,
     showPlayback: Boolean,
-    positionOverride: Long? = null,
     onPlay: () -> Unit,
     onActions: () -> Unit,
+    isBuffering: Boolean = false,
+    positionOverride: Long? = null,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -368,9 +368,9 @@ internal fun EpisodeActionRow(
 internal fun EpisodePlaybackButton(
     episode: EpisodeEntity,
     isPlaying: Boolean,
+    onClick: () -> Unit,
     isBuffering: Boolean = false,
     positionOverride: Long? = null,
-    onClick: () -> Unit,
 ) {
     EpisodePlaybackButton(
         durationMs = episode.durationMs,
@@ -870,8 +870,6 @@ internal fun PodcastEpisodeDetailContent(
     publishedAtMillis: Long?,
     explicit: Boolean?,
     isSubscribed: Boolean,
-    modifier: Modifier = Modifier,
-    isSubscriptionLoading: Boolean = false,
     onSubscription: (() -> Unit)?,
     isPlaying: Boolean,
     isBuffering: Boolean,
@@ -886,6 +884,8 @@ internal fun PodcastEpisodeDetailContent(
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit,
     onOpenPodcast: () -> Unit,
+    modifier: Modifier = Modifier,
+    isSubscriptionLoading: Boolean = false,
     twoPane: Boolean = false,
 ) {
     val linkColor = MaterialTheme.colorScheme.primary

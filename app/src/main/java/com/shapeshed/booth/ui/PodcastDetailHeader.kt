@@ -29,16 +29,16 @@ import com.shapeshed.booth.R
 internal fun PodcastDetailHeader(
     title: String,
     artworkUrl: String?,
-    onArtworkClick: (() -> Unit)? = null,
     author: String?,
+    isSubscribed: Boolean,
+    onSubscription: () -> Unit,
+    latestAction: @Composable (Modifier) -> Unit,
+    onArtworkClick: (() -> Unit)? = null,
     description: String? = null,
     onDescriptionClick: (() -> Unit)? = null,
     categories: List<String> = emptyList(),
     onCategory: (String) -> Unit = {},
-    isSubscribed: Boolean,
-    onSubscription: () -> Unit,
     showSubscriptionAction: Boolean = true,
-    latestAction: @Composable (Modifier) -> Unit,
 ) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),

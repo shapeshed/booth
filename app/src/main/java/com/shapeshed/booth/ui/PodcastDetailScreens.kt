@@ -246,17 +246,17 @@ internal fun PodcastDetail(
 @OptIn(ExperimentalMaterial3Api::class)
 internal fun PodcastEpisodeActionsSheet(
     action: PodcastEpisodeAction,
-    downloadSizeBytes: Long? = action.downloadSizeBytes,
-    loadingDownloadSize: Boolean = false,
     onShare: () -> Unit,
     onOpenInBrowser: () -> Unit,
     onDownload: () -> Unit,
     onRemoveDownload: (() -> Unit)?,
     onToggleQueue: () -> Unit,
-    onReorder: (() -> Unit)? = null,
     onSetPlayed: (Boolean) -> Unit,
     onResetPosition: () -> Unit,
     onDismiss: () -> Unit,
+    downloadSizeBytes: Long? = action.downloadSizeBytes,
+    loadingDownloadSize: Boolean = false,
+    onReorder: (() -> Unit)? = null,
 ) {
     val episodeTitle = when (action) {
         is PodcastEpisodeAction.Subscribed -> action.episode.title

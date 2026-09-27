@@ -549,8 +549,8 @@ internal fun downloadStatusLabel(
 internal fun DownloadStatusIcon(
     asset: DownloadAssetEntity?,
     isDownloaded: Boolean,
-    isActive: Boolean = asset?.status in PodcastDownloadManager.ACTIVE_STATUSES,
     contentDescription: String,
+    isActive: Boolean = asset?.status in PodcastDownloadManager.ACTIVE_STATUSES,
 ) {
     if (!isDownloaded && asset?.status != DownloadAssetStatus.FAILED &&
         asset?.status != DownloadAssetStatus.CANCELLED

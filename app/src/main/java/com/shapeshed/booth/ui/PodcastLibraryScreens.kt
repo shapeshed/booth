@@ -99,6 +99,8 @@ internal fun PodcastLibrary(
     popularPodcasts: List<com.shapeshed.booth.data.PodcastSearchResult>,
     isLoadingPopular: Boolean,
     onOpenPopularPodcast: (com.shapeshed.booth.data.PodcastSearchResult) -> Unit,
+    onRefresh: () -> Unit,
+    refreshing: Boolean,
     modifier: Modifier = Modifier,
     selectedCategory: com.shapeshed.booth.data.PodcastDiscoveryCategory? = null,
     categoryResults: List<com.shapeshed.booth.data.PodcastSearchResult> = emptyList(),
@@ -107,8 +109,6 @@ internal fun PodcastLibrary(
     onCategorySelected: (com.shapeshed.booth.data.PodcastDiscoveryCategory?) -> Unit = {},
     onPreloadCategory: (com.shapeshed.booth.data.PodcastDiscoveryCategory) -> Unit = {},
     categories: List<com.shapeshed.booth.data.PodcastDiscoveryCategory> = emptyList(),
-    onRefresh: () -> Unit,
-    refreshing: Boolean,
 ) {
     val orderedPodcasts = remember(podcasts, sortOrder, latestEpisodePublishedAt) {
         orderPodcasts(podcasts, sortOrder, latestEpisodePublishedAt)
@@ -570,11 +570,11 @@ internal fun PodcastCard(podcast: PodcastEntity, onClick: () -> Unit, modifier: 
 internal fun PodcastMenu(
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
-    showSettings: Boolean = true,
     onSettings: () -> Unit,
     onUnsubscribe: () -> Unit,
     onShare: () -> Unit,
     onOpenInBrowser: () -> Unit,
+    showSettings: Boolean = true,
 ) {
     Box {
         IconButton(onClick = { onExpandedChange(true) }) {
