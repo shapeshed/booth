@@ -136,6 +136,19 @@ directory is intentionally ignored.
 - Use adaptive layouts for phones, tablets, and other window sizes.
 - Keep composables side-effect free, hoist state appropriately, forward `Modifier` to the outermost
   layout, and collect UI Flows with `collectAsStateWithLifecycle()`.
+- Composables take actions, not ViewModels. Where a screen needs the ViewModel, build a small action
+  value where it is in scope, following `PodcastDiscoveryActions` and `PodcastHomePlatformActions`.
+  Each entry is a whole user intent rather than one ViewModel method, because most of these are two
+  steps: resolve the row first, then act on it. Two rules that are easy to get wrong:
+  - Give the action class its completion callbacks as *arguments* rather than closing over them. A
+    class that captures a caller lambda can only be `remember`ed against that lambda, and the lambdas
+    in the home screen are recreated on every recomposition, so the object would be rebuilt each time.
+  - The Compose compiler plugin rejects a callable reference to a property in a composable argument
+    position. `actions::browse` fails with only "Inapplicable candidate(s)". Pass an explicit lambda.
+- Do not hoist the 2 Hz played position into the home screen body. Splitting `PlaybackProgress` out of
+  `PlaybackUiState` exists so that value stays scoped to the subtree that draws a progress bar;
+  collecting it once at the top would put the whole screen back at 2 Hz. The detail pager and
+  `ScopedPodcastHomeDiscoveryDestination` each collect it locally for that reason.
 - Use stable keys and content types in lazy lists, and avoid unnecessary work during recomposition.
 - Check screenshots and device behavior before changing typography, playback controls, notifications,
   edge-to-edge behavior, or navigation.
