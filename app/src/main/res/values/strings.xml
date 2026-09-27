@@ -285,7 +285,10 @@
     <string name="error_backup_import_failed" translatable="false">Could not import Booth backup</string>
     <string name="backup_export_completed" translatable="false">Backup exported successfully</string>
     <string name="backup_import_started" translatable="false">Importing backup…</string>
-    <string name="backup_import_completed" translatable="false">Backup imported successfully (%1$d subscriptions)</string>
+    <plurals name="backup_import_completed" translatable="false">
+        <item quantity="one">Backup imported successfully (%1$d subscription)</item>
+        <item quantity="other">Backup imported successfully (%1$d subscriptions)</item>
+    </plurals>
     <string name="error_refresh_failed">Could not refresh podcast</string>
     <string name="error_partial_refresh_failed">Some podcasts could not be refreshed</string>
     <string name="error_remove_podcast_failed">Could not remove podcast</string>

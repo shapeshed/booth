@@ -18,6 +18,17 @@ internal class PodcastHomePlatformActions internal constructor(
     val exportBackupZip: () -> Unit,
     val setNotificationsEnabled: (Boolean) -> Unit,
     val notificationsPermissionGranted: Boolean,
+
+    /**
+     * Asks for POST_NOTIFICATIONS if it is missing, without touching the new-episode notification
+     * preference.
+     *
+     * These are separate decisions. The media notification is the foreground-service notification,
+     * and without the permission the service still runs but the notification is never shown, so the
+     * user loses the lock screen, the notification shade and any headset transport for the episode
+     * they are listening to. New-episode notifications stay off unless asked for in Settings.
+     */
+    val ensureMediaNotificationPermission: () -> Unit,
 )
 
 @Composable
@@ -59,6 +70,13 @@ internal fun rememberPodcastHomePlatformActions(
         notificationPermissionGranted = granted
         if (granted) viewModel.setPodcastNotificationsEnabled(true)
     }
+    // Separate from the launcher above because the two requests mean different things: this one
+    // only wants the media notification, so it must not switch new-episode notifications on.
+    val mediaNotificationLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        notificationPermissionGranted = granted
+    }
     return remember(
         importLauncher,
         exportLauncher,
@@ -66,6 +84,7 @@ internal fun rememberPodcastHomePlatformActions(
         backupImportLauncher,
         backupZipExportLauncher,
         notificationLauncher,
+        mediaNotificationLauncher,
         notificationPermissionGranted,
         onImportSelected,
     ) {
@@ -89,6 +108,13 @@ internal fun rememberPodcastHomePlatformActions(
                 }
             },
             notificationsPermissionGranted = notificationPermissionGranted,
+            ensureMediaNotificationPermission = {
+                if (!notificationPermissionGranted &&
+                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                ) {
+                    mediaNotificationLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                }
+            },
         )
     }
 }

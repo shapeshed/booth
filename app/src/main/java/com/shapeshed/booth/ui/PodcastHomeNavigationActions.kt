@@ -3,6 +3,7 @@ package com.shapeshed.booth.ui
 import com.shapeshed.booth.data.DownloadProgress
 import com.shapeshed.booth.data.EpisodeEntity
 import com.shapeshed.booth.data.PodcastEntity
+import com.shapeshed.booth.data.isDownloaded
 
 internal fun selectPodcastTab(routeState: PodcastHomeRouteState, viewModel: PodcastViewModel, tab: PodcastTab) {
     routeState.selectedTab.value = tab
@@ -32,7 +33,7 @@ internal fun createSubscribedEpisodeAction(
     podcastTitle = podcastsById[episode.podcastId]?.title.orEmpty(),
     podcastArtworkUrl = podcastsById[episode.podcastId]?.artworkUrl,
     linkUrl = episode.linkUrl ?: podcastsById[episode.podcastId]?.siteUrl,
-    isDownloaded = episode.localUri != null || downloadProgress[episode.id]?.completed == true,
+    isDownloaded = episode.isDownloaded(downloadProgress[episode.id]),
     downloadSizeBytes = episode.audioSizeBytes ?: downloadProgress[episode.id]?.totalBytes,
     isCompleted = episode.completed,
     isInQueue = queueEpisodeIds.contains(episode.id),

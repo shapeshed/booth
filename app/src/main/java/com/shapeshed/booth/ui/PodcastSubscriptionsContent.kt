@@ -29,6 +29,9 @@ internal fun PodcastSubscriptionsContent(
     popularPodcasts: List<com.shapeshed.booth.data.PodcastSearchResult>,
     isLoadingPopular: Boolean,
     onOpenPopularPodcast: (com.shapeshed.booth.data.PodcastSearchResult) -> Unit,
+    onRefresh: () -> Unit,
+    refreshing: Boolean,
+    modifier: Modifier = Modifier,
     selectedCategory: com.shapeshed.booth.data.PodcastDiscoveryCategory? = null,
     categoryResults: List<com.shapeshed.booth.data.PodcastSearchResult> = emptyList(),
     categoryResultsById: Map<String, List<com.shapeshed.booth.data.PodcastSearchResult>> = emptyMap(),
@@ -36,9 +39,6 @@ internal fun PodcastSubscriptionsContent(
     onCategorySelected: (com.shapeshed.booth.data.PodcastDiscoveryCategory?) -> Unit = {},
     onPreloadCategory: (com.shapeshed.booth.data.PodcastDiscoveryCategory) -> Unit = {},
     categories: List<com.shapeshed.booth.data.PodcastDiscoveryCategory> = emptyList(),
-    onRefresh: () -> Unit,
-    refreshing: Boolean,
-    modifier: Modifier = Modifier,
 ) {
     PodcastLibrary(
         podcasts = podcasts,

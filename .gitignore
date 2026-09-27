@@ -87,3 +87,7 @@ kotlin-ide/
 
 # Local Compose audit snapshots
 COMPOSE-AUDIT-REPORT*.md
+
+# JVM crash dumps from the Gradle daemon
+hs_err_pid*.log
+replay_pid*.log

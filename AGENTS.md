@@ -49,7 +49,8 @@ ANDROID_SERIAL=<test-device-serial> ./gradlew preservingDebugAndroidTest
 Instrumentation uses the isolated `com.shapeshed.booth.deviceTest` application ID. Do not run
 connected instrumentation tasks against `com.shapeshed.booth` on a device containing personal app
 data. See [docs/testing.md](docs/testing.md) for the testing pyramid, UI coverage expectations,
-and JaCoCo commands.
+and JaCoCo commands, and [docs/architecture-and-coverage-plan.md](docs/architecture-and-coverage-plan.md)
+for where test coverage currently stands and the order to raise it in.
 
 ## Release versioning
 
@@ -103,6 +104,31 @@ directory is intentionally ignored.
 - Keep application-scoped services explicit and test-replaceable. Hilt is now used for ViewModel
   construction and app-scoped repository/provider bindings because it provides a concrete
   maintenance and testability benefit; do not add additional abstraction without similar value.
+- Do not set `followSslRedirects(false)` on the shared OkHttp client. Feeds, enclosures and radio
+  streams legitimately use plain HTTP, and a number of feeds publish an `https://` URL that
+  redirects to `http://`; blocking that would break real subscriptions. A network attacker forcing
+  a downgrade is possible in principle, but the same attacker can already observe and alter the
+  plain-HTTP traffic these feeds use anyway, so the downgrade adds little that is not already the
+  case. The one genuinely sensitive request is the Podcast Index API, which is hardcoded to
+  `https://api.podcastindex.org` and carries the key and secret. If that ever needs protecting,
+  scope it by giving that provider its own client rather than tightening the shared one — and give
+  it no shared `Cache` directory, per the single-graph rule below.
+- There must be exactly one object graph. `BoothApp` must not construct dependencies itself, and
+  workers, receivers and services must resolve them from the Hilt entry points
+  (`boothWorkerEntryPoint`, `boothPlaybackEntryPoint`). A second `PodcastDatabase` or `OkHttpClient`
+  silently breaks Room flow invalidation and corrupts the shared HTTP cache directory.
+  `BoothWorkerEntryPointDeviceTest` pins this; keep it passing.
+- The Room schema is at version 1. Versions 1 to 27 were squashed before the first release, because
+  Booth is local-first with no server-side copy, so a bad migration is unrecoverable data loss and
+  a long hand-written chain is permanent carrying cost. The first real schema change is v2: add a
+  `Migration`, add it to `create()`, and cover it with a `MigrationTestHelper` instrumented test in
+  the same change. `room-testing` is kept as an androidTest dependency for exactly that.
+- Do not introduce a mutable `object` singleton for state that more than one component touches.
+  Bind it in `BoothModule` and reach it from `BoothWorkerEntryPoint` instead. A process-global is
+  invisible in the object graph, cannot be replaced in a test, and any lock it holds is per
+  instance rather than per process, so it silently provides no mutual exclusion.
+  `BoothWorkerEntryPointDeviceTest` pins the shared instances; keep it passing. The only remaining
+  `object` state is `SleepTimerStore`, which has a single writer, the playback service.
 
 ## UI notes
 
@@ -111,6 +137,19 @@ directory is intentionally ignored.
 - Use adaptive layouts for phones, tablets, and other window sizes.
 - Keep composables side-effect free, hoist state appropriately, forward `Modifier` to the outermost
   layout, and collect UI Flows with `collectAsStateWithLifecycle()`.
+- Composables take actions, not ViewModels. Where a screen needs the ViewModel, build a small action
+  value where it is in scope, following `PodcastDiscoveryActions` and `PodcastHomePlatformActions`.
+  Each entry is a whole user intent rather than one ViewModel method, because most of these are two
+  steps: resolve the row first, then act on it. Two rules that are easy to get wrong:
+  - Give the action class its completion callbacks as *arguments* rather than closing over them. A
+    class that captures a caller lambda can only be `remember`ed against that lambda, and the lambdas
+    in the home screen are recreated on every recomposition, so the object would be rebuilt each time.
+  - The Compose compiler plugin rejects a callable reference to a property in a composable argument
+    position. `actions::browse` fails with only "Inapplicable candidate(s)". Pass an explicit lambda.
+- Do not hoist the 2 Hz played position into the home screen body. Splitting `PlaybackProgress` out of
+  `PlaybackUiState` exists so that value stays scoped to the subtree that draws a progress bar;
+  collecting it once at the top would put the whole screen back at 2 Hz. The detail pager and
+  `ScopedPodcastHomeDiscoveryDestination` each collect it locally for that reason.
 - Use stable keys and content types in lazy lists, and avoid unnecessary work during recomposition.
 - Check screenshots and device behavior before changing typography, playback controls, notifications,
   edge-to-edge behavior, or navigation.

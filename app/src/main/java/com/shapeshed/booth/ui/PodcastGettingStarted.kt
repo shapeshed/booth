@@ -51,6 +51,7 @@ internal fun PodcastGettingStarted(
     onSearch: () -> Unit,
     onImportOpml: () -> Unit,
     onOpenPodcast: (PodcastSearchResult) -> Unit,
+    modifier: Modifier = Modifier,
     selectedCategory: PodcastDiscoveryCategory? = null,
     categoryResults: List<PodcastSearchResult> = emptyList(),
     categoryResultsById: Map<String, List<PodcastSearchResult>> = emptyMap(),
@@ -58,7 +59,6 @@ internal fun PodcastGettingStarted(
     onCategorySelected: (PodcastDiscoveryCategory?) -> Unit = {},
     onPreloadCategory: (PodcastDiscoveryCategory) -> Unit = {},
     categories: List<PodcastDiscoveryCategory> = PodcastDiscoveryCategories,
-    modifier: Modifier = Modifier,
 ) {
     val selectedPage = selectedCategory?.let { category ->
         categories.indexOfFirst { it.id == category.id } + 1

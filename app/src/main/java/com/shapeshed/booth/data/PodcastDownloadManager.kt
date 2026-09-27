@@ -10,7 +10,11 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
-class PodcastDownloadManager(private val context: Context, private val repository: PodcastRepository) {
+class PodcastDownloadManager(
+    private val context: Context,
+    private val repository: PodcastRepository,
+    private val progressStore: DownloadProgressStore,
+) {
     private val downloadManager = context.getSystemService(DownloadManager::class.java)
     private val enqueueMutex = Mutex()
 
@@ -83,7 +87,7 @@ class PodcastDownloadManager(private val context: Context, private val repositor
             downloadManager.remove(downloadId)
             throw error
         }
-        DownloadProgressStore.update(
+        progressStore.update(
             episode.id,
             DownloadProgress(0L, expectedBytes ?: 0L, android.os.SystemClock.elapsedRealtime()),
         )
@@ -124,27 +128,38 @@ class PodcastDownloadManager(private val context: Context, private val repositor
                     if (invalidCompletedFile) {
                         mappedStatus = DownloadAssetStatus.FAILED
                     }
-                    repository.updateDownloadAsset(
-                        episodeId = asset.episodeId,
-                        assetType = asset.assetType,
-                        status = mappedStatus,
-                        bytesDownloaded = bytes,
-                        totalBytes = total,
-                        errorMessage = when {
-                            invalidCompletedFile -> "Download completed but the local file was invalid."
+                    // Only write when something actually changed. updateDownloadAsset always
+                    // stamps updatedAtMillis, so an unconditional write makes every row differ
+                    // on every tick, which re-emits the observed download_assets Flow and
+                    // invalidates every episodes observer. Completed assets stay in this set on
+                    // purpose: the poll is the safety net for a missed DOWNLOAD_COMPLETE
+                    // broadcast, and a completed row no longer costs a write.
+                    if (mappedStatus != asset.status ||
+                        bytes != asset.bytesDownloaded ||
+                        total != asset.totalBytes
+                    ) {
+                        repository.updateDownloadAsset(
+                            episodeId = asset.episodeId,
+                            assetType = asset.assetType,
+                            status = mappedStatus,
+                            bytesDownloaded = bytes,
+                            totalBytes = total,
+                            errorMessage = when {
+                                invalidCompletedFile -> "Download completed but the local file was invalid."
 
-                            mappedStatus == DownloadAssetStatus.FAILED -> downloadManagerFailureMessage(
-                                cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON)),
-                            )
+                                mappedStatus == DownloadAssetStatus.FAILED -> downloadManagerFailureMessage(
+                                    cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON)),
+                                )
 
-                            else -> null
-                        },
-                        completedAtMillis = if (mappedStatus == DownloadAssetStatus.COMPLETED) {
-                            System.currentTimeMillis()
-                        } else {
-                            null
-                        },
-                    )
+                                else -> null
+                            },
+                            completedAtMillis = if (mappedStatus == DownloadAssetStatus.COMPLETED) {
+                                System.currentTimeMillis()
+                            } else {
+                                null
+                            },
+                        )
+                    }
                     if (mappedStatus == DownloadAssetStatus.COMPLETED) {
                         if (asset.assetType == DownloadAssetType.VIDEO) {
                             repository.setLocalVideoUri(asset.episodeId, asset.destinationUri)
@@ -153,14 +168,14 @@ class PodcastDownloadManager(private val context: Context, private val repositor
                         }
                     } else if (mappedStatus == DownloadAssetStatus.FAILED) {
                         clearLocalUri(asset)
-                        DownloadProgressStore.clear(asset.episodeId)
+                        progressStore.clear(asset.episodeId)
                     }
-                    DownloadProgressStore.update(
+                    progressStore.update(
                         asset.episodeId,
                         DownloadProgress(
                             bytesDownloaded = bytes,
                             totalBytes = total ?: 0L,
-                            startedAtElapsedMs = DownloadProgressStore.progress.value[asset.episodeId]
+                            startedAtElapsedMs = progressStore.progress.value[asset.episodeId]
                                 ?.startedAtElapsedMs
                                 ?: android.os.SystemClock.elapsedRealtime(),
                             completed = mappedStatus == DownloadAssetStatus.COMPLETED,
@@ -181,7 +196,7 @@ class PodcastDownloadManager(private val context: Context, private val repositor
             completedAtMillis = null,
         )
         clearLocalUri(asset)
-        DownloadProgressStore.clear(asset.episodeId)
+        progressStore.clear(asset.episodeId)
     }
 
     private suspend fun clearLocalUri(asset: DownloadAssetEntity) {
@@ -197,7 +212,7 @@ class PodcastDownloadManager(private val context: Context, private val repositor
             .filter { it.episodeId == episodeId }
             .forEach { downloadManager.remove(it.downloadId) }
         repository.removeDownloadAssets(episodeId)
-        DownloadProgressStore.clear(episodeId)
+        progressStore.clear(episodeId)
     }
 
     /** Frees safe downloads as needed and returns the candidates that fit within the limit. */
@@ -211,7 +226,7 @@ class PodcastDownloadManager(private val context: Context, private val repositor
     ): List<EpisodeEntity> {
         val currentEpisodeIds = downloadedEpisodes
             .asSequence()
-            .filter { it.localUri != null || it.localVideoUri != null }
+            .filter(EpisodeEntity::hasLocalMedia)
             .mapTo(mutableSetOf(), EpisodeEntity::id)
         downloadAssets
             .asSequence()

@@ -5,12 +5,9 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -35,32 +32,59 @@ class PodcastRepository(
     private val httpClient: OkHttpClient? = null,
     private val streamingFeedProvider: StreamingPodcastFeedProvider? = null,
 ) {
-    private val searchIndexScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val searchIndexRequests = Channel<SearchIndexRequest>(Channel.UNLIMITED)
     private val refreshLocks = ConcurrentHashMap<Long, Mutex>()
 
-    init {
-        searchIndexScope.launch {
-            for (request in searchIndexRequests) {
-                try {
-                    when (request) {
-                        is SearchIndexRequest.Upsert -> dao.upsertEpisodeSearch(request.episodes.map(::toSearchEntity))
-
-                        is SearchIndexRequest.Delete -> dao.deleteEpisodeSearch(request.episodeIds)
-
-                        SearchIndexRequest.Rebuild -> {
-                            dao.clearEpisodeSearch()
-                            dao.upsertEpisodeSearch(dao.allEpisodesForSearchIndex().map(::toSearchEntity))
-                        }
-                    }
-                } catch (cancelled: CancellationException) {
-                    throw cancelled
-                } catch (_: Exception) {
-                    // Search indexing is deliberately best effort. Feed persistence and refresh
-                    // must not fail because the asynchronous FTS update failed.
-                }
-            }
+    /**
+     * Keeps the FTS index in step with the episodes table.
+     *
+     * This used to hand work to a Channel drained by a coroutine launched from `init` on a
+     * `SupervisorJob` that nothing ever cancelled. Three problems came with that:
+     *
+     *  - Constructing the class spawned a background coroutine touching the database, so no unit
+     *    test could build one. That was the main obstacle to testing this repository at all.
+     *  - If the process died between the Room write and the channel drain, the index was
+     *    permanently missing those episodes for the life of the install, and `rebuildSearchIndex`
+     *    was unreachable, so nothing could repair it.
+     *  - `Channel.UNLIMITED` let a large refresh accumulate unbounded pending batches in memory.
+     *
+     * Indexing is now inline and awaited. It is one FTS statement per write, so the cost is small,
+     * and in exchange the index is immediately consistent and the class has no hidden lifecycle.
+     *
+     * Failures stay non-fatal: a feed must still save if the FTS update does not, because Booth is
+     * local-first and a broken search is recoverable while a lost subscription is not.
+     */
+    private suspend fun indexEpisodes(operation: suspend () -> Unit) {
+        try {
+            operation()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            // Best effort by design; see above.
         }
+    }
+
+    private suspend fun indexUpsert(episodes: List<EpisodeEntity>) = indexEpisodes {
+        if (episodes.isNotEmpty()) {
+            dao.upsertEpisodeSearch(episodes.map(::toSearchEntity))
+        }
+    }
+
+    private suspend fun indexDelete(episodeIds: List<Long>) = indexEpisodes {
+        if (episodeIds.isNotEmpty()) {
+            dao.deleteEpisodeSearch(episodeIds)
+        }
+    }
+
+    /**
+     * Rebuilds the whole index.
+     *
+     * The request type existed and was handled but never sent, so a previously lost batch could
+     * never be recovered. The ViewModel calls this once at startup, which makes the index
+     * self-healing and means the remaining risk is only a batch lost within one process run.
+     */
+    suspend fun rebuildSearchIndex() = indexEpisodes {
+        dao.clearEpisodeSearch()
+        dao.upsertEpisodeSearch(dao.allEpisodesForSearchIndex().map(::toSearchEntity))
     }
 
     val podcasts: Flow<List<PodcastEntity>> = dao.observePodcasts().combine(dao.observePodcastCategories()) {
@@ -352,7 +376,7 @@ class PodcastRepository(
     suspend fun removeEpisode(episodeId: Long) {
         downloadDao.deleteByEpisodeId(episodeId)
         dao.deleteEpisode(episodeId)
-        searchIndexRequests.trySend(SearchIndexRequest.Delete(listOf(episodeId)))
+        indexDelete(listOf(episodeId))
     }
 
     /** Persists a preview episode without adding its podcast to subscriptions. */
@@ -368,7 +392,7 @@ class PodcastRepository(
             } else {
                 dao.upsertPodcastAndEpisodes(podcastEntity, listOf(entity))
             }
-            searchIndexRequests.trySend(SearchIndexRequest.Upsert(listOf(entity)))
+            indexUpsert(listOf(entity))
             entity
         }
 
@@ -637,7 +661,7 @@ class PodcastRepository(
                 names.map { name -> PodcastCategory(categoryProviderId, name, ids[name]) },
             )
         }
-        if (episodes.isNotEmpty()) searchIndexRequests.trySend(SearchIndexRequest.Upsert(episodes))
+        indexUpsert(episodes)
     }
 
     private suspend fun enrich(podcast: PodcastEntity): PodcastEntity =
@@ -696,60 +720,6 @@ internal fun newEpisodesSince(
     val existingAudioUrls = existingEpisodeIdentities.mapTo(hashSetOf()) { it.second }
     return episodes.filterNot { it.guid in existingGuids || it.audioUrl in existingAudioUrls }
 }
-
-private sealed interface SearchIndexRequest {
-    data class Upsert(val episodes: List<EpisodeEntity>) : SearchIndexRequest
-    data class Delete(val episodeIds: List<Long>) : SearchIndexRequest
-    data object Rebuild : SearchIndexRequest
-}
-
-private fun toSearchEntity(episode: EpisodeEntity): EpisodeSearchFtsEntity = EpisodeSearchFtsEntity(
-    rowId = episode.id,
-    title = episode.title,
-    descriptionHtml = episode.descriptionHtml.orEmpty(),
-    podcastId = episode.podcastId.toString(),
-)
-
-private fun PodcastEntity.toPreviewPodcast() = Podcast(
-    id = id,
-    title = title,
-    author = author,
-    feedUrl = feedUrl,
-    siteUrl = siteUrl,
-    descriptionHtml = descriptionHtml,
-    artworkUrl = artworkUrl,
-    explicit = explicit,
-    categories = displayCategories(),
-    categoryIds = categories.mapNotNull { category ->
-        category.externalId?.let { category.name to it }
-    }.toMap(),
-)
-
-private fun EpisodeEntity.toPreviewEpisode() = Episode(
-    id = id,
-    podcastId = podcastId,
-    guid = guid,
-    title = title,
-    descriptionHtml = descriptionHtml,
-    audioUrl = audioUrl,
-    mimeType = mimeType,
-    artworkUrl = artworkUrl,
-    publishedAtMillis = publishedAtMillis,
-    durationMs = durationMs,
-    linkUrl = linkUrl,
-    videoUrl = videoUrl,
-    videoMimeType = videoMimeType,
-    audioSizeBytes = audioSizeBytes,
-    videoSizeBytes = videoSizeBytes,
-    explicit = explicit,
-)
-
-internal fun podcastFtsQuery(query: String): String? = query.trim()
-    .split(Regex("\\s+"))
-    .map { it.filter(Char::isLetterOrDigit) }
-    .filter(String::isNotBlank)
-    .takeIf(List<String>::isNotEmpty)
-    ?.joinToString(" AND ") { "$it*" }
 
 private fun Podcast.toEntity(
     idOverride: Long = id,

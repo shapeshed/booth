@@ -32,7 +32,8 @@ internal fun PodcastHomeSecondaryOverlays(
     homeState: PodcastHomeState,
     selectedPodcast: PodcastEntity?,
     discoveryDescriptionBlocks: List<DescriptionBlock>,
-    viewModel: PodcastViewModel,
+    onSearchQueryChange: (String) -> Unit,
+    onSearch: () -> Unit,
     undoActions: PodcastHomeUndoActions,
     onUnsubscribeConfirmed: (PodcastEntity) -> Unit,
     directFeedUrl: String,
@@ -102,9 +103,9 @@ internal fun PodcastHomeSecondaryOverlays(
                     directFeedUrl = "",
                     onDirectFeedUrlChange = {},
                     onSubscribeDirect = {},
-                    onQueryChange = viewModel::setQuery,
+                    onQueryChange = onSearchQueryChange,
                     onSearch = {
-                        viewModel.search()
+                        onSearch()
                         routeState.showDiscoverySearch.value = false
                     },
                     showDirectFeed = false,

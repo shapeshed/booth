@@ -8,9 +8,19 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 
+    <!--
+      Backups are off deliberately. Booth is local-first and PRIVACY.md promises the library
+      never leaves the device, so cloud backup, adb backup and device-to-device transfer are
+      all excluded. allowBackup covers API 30 and below; dataExtractionRules is the Android 12+
+      mechanism and is what lint expects at targetSdk 37. The user-driven export/import in
+      Settings (PodcastBackupManager) is the only backup path. Do not re-enable either without
+      updating PRIVACY.md.
+    -->
     <application
         android:name=".BoothApp"
-        android:allowBackup="true"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="false"
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
@@ -32,6 +42,22 @@
             </intent-filter>
         </activity>
 
+        <!--
+            Exported on purpose and not negotiable: a MediaSessionService has to be discoverable by
+            Android Auto, the assistant, Bluetooth and Wear, and the platform discovers it by binding
+            to the service from outside the app. Setting exported="false" would leave the app with
+            no lock screen, notification shade, headset or car transport at all, which is the centre
+            of this product.
+
+            The consequence is that any app on the device can bind and therefore browse the
+            subscription and episode list and drive playback, which is the standard Android media
+            session contract that every media app accepts. It is worth knowing about when deciding
+            what to put in a podcast title. The three custom commands handed out in
+            SessionCallback.onConnect, the sleep timer and skip-silence, are Booth's own controls
+            exposed to those same external surfaces on purpose.
+
+            ExportedService is suppressed rather than fixed for that reason.
+        -->
         <service
             android:name=".PodcastPlaybackService"
             android:foregroundServiceType="mediaPlayback"

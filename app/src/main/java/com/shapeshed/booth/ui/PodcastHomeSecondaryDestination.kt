@@ -1,14 +1,32 @@
 package com.shapeshed.booth.ui
 
-import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.shapeshed.booth.data.DownloadAssetEntity
 import com.shapeshed.booth.data.DownloadProgress
 import com.shapeshed.booth.data.EpisodeEntity
 import com.shapeshed.booth.data.PodcastEntity
+import kotlinx.coroutines.flow.StateFlow
+
+/**
+ * What the downloads and all-episodes screens can do.
+ *
+ * This destination routes to two screens, and both were reaching the same ViewModel operations, with
+ * the play-with-podcast-title lookup written out in both branches. [play] takes the title as an
+ * argument for that reason, so the lookup stays at the one place that knows which podcast a row
+ * belongs to.
+ */
+internal class PodcastSecondaryActions(
+    val play: (episode: EpisodeEntity, podcastTitle: String) -> Unit,
+    val download: (episodeId: Long) -> Unit,
+    val removeDownload: (episodeId: Long) -> Unit,
+    val addToQueue: (episodeId: Long) -> Unit,
+    val refreshSubscriptions: () -> Unit,
+)
 
 @Composable
 internal fun PodcastHomeSecondaryDestination(
@@ -19,9 +37,9 @@ internal fun PodcastHomeSecondaryDestination(
     downloadedEpisodes: Map<Long, EpisodeEntity>,
     playback: PlaybackUiState,
     downloadProgress: Map<Long, DownloadProgress>,
-    viewModel: PodcastViewModel,
-    playbackViewModel: PodcastPlaybackViewModel,
-    context: Context,
+    actions: PodcastSecondaryActions,
+    allEpisodes: kotlinx.coroutines.flow.Flow<androidx.paging.PagingData<EpisodeEntity>>,
+    playbackProgressFlow: StateFlow<PlaybackProgress>,
     refreshing: Boolean,
     onOpen: (EpisodeEntity, EpisodeNavigationOrigin) -> Unit,
     onAction: (EpisodeEntity) -> Unit,
@@ -38,30 +56,32 @@ internal fun PodcastHomeSecondaryDestination(
             downloadProgress = downloadProgress,
             onOpen = { onOpen(it, EpisodeNavigationOrigin.Downloads) },
             onPlay = { episode ->
-                playbackViewModel.play(episode, allPodcastsById[episode.podcastId]?.title.orEmpty())
+                actions.play(episode, allPodcastsById[episode.podcastId]?.title.orEmpty())
             },
-            onDownload = { viewModel.download(context, it.id) },
-            onRemove = { viewModel.removeDownload(context, it.id) },
+            onDownload = { actions.download(it.id) },
+            onRemove = { actions.removeDownload(it.id) },
             onLongPress = onAction,
             modifier = modifier,
         )
 
         PodcastNavigationKey.AllEpisodes -> {
-            val allEpisodes = remember {
-                viewModel.allEpisodes(null)
-            }.collectAsLazyPagingItems()
+            val episodes = remember(allEpisodes) { allEpisodes }.collectAsLazyPagingItems()
+            // Scoped to this branch: the position ticks twice a second and must not reach the
+            // home screen body, and this is the only branch that draws a scrubber.
+            val progress by playbackProgressFlow.collectAsStateWithLifecycle()
             PodcastAllEpisodesContent(
-                episodes = allEpisodes,
+                episodes = episodes,
                 podcastsById = allPodcastsById,
                 playback = playback,
+                playbackProgress = progress,
                 onOpen = { onOpen(it, EpisodeNavigationOrigin.AllEpisodes) },
-                onAddToQueue = { viewModel.addToQueueFromInbox(it.id) },
+                onAddToQueue = { actions.addToQueue(it.id) },
                 onActions = onAction,
                 onPlay = { episode ->
-                    playbackViewModel.play(episode, allPodcastsById[episode.podcastId]?.title.orEmpty())
+                    actions.play(episode, allPodcastsById[episode.podcastId]?.title.orEmpty())
                 },
-                onDownload = { viewModel.download(context, it.id) },
-                onRefresh = { viewModel.refreshSubscriptions(context) },
+                onDownload = { actions.download(it.id) },
+                onRefresh = actions.refreshSubscriptions,
                 refreshing = refreshing,
                 downloadProgress = downloadProgress,
                 modifier = modifier,

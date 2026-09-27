@@ -25,6 +25,7 @@ internal fun PodcastHomeInboxContent(
     onRefresh: () -> Unit,
     refreshing: Boolean,
     downloadProgress: Map<Long, DownloadProgress>,
+    playbackProgress: PlaybackProgress,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
@@ -39,9 +40,7 @@ internal fun PodcastHomeInboxContent(
             episodes = inbox,
             podcastsById = podcastsById,
             activeEpisodeId = playback.episode?.id,
-            activeProgress = playback.durationMs.takeIf { it > 0L }?.let {
-                (playback.positionMs.toFloat() / it).coerceIn(0f, 1f)
-            },
+            activeProgress = playbackProgress.fraction,
             isBuffering = playback.isBuffering,
             onOpen = onOpen,
             onAddToQueue = onAddToQueue,

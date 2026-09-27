@@ -76,7 +76,7 @@ class ApplePodcastSearchProvider(
         parseLookupResults(response)
     }
 
-    private fun lookup(ids: List<String>): List<PodcastSearchResult> {
+    internal fun lookup(ids: List<String>): List<PodcastSearchResult> {
         val url = "$apiBaseUrl/lookup".toHttpUrl().newBuilder()
             .addQueryParameter("id", ids.joinToString(","))
             .addQueryParameter("entity", "podcast")
@@ -85,11 +85,23 @@ class ApplePodcastSearchProvider(
             .build()
         val lookupResults = parseLookupResults(getJson(url))
         return ids.mapNotNull { id ->
-            lookupResults.firstOrNull { result ->
-                result.podcast.siteUrl?.contains("id$id") == true
-            }
+            lookupResults.firstOrNull { result -> sitePodcastId(result.podcast.siteUrl) == id }
         }
     }
+
+    /**
+     * The Apple podcast id embedded in a `collectionViewUrl`.
+     *
+     * The shape is `.../podcast/<slug>/id<appleId>`, optionally followed by `?i=<episodeId>`. This
+     * used to be matched with `siteUrl.contains("id$id")`, which is wrong whenever one id is a
+     * prefix of another: looking up "123456" matched "…/id1234567" first, so a chart could pair the
+     * wrong artwork with the wrong show, and mapNotNull then silently dropped the entry whose id
+     * never got a hit.
+     */
+    private fun sitePodcastId(siteUrl: String?): String? = siteUrl
+        ?.substringAfterLast("/id", missingDelimiterValue = "")
+        ?.substringBefore('?')
+        ?.takeIf(String::isNotBlank)
 
     internal fun parseLookupResults(json: JSONObject): List<PodcastSearchResult> {
         val results = json.optJSONArray("results") ?: return emptyList()

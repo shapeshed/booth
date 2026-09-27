@@ -13,8 +13,13 @@ does not sell personal data.
 ## Data stored on your device
 
 Booth stores podcast subscriptions, episode metadata, playback positions, downloads, and settings
-in the app's private storage. This data is not sent to the
-developer. You can remove it by clearing the app's storage or uninstalling the app.
+in the app's private storage. This data is not sent to the developer. You can remove it by
+clearing the app's storage or uninstalling the app.
+
+Android backup is disabled, so this data is not copied to Google Drive, to a device-to-device
+transfer, or by `adb backup`. Moving to a new device is a manual action: use the backup export
+and import actions in Settings. Files you export are created at the location you select, and you
+are responsible for how you store or share them.
 
 ## Network requests
 

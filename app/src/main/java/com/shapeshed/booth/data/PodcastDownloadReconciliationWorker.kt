@@ -7,7 +7,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import com.shapeshed.booth.BoothApp
+import com.shapeshed.booth.di.boothWorkerEntryPoint
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -18,8 +18,8 @@ class PodcastDownloadReconciliationWorker(appContext: Context, workerParams: Wor
     CoroutineWorker(appContext, workerParams) {
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         try {
-            val app = applicationContext as BoothApp
-            PodcastDownloadManager(applicationContext, app.podcastRepository).syncActiveDownloads()
+            val entryPoint = boothWorkerEntryPoint(applicationContext)
+            entryPoint.downloadManager.syncActiveDownloads()
             Result.success()
         } catch (cancelled: CancellationException) {
             throw cancelled

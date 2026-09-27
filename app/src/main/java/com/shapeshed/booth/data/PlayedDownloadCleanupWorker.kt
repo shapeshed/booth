@@ -26,8 +26,7 @@ class PlayedDownloadCleanupWorker(appContext: Context, workerParams: WorkerParam
         val episode = entryPoint.podcastRepository.episode(episodeId) ?: return Result.success()
         if (!shouldRemovePlayedDownload(episode)) return Result.success()
 
-        PodcastDownloadManager(applicationContext, entryPoint.podcastRepository)
-            .removeEpisodeDownloads(episodeId)
+        entryPoint.downloadManager.removeEpisodeDownloads(episodeId)
         return Result.success()
     }
 
@@ -52,5 +51,4 @@ class PlayedDownloadCleanupWorker(appContext: Context, workerParams: WorkerParam
     }
 }
 
-internal fun shouldRemovePlayedDownload(episode: EpisodeEntity): Boolean =
-    episode.completed && (episode.localUri != null || episode.localVideoUri != null)
+internal fun shouldRemovePlayedDownload(episode: EpisodeEntity): Boolean = episode.completed && episode.hasLocalMedia()

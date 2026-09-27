@@ -1,9 +1,11 @@
 package com.shapeshed.booth.data
 
 import android.os.SystemClock
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 
 data class DownloadProgress(
     val bytesDownloaded: Long,
@@ -15,12 +17,24 @@ data class DownloadProgress(
         get() = totalBytes.takeIf { it > 0L }?.let { bytesDownloaded.toFloat() / it }
 }
 
-object DownloadProgressStore {
+/**
+ * In-flight download progress, keyed by episode.
+ *
+ * A class rather than an `object` so it is an ordinary injectable singleton: this state is written
+ * from Dispatchers.IO in the download workers, the reconciliation worker and the broadcast
+ * receiver, and from the main thread in the ViewModel, so being able to hand a test its own
+ * instance matters. Bound in BoothModule and reached through boothWorkerEntryPoint.
+ */
+class DownloadProgressStore @Inject constructor() {
     private val _progress = MutableStateFlow<Map<Long, DownloadProgress>>(emptyMap())
     val progress: StateFlow<Map<Long, DownloadProgress>> = _progress.asStateFlow()
 
+    // Both mutators are called from Dispatchers.IO (the download workers, the reconciliation
+    // worker, the broadcast receiver) and from the main thread, so the read-modify-write has to
+    // be a compare-and-set. A plain `_progress.value + entry` can lose a concurrent update,
+    // which would drop another episode's entry and stall shouldSyncDownloads.
     fun update(episodeId: Long, value: DownloadProgress) {
-        _progress.value = _progress.value + (episodeId to value)
+        _progress.update { it + (episodeId to value) }
     }
 
     /** Publishes the pending state before WorkManager starts the downloader. */
@@ -39,7 +53,7 @@ object DownloadProgressStore {
     }
 
     fun clear(episodeId: Long) {
-        _progress.value = _progress.value - episodeId
+        _progress.update { it - episodeId }
     }
 }
 

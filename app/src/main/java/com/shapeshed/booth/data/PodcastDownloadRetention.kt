@@ -9,7 +9,7 @@ internal fun downloadsEligibleForDeletion(
     .asSequence()
     // An episode can be downloaded as audio, video, or both.  Retention operates on
     // the episode as a whole because removal must keep the two assets in sync.
-    .filter { it.localUri != null || it.localVideoUri != null }
+    .filter(EpisodeEntity::hasLocalMedia)
     .filterNot { it.id in queuedEpisodeIds }
     .filterNot(EpisodeEntity::favorite)
     .filter { mode != PodcastDeleteBeforeAutoDownload.PLAYED || it.completed }

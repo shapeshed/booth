@@ -3,22 +3,17 @@ package com.shapeshed.booth.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -36,6 +31,7 @@ internal fun PodcastAllEpisodesContent(
     episodes: LazyPagingItems<EpisodeEntity>,
     podcastsById: Map<Long, PodcastEntity>,
     playback: PlaybackUiState,
+    playbackProgress: PlaybackProgress,
     onOpen: (EpisodeEntity) -> Unit,
     onAddToQueue: (EpisodeEntity) -> Unit,
     onActions: (EpisodeEntity) -> Unit,
@@ -105,13 +101,12 @@ internal fun PodcastAllEpisodesContent(
                     onDownload = { onDownload(episode) },
                     isPlaying = playback.isPlaying,
                     isBuffering = playback.isBuffering,
-                    positionOverride = if (episode.id == playback.episode?.id) {
-                        playback.durationMs.takeIf { it > 0L }?.let { duration ->
-                            (playback.positionMs.toFloat() / duration * (episode.durationMs ?: duration)).toLong()
-                        }
-                    } else {
-                        null
-                    },
+                    positionOverride = activeEpisodePositionOverride(
+                        episodeId = episode.id,
+                        activeEpisodeId = playback.episode?.id,
+                        playedFraction = playbackProgress.fraction,
+                        episodeDurationMs = episode.durationMs,
+                    ),
                     downloadProgress = downloadProgress[episode.id],
                     swipeEnabled = false,
                 )

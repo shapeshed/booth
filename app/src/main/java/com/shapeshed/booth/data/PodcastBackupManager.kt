@@ -26,6 +26,7 @@ class PodcastBackupManager(
     private val repository: PodcastRepository,
     private val settings: SettingsStore,
     private val context: Context? = null,
+    private val downloadManager: PodcastDownloadManager? = null,
     private val restoreDownload: suspend (EpisodeEntity) -> Unit = { episode ->
         context?.let { restoreContext ->
             val network = settings.podcastDownloadNetwork.first()
@@ -421,8 +422,8 @@ class PodcastBackupManager(
         }
         val allEpisodes = repository.podcasts.first()
             .flatMap { podcast -> repository.episodes(podcast.id).first() }
-        val downloadsToRestore = context?.let { restoreContext ->
-            PodcastDownloadManager(restoreContext, repository).downloadsWithinLimit(
+        val downloadsToRestore = context?.let {
+            downloadManager?.downloadsWithinLimit(
                 candidates = downloadCandidates,
                 downloadedEpisodes = allEpisodes,
                 downloadAssets = repository.downloadAssets.first(),

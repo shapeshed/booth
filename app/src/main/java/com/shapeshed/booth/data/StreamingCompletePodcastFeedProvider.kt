@@ -53,6 +53,10 @@ class StreamingCompletePodcastFeedProvider(
         }
     }
 
+    // UnclosedTrace is a false positive here. Every beginSection below is paired with a
+    // finally { endSection() }, which runs on the non-local `return@use` for a 304 and on any
+    // thrown exception alike; lint cannot see through the use lambda to prove that.
+    @Suppress("UnclosedTrace")
     private suspend fun fetchWithStreamingParser(
         feedUrl: String,
         etag: String?,

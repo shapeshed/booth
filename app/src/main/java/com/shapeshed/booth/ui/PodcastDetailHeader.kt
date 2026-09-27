@@ -17,7 +17,6 @@ import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,16 +29,16 @@ import com.shapeshed.booth.R
 internal fun PodcastDetailHeader(
     title: String,
     artworkUrl: String?,
-    onArtworkClick: (() -> Unit)? = null,
     author: String?,
+    isSubscribed: Boolean,
+    onSubscription: () -> Unit,
+    latestAction: @Composable (Modifier) -> Unit,
+    onArtworkClick: (() -> Unit)? = null,
     description: String? = null,
     onDescriptionClick: (() -> Unit)? = null,
     categories: List<String> = emptyList(),
     onCategory: (String) -> Unit = {},
-    isSubscribed: Boolean,
-    onSubscription: () -> Unit,
     showSubscriptionAction: Boolean = true,
-    latestAction: @Composable (Modifier) -> Unit,
 ) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),

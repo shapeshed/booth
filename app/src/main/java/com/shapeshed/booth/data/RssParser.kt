@@ -46,6 +46,10 @@ class Prof18FeedParser private constructor(private val parser: RssParser, privat
 
     constructor() : this(RssParser())
 
+    // UnclosedTrace is a false positive here. Every beginSection below is paired with a
+    // finally { endSection() }, which runs on the non-local `return@use` for a 304 and on any
+    // thrown exception alike; lint cannot see through the use lambda to prove that.
+    @Suppress("UnclosedTrace")
     override suspend fun fetch(feedUrl: String, etag: String?, lastModified: String?): RssParseResult {
         val client = client ?: return parser.getRssChannel(feedUrl).toParseResult(feedUrl)
         val boundedClient = client.newBuilder()

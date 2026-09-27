@@ -9,31 +9,41 @@ import com.shapeshed.booth.data.PodcastEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
+/**
+ * The undoable inbox and subscription actions, and the snackbars that offer to undo them.
+ *
+ * Takes the four underlying operations as callbacks rather than the ViewModel. It was holding the
+ * ViewModel only to forward to it, which is what the vm-forwarding rule flags, and it made this
+ * class impossible to exercise without one.
+ *
+ * [addToQueueFromInbox] takes its failure callback as an argument, matching the ViewModel method it
+ * stands in for, so that reporting the error stays the caller's decision rather than being baked in.
+ */
 internal class PodcastHomeUndoActions(
     private val scope: CoroutineScope,
     private val context: Context,
     private val snackbarHostState: SnackbarHostState,
-    private val viewModel: PodcastViewModel,
+    private val removePodcast: (PodcastEntity) -> Unit,
+    private val addToQueueFromInbox: (episodeId: Long, onError: () -> Unit) -> Unit,
+    private val dismissFromInbox: (episodeId: Long) -> Unit,
+    private val restoreToInbox: (episodeId: Long) -> Unit,
 ) {
     fun requestPodcastRemoval(podcast: PodcastEntity) {
-        viewModel.remove(podcast)
+        removePodcast(podcast)
     }
 
     fun requestInboxAction(episode: EpisodeEntity, addToQueue: Boolean) {
         if (addToQueue) {
-            viewModel.addToQueueFromInbox(
-                episode.id,
-                onError = {
-                    scope.launch {
-                        snackbarHostState.showSnackbar(
-                            context.getString(com.shapeshed.booth.R.string.error_add_up_next),
-                        )
-                    }
-                },
-            )
+            addToQueueFromInbox(episode.id) {
+                scope.launch {
+                    snackbarHostState.showSnackbar(
+                        context.getString(com.shapeshed.booth.R.string.error_add_up_next),
+                    )
+                }
+            }
             return
         }
-        viewModel.dismissFromInbox(episode.id)
+        dismissFromInbox(episode.id)
         scope.launch {
             val result = snackbarHostState.showSnackbar(
                 message = context.resources.getString(
@@ -44,7 +54,7 @@ internal class PodcastHomeUndoActions(
                 actionLabel = context.getString(com.shapeshed.booth.R.string.undo),
                 duration = SnackbarDuration.Short,
             )
-            if (result == SnackbarResult.ActionPerformed) viewModel.restoreToInbox(episode.id)
+            if (result == SnackbarResult.ActionPerformed) restoreToInbox(episode.id)
         }
     }
 
@@ -54,7 +64,7 @@ internal class PodcastHomeUndoActions(
             clearSelection()
             return
         }
-        selected.forEach { viewModel.dismissFromInbox(it.id) }
+        selected.forEach { dismissFromInbox(it.id) }
         clearSelection()
         scope.launch {
             val result = snackbarHostState.showSnackbar(
@@ -74,7 +84,7 @@ internal class PodcastHomeUndoActions(
                 actionLabel = context.getString(com.shapeshed.booth.R.string.undo),
                 duration = SnackbarDuration.Short,
             )
-            if (result == SnackbarResult.ActionPerformed) selected.forEach { viewModel.restoreToInbox(it.id) }
+            if (result == SnackbarResult.ActionPerformed) selected.forEach { restoreToInbox(it.id) }
         }
     }
 }

@@ -32,8 +32,9 @@ class PodcastOpmlImportWorker(appContext: Context, workerParams: WorkerParameter
             }
             if (feeds.isEmpty()) return@withContext Result.failure()
 
-            // Use Hilt's singleton. BoothApp's legacy repository creates a second Room
-            // instance, whose writes do not invalidate the ViewModel's observed database.
+            // Every worker, receiver and service resolves its dependencies from the Hilt
+            // singleton graph. There is exactly one Room instance per process, so a write here
+            // is immediately visible to the flows the ViewModel observes.
             val repository = boothWorkerEntryPoint(applicationContext).podcastRepository
             val imported = AtomicInteger(0)
             val completed = AtomicInteger(0)

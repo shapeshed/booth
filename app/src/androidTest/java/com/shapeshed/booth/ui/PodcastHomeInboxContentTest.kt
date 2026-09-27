@@ -37,6 +37,7 @@ class PodcastHomeInboxContentTest {
                     onRefresh = {},
                     refreshing = false,
                     downloadProgress = emptyMap(),
+                    playbackProgress = PlaybackProgress(),
                 )
             }
         }

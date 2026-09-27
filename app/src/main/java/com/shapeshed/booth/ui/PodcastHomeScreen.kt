@@ -1,188 +1,57 @@
 package com.shapeshed.booth.ui
 
 import android.annotation.SuppressLint
-import android.content.pm.PackageManager
-import android.os.Build
 import android.view.inputmethod.InputMethodManager
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.MutableTransitionState
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.StartOffset
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.consumeWindowInsets
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.automirrored.rounded.ViewList
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.RssFeed
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Speed
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Block
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.ErrorOutline
-import androidx.compose.material.icons.rounded.FastForward
-import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.FavoriteBorder
-import androidx.compose.material.icons.rounded.FileDownload
-import androidx.compose.material.icons.rounded.Forward30
-import androidx.compose.material.icons.rounded.Fullscreen
-import androidx.compose.material.icons.rounded.FullscreenExit
-import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.Inbox
-import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.rounded.KeyboardArrowUp
-import androidx.compose.material.icons.rounded.Label
-import androidx.compose.material.icons.rounded.MoreHoriz
-import androidx.compose.material.icons.rounded.Notifications
-import androidx.compose.material.icons.rounded.OfflinePin
-import androidx.compose.material.icons.rounded.OpenInBrowser
-import androidx.compose.material.icons.rounded.Pause
-import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.Replay
-import androidx.compose.material.icons.rounded.Replay10
-import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.rounded.Share
-import androidx.compose.material.icons.rounded.Stop
-import androidx.compose.material.icons.rounded.Sync
-import androidx.compose.material.icons.rounded.UploadFile
-import androidx.compose.material.icons.rounded.VideoLibrary
-import androidx.compose.material.icons.rounded.Wifi
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.BottomSheetScaffold
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ButtonGroup
-import androidx.compose.material3.ButtonGroupDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.FilledIconButton
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.FloatingToolbarDefaults
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.InputChip
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.NavigationRail
-import androidx.compose.material3.NavigationRailItem
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.SearchBarValue
-import androidx.compose.material3.ShortNavigationBar
-import androidx.compose.material3.ShortNavigationBarItem
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.material3.adaptive.navigation3.ListDetailSceneStrategy
 import androidx.compose.material3.adaptive.navigation3.rememberListDetailSceneStrategy
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.rememberBottomSheetScaffoldState
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -194,97 +63,49 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextLayoutResult
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.media3.ui.AspectRatioFrameLayout
-import androidx.media3.ui.PlayerView
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import androidx.paging.compose.collectAsLazyPagingItems
-import coil3.compose.AsyncImage
 import com.shapeshed.booth.R
 import com.shapeshed.booth.data.APPLE_DIRECTORY_PROVIDER_ID
-import com.shapeshed.booth.data.DownloadAssetEntity
-import com.shapeshed.booth.data.DownloadAssetStatus
-import com.shapeshed.booth.data.DownloadAssetType
-import com.shapeshed.booth.data.DownloadProgress
 import com.shapeshed.booth.data.Episode
 import com.shapeshed.booth.data.EpisodeEntity
 import com.shapeshed.booth.data.PodcastDiscoveryCategories
 import com.shapeshed.booth.data.PodcastDiscoveryCategory
-import com.shapeshed.booth.data.PodcastDownloadManager
 import com.shapeshed.booth.data.PodcastEntity
 import com.shapeshed.booth.data.PodcastEpisodeSearchResult
-import com.shapeshed.booth.data.PodcastRefreshInterval
-import com.shapeshed.booth.data.PodcastRefreshNetwork
-import com.shapeshed.booth.data.PodcastRefreshWorker
-import com.shapeshed.booth.data.PodcastSearchProvider
 import com.shapeshed.booth.data.PodcastSearchResult
-import com.shapeshed.booth.data.PodcastSubscriptionProgressStore
 import com.shapeshed.booth.data.PodcastSubscriptionStage
-import com.shapeshed.booth.data.PodcastSubscriptionsViewMode
 import com.shapeshed.booth.data.canonicalFeedUrl
-import com.shapeshed.booth.data.displayCategories
 import com.shapeshed.booth.data.isAdded
 import com.shapeshed.booth.data.isInProgress
-import com.shapeshed.booth.data.podcastTags
-import com.shapeshed.booth.data.relativeTime
-import com.shapeshed.booth.data.searchableCategories
 import com.shapeshed.booth.data.shouldSyncDownloads
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import java.util.Locale
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import org.jsoup.Jsoup
-import org.jsoup.nodes.Element
-import org.jsoup.nodes.Node
-import org.jsoup.nodes.TextNode
 
 internal enum class PodcastSortOrder { LAST_UPDATED, A_TO_Z }
 
@@ -422,7 +243,7 @@ fun PodcastHomeScreen(
     val globalSearchQuery by viewModel.globalSearchQuery.collectAsStateWithLifecycle()
     val globalSearchEpisodes by viewModel.globalSearchEpisodes.collectAsStateWithLifecycle()
     val globalSearchState by viewModel.globalSearchState.collectAsStateWithLifecycle()
-    val subscriptionProgress by PodcastSubscriptionProgressStore.progress.collectAsStateWithLifecycle()
+    val subscriptionProgress by viewModel.subscriptionProgress.collectAsStateWithLifecycle()
     val refreshing = homeUiState.refreshing
     val subscriptionsViewMode = homeUiState.subscriptionsViewMode
     val playback = homeUiState.playback
@@ -632,9 +453,34 @@ fun PodcastHomeScreen(
     } else {
         0.dp
     }
+    val managementActions = rememberManagementActions(viewModel)
+    val nowPlayingActions = rememberNowPlayingActions(playbackViewModel, viewModel)
+    val episodeActionActions = rememberEpisodeActionActions(context, viewModel, playbackViewModel)
+    val settingsActions = rememberSettingsActions(viewModel)
+    val secondaryActions = remember(viewModel, playbackViewModel) {
+        PodcastSecondaryActions(
+            play = playbackViewModel::play,
+            download = { viewModel.download(context, it) },
+            removeDownload = { viewModel.removeDownload(context, it) },
+            addToQueue = { viewModel.addToQueueFromInbox(it) },
+            refreshSubscriptions = { viewModel.refreshSubscriptions(context) },
+        )
+    }
+    val discoveryActions = rememberPodcastDiscoveryActions(context, viewModel, playbackViewModel)
     val platformActions = rememberPodcastHomePlatformActions(context, viewModel) {
         topLevelBackStack.clear()
         topLevelBackStack.add(PodcastNavigationKey.Subscriptions)
+    }
+    // Ask for POST_NOTIFICATIONS the first time audio actually starts, rather than only when the
+    // user finds the new-episode toggle in Settings. The media notification is the foreground
+    // service notification, so on API 33+ a user who never opened that toggle was listening to an
+    // episode with no lock screen, notification shade or headset transport at all.
+    var hasAskedForMediaNotification by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(playback.episode?.id) {
+        if (playback.episode != null && !hasAskedForMediaNotification) {
+            hasAskedForMediaNotification = true
+            platformActions.ensureMediaNotificationPermission()
+        }
     }
     val scope = rememberCoroutineScope()
     fun openSettings() {
@@ -766,35 +612,36 @@ fun PodcastHomeScreen(
     val removeUpNextFailed = stringResource(R.string.error_remove_up_next)
     val addUpNextFailed = stringResource(R.string.error_add_up_next)
     var notifiedSubscriptionFailures by remember { mutableStateOf<Set<String>>(emptySet()) }
-    LaunchedEffect(state.error) {
-        val result = state.error as? PodcastUiError.ImportCompleted ?: return@LaunchedEffect
-        val message = if (result.imported == result.total) {
-            context.resources.getQuantityString(
-                R.plurals.imported_podcasts,
-                result.imported,
-                result.imported,
-            )
-        } else {
-            context.resources.getQuantityString(
-                R.plurals.imported_podcasts_partial,
-                result.imported,
-                result.imported,
-                result.total,
-            )
-        }
-        snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short)
-    }
+    // Collected as an event rather than read off the state. A Channel delivers each outcome once,
+    // so rotating the device no longer re-announces the last completed import, which is what
+    // happened when the confirmation lived in PodcastHomeUiState.error and was never cleared.
     LaunchedEffect(viewModel) {
-        viewModel.backupEvents.collect { event ->
+        viewModel.uiEvents.collect { event ->
             val message = when (event) {
-                PodcastBackupEvent.ImportStarted -> resources.getString(R.string.backup_import_started)
+                PodcastUiEvent.ImportStarted -> resources.getString(R.string.backup_import_started)
 
-                PodcastBackupEvent.Exported -> resources.getString(R.string.backup_export_completed)
+                PodcastUiEvent.Exported -> resources.getString(R.string.backup_export_completed)
 
-                is PodcastBackupEvent.Imported -> resources.getString(
-                    R.string.backup_import_completed,
+                is PodcastUiEvent.Imported -> resources.getQuantityString(
+                    R.plurals.backup_import_completed,
+                    event.subscriptions,
                     event.subscriptions,
                 )
+
+                is PodcastUiEvent.OpmlImported -> if (event.imported == event.total) {
+                    resources.getQuantityString(
+                        R.plurals.imported_podcasts,
+                        event.imported,
+                        event.imported,
+                    )
+                } else {
+                    resources.getQuantityString(
+                        R.plurals.imported_podcasts_partial,
+                        event.imported,
+                        event.imported,
+                        event.total,
+                    )
+                }
             }
             snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short)
         }
@@ -870,7 +717,12 @@ fun PodcastHomeScreen(
             context = context,
             scope = scope,
             snackbarHostState = snackbarHostState,
-            viewModel = viewModel,
+            removePodcast = viewModel::remove,
+            addToQueueFromInbox = { episodeId, onError ->
+                viewModel.addToQueueFromInbox(episodeId, onError = onError)
+            },
+            dismissFromInbox = viewModel::dismissFromInbox,
+            restoreToInbox = viewModel::restoreToInbox,
         )
     }
     val windowSizeClass = currentWindowAdaptiveInfoV2().windowSizeClass
@@ -1003,7 +855,9 @@ fun PodcastHomeScreen(
     fun SettingsContent() {
         PodcastHomeSettingsDestination(
             homeUiState = homeUiState,
-            viewModel = viewModel,
+            actions = settingsActions,
+            searchProviders = viewModel.searchProviders,
+            podcastIndexCredentials = viewModel.podcastIndexCredentials,
             platformActions = platformActions,
             onManagePodcasts = ::openPodcastManagement,
             modifier = Modifier.fillMaxSize(),
@@ -1012,11 +866,10 @@ fun PodcastHomeScreen(
 
     @Composable
     fun DiscoveryContent() {
-        PodcastHomeDiscoveryDestination(
+        ScopedPodcastHomeDiscoveryDestination(
             homeUiState = homeUiState,
-            viewModel = viewModel,
-            playbackViewModel = playbackViewModel,
-            context = context,
+            actions = discoveryActions,
+            playbackProgressFlow = playbackViewModel.progress,
             queueEpisodeIds = queueEpisodeIds,
             subscribedFeedUrls = subscribedFeedUrls,
             onSubscribe = { result -> enqueueSubscription(result) },
@@ -1256,7 +1109,12 @@ fun PodcastHomeScreen(
                                             inbox = inboxSnapshot,
                                             selectedIds = selectedInboxIds,
                                             menuExpanded = inboxSelectionMenuExpanded,
-                                            viewModel = viewModel,
+                                            addToQueueFromInbox = { episodeId, onError ->
+                                                viewModel.addToQueueFromInbox(episodeId, onError = onError)
+                                            },
+                                            downloadEpisode = { viewModel.download(context, it) },
+                                            markEpisodePlayed = viewModel::markPlayed,
+                                            markEpisodeUnplayed = viewModel::markUnplayed,
                                             undoActions = undoActions,
                                             podcastsById = podcastsById,
                                             downloadProgress = downloadProgress,
@@ -1266,7 +1124,6 @@ fun PodcastHomeScreen(
                                             onMenuExpandedChange = { inboxSelectionMenuExpanded = it },
                                             onClearSelection = { selectedInboxIds = emptySet() },
                                             onPendingAction = { pendingEpisodeAction = it },
-                                            context = context,
                                         )
                                     } else if (atRoot) {
                                         PodcastHomeRootActions(
@@ -1467,10 +1324,11 @@ fun PodcastHomeScreen(
                                 @Composable
                                 fun RootTabContent(tab: PodcastTab) {
                                     if (tab == PodcastTab.HOME) {
-                                        PodcastHomeInboxDestination(
+                                        ScopedPodcastHomeInboxDestination(
                                             inbox = inbox,
                                             podcastsById = podcastsById,
                                             playback = playback,
+                                            playbackProgressFlow = playbackViewModel.progress,
                                             selectionMode = inboxSelectionMode,
                                             selectedEpisodeIds = selectedInboxIds,
                                             onSelectedEpisodeIdsChange = { selectedInboxIds = it },
@@ -1515,13 +1373,14 @@ fun PodcastHomeScreen(
                                             modifier = Modifier.fillMaxSize(),
                                         )
                                     } else if (tab == PodcastTab.UP_NEXT) {
-                                        PodcastHomeUpNextDestination(
+                                        ScopedPodcastHomeUpNextDestination(
                                             episodes = queueEpisodes,
                                             podcastsById = allPodcastsById,
                                             playback = playback,
+                                            playbackProgressFlow = playbackViewModel.progress,
                                             downloadProgress = downloadProgress,
-                                            viewModel = viewModel,
-                                            context = context,
+                                            onRemoveFromQueue = viewModel::removeFromQueueAwait,
+                                            onDownload = { viewModel.download(context, it.id) },
                                             reorderMode = queueReorderMode,
                                             filter = queueFilter,
                                             onFilterChange = { queueFilter = it },
@@ -1547,7 +1406,7 @@ fun PodcastHomeScreen(
                                                     queueEpisodeIds = queueEpisodeIds,
                                                 )
                                             },
-                                            onRemoveFailed = {
+                                            onRemoveError = {
                                                 scope.launch { snackbarHostState.showSnackbar(removeUpNextFailed) }
                                             },
                                             onReorder = viewModel::reorderQueue,
@@ -1833,6 +1692,10 @@ fun PodcastHomeScreen(
                                                 onPodcastSelected = { podcastDetailPageId = it.id },
                                                 modifier = Modifier.fillMaxSize(),
                                             ) { pagePodcast ->
+                                                // Scoped to the page: the position ticks twice a
+                                                // second and must not reach the home screen body.
+                                                val progress by playbackViewModel.progress
+                                                    .collectAsStateWithLifecycle()
                                                 val pageEpisodes by remember(pagePodcast.id) {
                                                     viewModel.episodes(pagePodcast.id)
                                                 }.collectAsStateWithLifecycle(emptyList())
@@ -1855,7 +1718,7 @@ fun PodcastHomeScreen(
                                                     activeEpisodeId = playback.episode?.id,
                                                     isPlaying = playback.isPlaying,
                                                     isBuffering = playback.isBuffering,
-                                                    positionMs = playback.positionMs,
+                                                    playbackProgress = progress,
                                                     onTogglePlayPause = playbackViewModel::togglePlayPause,
                                                     showDescription = showPodcastDescription,
                                                     onShowDescriptionChange = { showPodcastDescription = it },
@@ -1914,9 +1777,9 @@ fun PodcastHomeScreen(
                                         downloadedEpisodes = downloadedEpisodes,
                                         playback = playback,
                                         downloadProgress = downloadProgress,
-                                        viewModel = viewModel,
-                                        playbackViewModel = playbackViewModel,
-                                        context = context,
+                                        actions = secondaryActions,
+                                        allEpisodes = remember { viewModel.allEpisodes(null) },
+                                        playbackProgressFlow = playbackViewModel.progress,
                                         refreshing = refreshing,
                                         onOpen = { episode, origin ->
                                             episodeOrigin = when (origin) {
@@ -1964,7 +1827,7 @@ fun PodcastHomeScreen(
                                             PodcastHomeManagementDestination(
                                                 destination = destination,
                                                 podcasts = allPodcasts,
-                                                viewModel = viewModel,
+                                                actions = managementActions,
                                                 modifier = Modifier.fillMaxSize(),
                                             )
                                         }
@@ -2058,7 +1921,9 @@ fun PodcastHomeScreen(
                                 podcastTitle = playingPodcastTitle,
                                 isPlaying = playback.isPlaying,
                                 isBuffering = playback.isBuffering,
-                                playbackViewModel = playbackViewModel,
+                                onTogglePlayPause = playbackViewModel::togglePlayPause,
+                                onClearRememberedEpisode = playbackViewModel::clearRememberedEpisode,
+                                onStopAndClear = playbackViewModel::stopAndClear,
                                 onOpen = { showNowPlaying = true },
                                 onDismiss = ::dismissNowPlaying,
                                 onHeightChanged = { miniPlayerHeightPx = it },
@@ -2068,7 +1933,9 @@ fun PodcastHomeScreen(
                                 homeState = state,
                                 selectedPodcast = selectedPodcast,
                                 discoveryDescriptionBlocks = discoveryDescriptionBlocks,
-                                viewModel = viewModel,
+                                onSearchQueryChange = viewModel::setQuery,
+                                onSearch = viewModel::search,
+
                                 undoActions = undoActions,
                                 onUnsubscribeConfirmed = { retainedPodcastAfterUnsubscribe = it },
                                 directFeedUrl = directFeedUrl,
@@ -2083,8 +1950,7 @@ fun PodcastHomeScreen(
                                 routeState = routeState,
                                 selectedTab = selectedTab,
                                 context = context,
-                                viewModel = viewModel,
-                                playbackViewModel = playbackViewModel,
+                                actions = episodeActionActions,
                                 scope = scope,
                                 snackbarHostState = snackbarHostState,
                             )
@@ -2114,8 +1980,9 @@ fun PodcastHomeScreen(
                 topLevelBackStack.add(selectedTab.toNavigationKey())
                 topLevelBackStack.add(PodcastNavigationKey.PodcastDetail(podcastId))
             },
-            playbackViewModel = playbackViewModel,
-            viewModel = viewModel,
+            actions = nowPlayingActions,
+            player = playbackViewModel.player,
+            playbackProgressFlow = playbackViewModel.progress,
             queueEpisodes = queueEpisodes,
             podcastsById = allPodcastsById,
             podcastTitlesById = podcastTitlesById,

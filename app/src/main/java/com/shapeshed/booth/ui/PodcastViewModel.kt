@@ -16,7 +16,6 @@ import androidx.work.workDataOf
 import com.shapeshed.booth.data.APPLE_DIRECTORY_PROVIDER_ID
 import com.shapeshed.booth.data.CategoryEntity
 import com.shapeshed.booth.data.DefaultPodcastDiscoveryCatalog
-import com.shapeshed.booth.data.DownloadAssetEntity
 import com.shapeshed.booth.data.DownloadProgress
 import com.shapeshed.booth.data.DownloadProgressStore
 import com.shapeshed.booth.data.EPISODE_ID_INPUT
@@ -31,6 +30,7 @@ import com.shapeshed.booth.data.PodcastDiscoveryCategory
 import com.shapeshed.booth.data.PodcastDiscoveryProvider
 import com.shapeshed.booth.data.PodcastDiscoveryShelf
 import com.shapeshed.booth.data.PodcastDiscoveryShelfResult
+import com.shapeshed.booth.data.PodcastDownloadManager
 import com.shapeshed.booth.data.PodcastDownloadNetwork
 import com.shapeshed.booth.data.PodcastEntity
 import com.shapeshed.booth.data.PodcastFeed
@@ -121,10 +121,19 @@ data class PodcastHomeState(
     val error: PodcastUiError? = null,
 )
 
-sealed interface PodcastBackupEvent {
-    data object ImportStarted : PodcastBackupEvent
-    data object Exported : PodcastBackupEvent
-    data class Imported(val subscriptions: Int) : PodcastBackupEvent
+/**
+ * A one-shot outcome the user should be told about once.
+ *
+ * These are successes. Failures stay on [PodcastHomeUiState.error] because a failed screen load is
+ * a state the screen should keep showing, whereas a completed import is a thing that happened and
+ * stops being true the moment it has been said. Putting successes on the state as well is what made
+ * the OPML import confirmation replay every time the device was rotated.
+ */
+sealed interface PodcastUiEvent {
+    data object ImportStarted : PodcastUiEvent
+    data object Exported : PodcastUiEvent
+    data class Imported(val subscriptions: Int) : PodcastUiEvent
+    data class OpmlImported(val imported: Int, val total: Int) : PodcastUiEvent
 }
 
 private const val OPML_IMPORT_WORK_NAME = "podcast-opml-import"
@@ -165,6 +174,10 @@ class PodcastViewModel @Inject constructor(
     private val discoveryProviders: @JvmSuppressWildcards List<PodcastDiscoveryProvider>,
     private val settings: SettingsStore,
     private val credentialsStore: PodcastIndexCredentialsStore,
+    private val downloadManager: PodcastDownloadManager,
+    private val progressStore: DownloadProgressStore,
+    private val subscriptionProgressStore: PodcastSubscriptionProgressStore,
+    private val backupManager: PodcastBackupManager,
     @ApplicationContext private val applicationContext: Context,
 ) : ViewModel() {
     private val mediaSizeChecks = ConcurrentHashMap.newKeySet<Long>()
@@ -173,8 +186,27 @@ class PodcastViewModel @Inject constructor(
     private var discoveryJob: Job? = null
     private var previewJob: Job? = null
     private val categoryJobs = mutableMapOf<String, Deferred<PodcastDiscoveryShelfResult>>()
+
+    init {
+        // The FTS index is now written inline with the episodes table, so it cannot drift within a
+        // run. This is the recovery pass for episodes indexed by an older build, whose asynchronous
+        // indexing could lose a batch to a process death with nothing able to repair it.
+        viewModelScope.launch { runCancellableCatching { repository.rebuildSearchIndex() } }
+    }
+
     val searchProviders: List<PodcastSearchProvider> = searchCatalog.providers
     val podcastIndexCredentials: StateFlow<PodcastIndexCredentials?> = credentialsStore.credentials
+
+    /**
+     * In-flight subscription progress, for the spinner on a subscribing podcast.
+     *
+     * Exposed here rather than read from the store directly by the home screen, so the UI does not
+     * reach into a process-global in the data layer. This ViewModel is already the writer for
+     * every transition the UI observes.
+     */
+    val subscriptionProgress: StateFlow<Map<String, PodcastSubscriptionProgress>> =
+        subscriptionProgressStore.progress
+
     val podcasts: StateFlow<List<PodcastEntity>> = repository.podcasts.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5_000),
@@ -368,14 +400,14 @@ class PodcastViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
     val downloadProgress: StateFlow<Map<Long, DownloadProgress>> = combine(
         downloadAssets,
-        DownloadProgressStore.progress,
+        progressStore.progress,
     ) { assets, liveProgress -> mergeDownloadProgress(assets, liveProgress) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     private val _state = MutableStateFlow(PodcastHomeState())
     val state: StateFlow<PodcastHomeState> = _state.asStateFlow()
-    private val _backupEvents = Channel<PodcastBackupEvent>(Channel.BUFFERED)
-    val backupEvents: Flow<PodcastBackupEvent> = _backupEvents.receiveAsFlow()
+    private val _uiEvents = Channel<PodcastUiEvent>(Channel.BUFFERED)
+    val uiEvents: Flow<PodcastUiEvent> = _uiEvents.receiveAsFlow()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val previewEpisodeEntities: StateFlow<Map<Long, EpisodeEntity>> = state
@@ -695,7 +727,7 @@ class PodcastViewModel @Inject constructor(
         appleCategoryIds: Map<String, String> = emptyMap(),
         categoryProviderId: String = APPLE_DIRECTORY_PROVIDER_ID,
     ) {
-        PodcastSubscriptionProgressStore.queued(feedUrl, title)
+        subscriptionProgressStore.queued(feedUrl, title)
         val request = OneTimeWorkRequestBuilder<PodcastSubscribeWorker>()
             .setInputData(
                 workDataOf(
@@ -905,16 +937,15 @@ class PodcastViewModel @Inject constructor(
         val info = terminalInfo
         val imported = info.outputData.getInt(com.shapeshed.booth.data.OPML_IMPORT_IMPORTED, 0)
         val total = info.outputData.getInt(com.shapeshed.booth.data.OPML_IMPORT_TOTAL, 0)
+        val succeeded = info.state == androidx.work.WorkInfo.State.SUCCEEDED
         _state.value = state.value.copy(
             isImporting = false,
             importProgress = null,
             importFirstPodcastSaved = state.value.importFirstPodcastSaved || importHasSavedPodcast(imported),
-            error = if (info.state == androidx.work.WorkInfo.State.SUCCEEDED) {
-                PodcastUiError.ImportCompleted(imported, total)
-            } else {
-                PodcastUiError.OpmlReadFailed
-            },
+            // A failure is a state the screen should keep showing; a success is a one-shot event.
+            error = if (succeeded) null else PodcastUiError.OpmlReadFailed,
         )
+        if (succeeded) _uiEvents.send(PodcastUiEvent.OpmlImported(imported, total))
     }
 
     fun exportOpml(context: Context, uri: Uri) {
@@ -936,14 +967,13 @@ class PodcastViewModel @Inject constructor(
     fun exportBackup(context: Context, uri: Uri) {
         viewModelScope.launch {
             runCancellableCatching {
-                val body = com.shapeshed.booth.data.PodcastBackupManager(repository, settings).export()
+                val body = backupManager.export()
                 withContext(Dispatchers.IO) {
                     context.contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { writer ->
                         writer.write(body)
                     } ?: error("Could not open backup destination")
                 }
-                _state.value = state.value.copy(error = PodcastUiError.BackupExportCompleted)
-                _backupEvents.send(PodcastBackupEvent.Exported)
+                _uiEvents.send(PodcastUiEvent.Exported)
             }.onFailure {
                 _state.value = state.value.copy(error = PodcastUiError.ExportFailed)
             }
@@ -953,20 +983,19 @@ class PodcastViewModel @Inject constructor(
     fun exportBackupZip(context: Context, uri: Uri) {
         viewModelScope.launch {
             runCancellableCatching {
-                val body = PodcastBackupManager(repository, settings).exportZip()
+                val body = backupManager.exportZip()
                 withContext(Dispatchers.IO) {
                     context.contentResolver.openOutputStream(uri)?.use { it.write(body) }
                         ?: error("Could not open backup destination")
                 }
-                _state.value = state.value.copy(error = PodcastUiError.BackupExportCompleted)
-                _backupEvents.send(PodcastBackupEvent.Exported)
+                _uiEvents.send(PodcastUiEvent.Exported)
             }.onFailure { _state.value = state.value.copy(error = PodcastUiError.ExportFailed) }
         }
     }
 
     fun importBackup(context: Context, uri: Uri) {
         viewModelScope.launch {
-            _backupEvents.send(PodcastBackupEvent.ImportStarted)
+            _uiEvents.send(PodcastUiEvent.ImportStarted)
             val body = runCancellableCatching {
                 withContext(Dispatchers.IO) {
                     context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
@@ -978,13 +1007,12 @@ class PodcastViewModel @Inject constructor(
             }
             runCancellableCatching {
                 if (body.size >= 2 && body[0] == 'P'.code.toByte() && body[1] == 'K'.code.toByte()) {
-                    PodcastBackupManager(repository, settings, context).importZip(body)
+                    backupManager.importZip(body)
                 } else {
-                    PodcastBackupManager(repository, settings, context).import(body.toString(Charsets.UTF_8))
+                    backupManager.import(body.toString(Charsets.UTF_8))
                 }
             }.onSuccess { imported ->
-                _state.value = state.value.copy(error = PodcastUiError.BackupImportCompleted(imported))
-                _backupEvents.send(PodcastBackupEvent.Imported(imported))
+                _uiEvents.send(PodcastUiEvent.Imported(imported))
                 com.shapeshed.booth.data.PodcastRefreshWorker.enqueueNow(context)
             }.onFailure {
                 _state.value = state.value.copy(error = PodcastUiError.BackupImportFailed)
@@ -1093,7 +1121,7 @@ class PodcastViewModel @Inject constructor(
     }
 
     fun remove(podcast: PodcastEntity) {
-        PodcastSubscriptionProgressStore.update(
+        subscriptionProgressStore.update(
             podcast.feedUrl,
             PodcastSubscriptionProgress(
                 stage = PodcastSubscriptionStage.UNSUBSCRIBING,
@@ -1103,12 +1131,12 @@ class PodcastViewModel @Inject constructor(
         viewModelScope.launch {
             runCancellableCatching { repository.remove(podcast) }
                 .onFailure { _state.value = state.value.copy(error = PodcastUiError.RemovePodcastFailed) }
-                .also { PodcastSubscriptionProgressStore.clear(podcast.feedUrl) }
+                .also { subscriptionProgressStore.clear(podcast.feedUrl) }
         }
     }
 
     fun markUnsubscribing(podcast: PodcastEntity) {
-        PodcastSubscriptionProgressStore.update(
+        subscriptionProgressStore.update(
             podcast.feedUrl,
             PodcastSubscriptionProgress(
                 stage = PodcastSubscriptionStage.UNSUBSCRIBING,
@@ -1118,7 +1146,7 @@ class PodcastViewModel @Inject constructor(
     }
 
     fun clearSubscriptionProgress(podcast: PodcastEntity) {
-        PodcastSubscriptionProgressStore.clear(podcast.feedUrl)
+        subscriptionProgressStore.clear(podcast.feedUrl)
     }
 
     fun updatePodcastSettings(
@@ -1240,7 +1268,7 @@ class PodcastViewModel @Inject constructor(
     fun download(context: android.content.Context, episodeId: Long) {
         // WorkManager and DownloadManager are intentionally asynchronous. Publish the
         // pending state now so every list view gives immediate feedback on the tap.
-        DownloadProgressStore.request(episodeId)
+        progressStore.request(episodeId)
         enqueueDownload(context, episodeId, PodcastDownloadNetwork.ANY_CONNECTION)
     }
 
@@ -1256,10 +1284,7 @@ class PodcastViewModel @Inject constructor(
         val network = settings.podcastDownloadNetwork.first()
         val allEpisodes = repository.podcasts.first()
             .flatMap { subscribed -> repository.episodes(subscribed.id).first() }
-        val downloadsToEnqueue = com.shapeshed.booth.data.PodcastDownloadManager(
-            context.applicationContext,
-            repository,
-        ).downloadsWithinLimit(
+        val downloadsToEnqueue = downloadManager.downloadsWithinLimit(
             candidates = episodes,
             downloadedEpisodes = allEpisodes,
             downloadAssets = repository.downloadAssets.first(),
@@ -1271,7 +1296,7 @@ class PodcastViewModel @Inject constructor(
     }
 
     private fun enqueueDownload(context: Context, episodeId: Long, network: PodcastDownloadNetwork) {
-        DownloadProgressStore.request(episodeId)
+        progressStore.request(episodeId)
         val request = OneTimeWorkRequestBuilder<EpisodeDownloadWorker>()
             .setInputData(workDataOf(EPISODE_ID_INPUT to episodeId))
             .setConstraints(
@@ -1289,18 +1314,12 @@ class PodcastViewModel @Inject constructor(
     }
 
     suspend fun syncDownloads(context: android.content.Context) = withContext(Dispatchers.IO) {
-        com.shapeshed.booth.data.PodcastDownloadManager(
-            context.applicationContext,
-            repository,
-        ).syncActiveDownloads()
+        downloadManager.syncActiveDownloads()
     }
 
     fun removeDownload(context: android.content.Context, episodeId: Long) {
         viewModelScope.launch(Dispatchers.IO) {
-            com.shapeshed.booth.data.PodcastDownloadManager(
-                context.applicationContext,
-                repository,
-            ).removeEpisodeDownloads(episodeId)
+            downloadManager.removeEpisodeDownloads(episodeId)
         }
     }
 }
