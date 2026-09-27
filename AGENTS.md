@@ -49,7 +49,8 @@ ANDROID_SERIAL=<test-device-serial> ./gradlew preservingDebugAndroidTest
 Instrumentation uses the isolated `com.shapeshed.booth.deviceTest` application ID. Do not run
 connected instrumentation tasks against `com.shapeshed.booth` on a device containing personal app
 data. See [docs/testing.md](docs/testing.md) for the testing pyramid, UI coverage expectations,
-and JaCoCo commands.
+and JaCoCo commands, and [docs/architecture-and-coverage-plan.md](docs/architecture-and-coverage-plan.md)
+for where test coverage currently stands and the order to raise it in.
 
 ## Release versioning
 
