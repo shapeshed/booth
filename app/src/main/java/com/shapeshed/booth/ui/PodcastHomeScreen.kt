@@ -455,6 +455,17 @@ fun PodcastHomeScreen(
     }
     val managementActions = rememberManagementActions(viewModel)
     val nowPlayingActions = rememberNowPlayingActions(playbackViewModel, viewModel)
+    val episodeActionActions = rememberEpisodeActionActions(context, viewModel, playbackViewModel)
+    val settingsActions = rememberSettingsActions(viewModel)
+    val secondaryActions = remember(viewModel, playbackViewModel) {
+        PodcastSecondaryActions(
+            play = playbackViewModel::play,
+            download = { viewModel.download(context, it) },
+            removeDownload = { viewModel.removeDownload(context, it) },
+            addToQueue = { viewModel.addToQueueFromInbox(it) },
+            refreshSubscriptions = { viewModel.refreshSubscriptions(context) },
+        )
+    }
     val discoveryActions = rememberPodcastDiscoveryActions(context, viewModel, playbackViewModel)
     val platformActions = rememberPodcastHomePlatformActions(context, viewModel) {
         topLevelBackStack.clear()
@@ -844,7 +855,9 @@ fun PodcastHomeScreen(
     fun SettingsContent() {
         PodcastHomeSettingsDestination(
             homeUiState = homeUiState,
-            viewModel = viewModel,
+            actions = settingsActions,
+            searchProviders = viewModel.searchProviders,
+            podcastIndexCredentials = viewModel.podcastIndexCredentials,
             platformActions = platformActions,
             onManagePodcasts = ::openPodcastManagement,
             modifier = Modifier.fillMaxSize(),
@@ -1764,9 +1777,9 @@ fun PodcastHomeScreen(
                                         downloadedEpisodes = downloadedEpisodes,
                                         playback = playback,
                                         downloadProgress = downloadProgress,
-                                        viewModel = viewModel,
-                                        playbackViewModel = playbackViewModel,
-                                        context = context,
+                                        actions = secondaryActions,
+                                        allEpisodes = remember { viewModel.allEpisodes(null) },
+                                        playbackProgressFlow = playbackViewModel.progress,
                                         refreshing = refreshing,
                                         onOpen = { episode, origin ->
                                             episodeOrigin = when (origin) {
@@ -1937,8 +1950,7 @@ fun PodcastHomeScreen(
                                 routeState = routeState,
                                 selectedTab = selectedTab,
                                 context = context,
-                                viewModel = viewModel,
-                                playbackViewModel = playbackViewModel,
+                                actions = episodeActionActions,
                                 scope = scope,
                                 snackbarHostState = snackbarHostState,
                             )
