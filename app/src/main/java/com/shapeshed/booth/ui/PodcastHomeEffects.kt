@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.shapeshed.booth.PODCAST_NOTIFICATION_ACTION_ADD_TO_QUEUE
 import com.shapeshed.booth.PODCAST_NOTIFICATION_ACTION_PLAY
@@ -28,6 +29,10 @@ internal fun PodcastHomeEffects(
     onSelectSavedTab: (PodcastTab) -> Unit,
 ) {
     val settings by viewModel.podcastSettings.collectAsStateWithLifecycle()
+    // Both effects below are keyed on data, not on these callbacks, so neither should restart when
+    // the parent recreates them. Reading them through updated state keeps them current.
+    val currentOnOpenInitialEpisode by rememberUpdatedState(onOpenInitialEpisode)
+    val currentOnSelectSavedTab by rememberUpdatedState(onSelectSavedTab)
     LaunchedEffect(
         settings.refreshInterval,
         settings.refreshNetwork,
@@ -47,7 +52,7 @@ internal fun PodcastHomeEffects(
     LaunchedEffect(initialEpisodeId, initialNotificationAction) {
         initialEpisodeId?.let { episodeId ->
             viewModel.episode(episodeId)?.let { episode ->
-                onOpenInitialEpisode(episode)
+                currentOnOpenInitialEpisode(episode)
                 when (initialNotificationAction) {
                     PODCAST_NOTIFICATION_ACTION_ADD_TO_QUEUE -> viewModel.addToQueueFromInbox(episode.id)
 
@@ -62,7 +67,7 @@ internal fun PodcastHomeEffects(
     LaunchedEffect(savedPodcastTab) {
         savedPodcastTab
             ?.let { value -> runCatching { PodcastTab.valueOf(value) }.getOrNull() }
-            ?.let(onSelectSavedTab)
+            ?.let(currentOnSelectSavedTab)
     }
     LaunchedEffect(showNowPlaying, playbackEpisodeId) {
         if (showNowPlaying) playbackViewModel.restoreForegroundVideoPreference()

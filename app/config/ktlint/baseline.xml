@@ -1,25 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <baseline version="1.0">
     <file name="src/main/java/com/shapeshed/booth/ui/PodcastDetailSwipePager.kt">
-        <error line="22" column="5" source="compose:lambda-param-in-effect" />
-        <error line="24" column="5" source="compose:content-slot-reused" />
-    </file>
-    <file name="src/main/java/com/shapeshed/booth/ui/PodcastDiscoveryScreens.kt">
-        <error line="57" column="5" source="compose:lambda-param-in-effect" />
+        <error line="26" column="5" source="compose:content-slot-reused" />
     </file>
     <file name="src/main/java/com/shapeshed/booth/ui/PodcastEpisodeSwipePager.kt">
-        <error line="22" column="5" source="compose:lambda-param-in-effect" />
-        <error line="24" column="5" source="compose:content-slot-reused" />
-    </file>
-    <file name="src/main/java/com/shapeshed/booth/ui/PodcastGettingStarted.kt">
-        <error line="59" column="5" source="compose:lambda-param-in-effect" />
+        <error line="26" column="5" source="compose:content-slot-reused" />
     </file>
     <file name="src/main/java/com/shapeshed/booth/ui/PodcastHomeAppContent.kt">
         <error line="15" column="14" source="compose:param-order-check" />
-    </file>
-    <file name="src/main/java/com/shapeshed/booth/ui/PodcastHomeEffects.kt">
-        <error line="27" column="5" source="compose:lambda-param-in-effect" />
-        <error line="28" column="5" source="compose:lambda-param-in-effect" />
     </file>
     <file name="src/main/java/com/shapeshed/booth/ui/PodcastHomeInboxSelectionActions.kt">
         <error line="29" column="14" source="compose:multiple-emitters-check" />
@@ -30,15 +18,7 @@
     <file name="src/main/java/com/shapeshed/booth/ui/PodcastHomeRootActions.kt">
         <error line="26" column="14" source="compose:multiple-emitters-check" />
     </file>
-    <file name="src/main/java/com/shapeshed/booth/ui/PodcastHomeScreen.kt">
-        <error line="226" column="5" source="compose:lambda-param-in-effect" />
-    </file>
-    <file name="src/main/java/com/shapeshed/booth/ui/PodcastInboxScreens.kt">
-        <error line="186" column="5" source="compose:lambda-param-in-effect" />
-    </file>
     <file name="src/main/java/com/shapeshed/booth/ui/PodcastQueueScreens.kt">
-        <error line="297" column="14" source="compose:param-order-check" />
-        <error line="475" column="5" source="compose:lambda-param-in-effect" />
-        <error line="476" column="5" source="compose:lambda-param-in-effect" />
+        <error line="298" column="14" source="compose:param-order-check" />
     </file>
 </baseline>

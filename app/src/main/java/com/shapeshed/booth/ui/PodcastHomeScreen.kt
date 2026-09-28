@@ -231,6 +231,9 @@ fun PodcastHomeScreen(
     val resources = LocalResources.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
+    // The readiness effect below is keyed on data, not on this callback, so it must read the
+    // current one rather than whichever instance was captured when it last started.
+    val currentOnInitialContentReady by rememberUpdatedState(onInitialContentReady)
     val homeUiState = rememberPodcastHomeUiState(viewModel, playbackViewModel)
     val podcasts = homeUiState.podcasts
     val allPodcasts = homeUiState.allPodcasts
@@ -378,7 +381,7 @@ fun PodcastHomeScreen(
                 subscribedPodcasts.isNotEmpty() || homeState.discoveryLoaded || homeState.error != null
             }.first { it }
         }
-        onInitialContentReady()
+        currentOnInitialContentReady()
     }
     LaunchedEffect(globalSearchTextFieldState) {
         snapshotFlow { globalSearchTextFieldState.text.toString() }

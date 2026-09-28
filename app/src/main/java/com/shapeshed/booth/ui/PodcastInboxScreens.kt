@@ -42,6 +42,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -432,11 +433,15 @@ internal fun PodcastDownloadsScreen(
             val dismissState = rememberSwipeToDismissBoxState(
                 positionalThreshold = { distance -> distance * SWIPE_TO_DISMISS_THRESHOLD_FRACTION },
             )
+            // The effect is keyed only on the swipe state, so it does not restart when this
+            // callback is recreated by the parent. Reading it through updated state keeps it
+            // pointing at the current one.
+            val currentOnRemove by rememberUpdatedState(onRemove)
             LaunchedEffect(dismissState.currentValue) {
                 if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     dismissState.snapTo(SwipeToDismissBoxValue.Settled)
-                    onRemove(episode)
+                    currentOnRemove(episode)
                 }
             }
             SwipeToDismissBox(

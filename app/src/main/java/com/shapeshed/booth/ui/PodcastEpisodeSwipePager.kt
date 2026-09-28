@@ -6,7 +6,9 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import com.shapeshed.booth.data.EpisodeEntity
@@ -30,15 +32,18 @@ internal fun PodcastEpisodeSwipePager(
         initialPage = currentIndex,
         pageCount = { episodes.size },
     )
+    // The settled-page collector is keyed on the pager, not on this callback, so it must read the
+    // current one rather than whichever instance was captured when it last started.
+    val currentOnSelectEpisode by rememberUpdatedState(onSelectEpisode)
 
     LaunchedEffect(currentIndex) {
         if (pagerState.currentPage != currentIndex && currentIndex < pagerState.pageCount) {
             pagerState.scrollToPage(currentIndex)
         }
     }
-    LaunchedEffect(pagerState) {
+    LaunchedEffect(pagerState, episodes) {
         snapshotFlow { pagerState.settledPage }.collectLatest { page ->
-            episodes.getOrNull(page)?.let(onSelectEpisode)
+            episodes.getOrNull(page)?.let(currentOnSelectEpisode)
         }
     }
 

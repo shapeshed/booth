@@ -31,6 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -59,14 +60,18 @@ internal fun PodcastCategoryListScreen(
     hasMore: Boolean = true,
 ) {
     val gridState = rememberLazyGridState()
-    LaunchedEffect(gridState, category.results.size, isLoadingMore) {
+    // Keyed on the things the decision below reads, and reading the callback through updated state
+    // so firing it does not restart the scroll observer. hasMore was read here without being a key,
+    // so reaching the end after a page had been exhausted never triggered another load.
+    val currentOnLoadMore by rememberUpdatedState(onLoadMore)
+    LaunchedEffect(gridState, category.results.size, isLoadingMore, hasMore) {
         snapshotFlow { gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1 }
             .collect { lastVisibleIndex ->
                 if (category.results.size > 0 &&
                     lastVisibleIndex >= category.results.size - 6 &&
                     !isLoadingMore && hasMore
                 ) {
-                    onLoadMore()
+                    currentOnLoadMore()
                 }
             }
     }

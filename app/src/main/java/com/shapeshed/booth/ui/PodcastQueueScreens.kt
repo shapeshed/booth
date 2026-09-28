@@ -46,6 +46,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -493,18 +494,22 @@ internal fun InboxEpisodeSwipeRow(
     val dismissState = rememberSwipeToDismissBoxState(
         positionalThreshold = { distance -> distance * SWIPE_TO_DISMISS_THRESHOLD_FRACTION },
     )
+    // Keyed only on the swipe state, so neither callback restarting the effect is wanted. Read
+    // through updated state so both stay current.
+    val currentOnAddToQueue by rememberUpdatedState(onAddToQueue)
+    val currentOnDismiss by rememberUpdatedState(onDismiss)
     LaunchedEffect(dismissState.currentValue) {
         when (dismissState.currentValue) {
             SwipeToDismissBoxValue.StartToEnd -> {
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                onAddToQueue()
+                currentOnAddToQueue()
                 dismissState.snapTo(SwipeToDismissBoxValue.Settled)
             }
 
             SwipeToDismissBoxValue.EndToStart -> {
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 dismissState.snapTo(SwipeToDismissBoxValue.Settled)
-                onDismiss()
+                currentOnDismiss()
             }
 
             SwipeToDismissBoxValue.Settled -> Unit
