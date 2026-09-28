@@ -24,6 +24,13 @@ ij_kotlin_allow_trailing_comma_on_call_site = true
 ktlint_code_style = android_studio
 ktlint_function_naming_ignore_when_annotated_with = Composable, Preview, PreviewTest
 
+# LocalPodcastMiniPlayerInset is a mutable compositionLocalOf with a default, because the inset
+# changes as the mini player animates and every screen drawing above it should not have to supply
+# one it does not care about. The rule's own escape hatch is this allowlist rather than a
+# suppression, so the decision is declarative and survives the file being split. The rule matches on
+# the declared name, not the qualified one.
+compose_allowed_composition_locals = LocalPodcastMiniPlayerInset
+
 [*.{gradle,toml}]
 indent_size = 4
 

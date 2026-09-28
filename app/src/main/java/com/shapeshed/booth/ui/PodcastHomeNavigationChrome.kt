@@ -31,15 +31,15 @@ internal fun PodcastHomeBottomNavigation(
     visible: Boolean,
     selectedTab: PodcastTab,
     inboxCount: Int,
-    onTabSelected: (PodcastTab) -> Unit,
+    onSelectTab: (PodcastTab) -> Unit,
 ) {
     if (!visible) return
     ShortNavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainerLow) {
         PodcastHomeNavigationItems(
             selectedTab = selectedTab,
             inboxCount = inboxCount,
-            onTabSelected = onTabSelected,
-            item = { selected, onClick, icon, label ->
+            onSelectTab = onSelectTab,
+            tabItem = { selected, onClick, icon, label ->
                 ShortNavigationBarItem(
                     selected = selected,
                     onClick = onClick,
@@ -56,7 +56,7 @@ internal fun PodcastHomeNavigationRail(
     visible: Boolean,
     selectedTab: PodcastTab,
     inboxCount: Int,
-    onTabSelected: (PodcastTab) -> Unit,
+    onSelectTab: (PodcastTab) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (!visible) return
@@ -71,8 +71,8 @@ internal fun PodcastHomeNavigationRail(
             PodcastHomeNavigationItems(
                 selectedTab = selectedTab,
                 inboxCount = inboxCount,
-                onTabSelected = onTabSelected,
-                item = { selected, onClick, icon, label ->
+                onSelectTab = onSelectTab,
+                tabItem = { selected, onClick, icon, label ->
                     NavigationRailItem(
                         selected = selected,
                         onClick = onClick,
@@ -89,17 +89,17 @@ internal fun PodcastHomeNavigationRail(
 private fun PodcastHomeNavigationItems(
     selectedTab: PodcastTab,
     inboxCount: Int,
-    onTabSelected: (PodcastTab) -> Unit,
-    item: @Composable (
+    onSelectTab: (PodcastTab) -> Unit,
+    tabItem: @Composable (
         selected: Boolean,
         onClick: () -> Unit,
         icon: @Composable () -> Unit,
         label: @Composable () -> Unit,
     ) -> Unit,
 ) {
-    item(
+    tabItem(
         selectedTab == PodcastTab.HOME,
-        { onTabSelected(PodcastTab.HOME) },
+        { onSelectTab(PodcastTab.HOME) },
         {
             BadgedBox(
                 badge = {
@@ -111,15 +111,15 @@ private fun PodcastHomeNavigationItems(
         },
         { Text(stringResource(R.string.inbox)) },
     )
-    item(
+    tabItem(
         selectedTab == PodcastTab.UP_NEXT,
-        { onTabSelected(PodcastTab.UP_NEXT) },
+        { onSelectTab(PodcastTab.UP_NEXT) },
         { Icon(Icons.AutoMirrored.Rounded.PlaylistPlay, contentDescription = null) },
         { Text(stringResource(R.string.up_next)) },
     )
-    item(
+    tabItem(
         selectedTab == PodcastTab.SUBSCRIPTIONS,
-        { onTabSelected(PodcastTab.SUBSCRIPTIONS) },
+        { onSelectTab(PodcastTab.SUBSCRIPTIONS) },
         { Icon(Icons.Filled.RssFeed, contentDescription = null) },
         { Text(stringResource(R.string.podcast_subscriptions)) },
     )

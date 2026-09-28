@@ -407,9 +407,9 @@ internal fun EpisodePlaybackButton(
     positionMs: Long,
     completed: Boolean,
     isPlaying: Boolean,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
     isBuffering: Boolean = false,
-    onClick: () -> Unit,
     prominent: Boolean = false,
     labelOverride: String? = null,
 ) {

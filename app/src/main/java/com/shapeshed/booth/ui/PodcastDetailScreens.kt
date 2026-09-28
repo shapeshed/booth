@@ -251,7 +251,7 @@ internal fun PodcastEpisodeActionsSheet(
     onDownload: () -> Unit,
     onRemoveDownload: (() -> Unit)?,
     onToggleQueue: () -> Unit,
-    onSetPlayed: (Boolean) -> Unit,
+    onPlayedChange: (Boolean) -> Unit,
     onResetPosition: () -> Unit,
     onDismiss: () -> Unit,
     downloadSizeBytes: Long? = action.downloadSizeBytes,
@@ -389,7 +389,7 @@ internal fun PodcastEpisodeActionsSheet(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable(onClick = { onSetPlayed(!action.isCompleted) }),
+                        .clickable(onClick = { onPlayedChange(!action.isCompleted) }),
                 )
                 if (action.hasPlaybackPosition) {
                     PodcastActionListItem(

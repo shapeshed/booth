@@ -56,7 +56,7 @@ internal fun PodcastGettingStarted(
     categoryResults: List<PodcastSearchResult> = emptyList(),
     categoryResultsById: Map<String, List<PodcastSearchResult>> = emptyMap(),
     isLoadingCategory: Boolean = false,
-    onCategorySelected: (PodcastDiscoveryCategory?) -> Unit = {},
+    onSelectCategory: (PodcastDiscoveryCategory?) -> Unit = {},
     onPreloadCategory: (PodcastDiscoveryCategory) -> Unit = {},
     categories: List<PodcastDiscoveryCategory> = PodcastDiscoveryCategories,
 ) {
@@ -72,7 +72,7 @@ internal fun PodcastGettingStarted(
     LaunchedEffect(pagerState, categories) {
         snapshotFlow { pagerState.settledPage }
             .distinctUntilChanged()
-            .collect { page -> onCategorySelected(categories.getOrNull(page - 1)) }
+            .collect { page -> onSelectCategory(categories.getOrNull(page - 1)) }
     }
     LaunchedEffect(pagerState, categories) {
         snapshotFlow { pagerState.currentPage }
@@ -144,13 +144,13 @@ internal fun PodcastGettingStarted(
             ) {
                 Tab(
                     selected = selectedCategory == null,
-                    onClick = { onCategorySelected(null) },
+                    onClick = { onSelectCategory(null) },
                     text = { Text(stringResource(R.string.popular_podcasts)) },
                 )
                 categories.forEach { category ->
                     Tab(
                         selected = selectedCategory?.id == category.id,
-                        onClick = { onCategorySelected(category) },
+                        onClick = { onSelectCategory(category) },
                         text = { Text(category.title) },
                     )
                 }

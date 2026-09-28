@@ -199,6 +199,10 @@ internal val PodcastEpisodeArtworkSize = 80.dp
 
 // Require an intentional horizontal gesture so vertical list scrolling does not dismiss rows.
 internal const val SWIPE_TO_DISMISS_THRESHOLD_FRACTION = 0.5f
+
+// Mutable with a default on purpose: the inset changes as the mini player animates, and every
+// screen that draws above it should not have to supply an inset it does not care about. Listed in
+// .editorconfig under compose_allowed_composition_locals, which is the rule's own allowlist.
 internal val LocalPodcastMiniPlayerInset = compositionLocalOf { 0.dp }
 
 @Composable
@@ -208,6 +212,12 @@ internal val LocalPodcastMiniPlayerInset = compositionLocalOf { 0.dp }
     ExperimentalMaterial3AdaptiveApi::class,
 )
 @SuppressLint("UnsafeOptInUsageError")
+// PodcastHomeEffects is the one composable here that keeps its ViewModels, and deliberately: it
+// renders nothing, it only runs effects, so hoisting the ViewModel away would buy no testability and
+// would just relocate the same calls. PodcastHomeBackHandlers, which does take one purely to call
+// switchToAudioForBackground, was hoisted instead. Suppressed on the call site rather than
+// baselined, so the reason sits with the code instead of at a line number.
+@Suppress("ktlint:compose:vm-forwarding-check")
 fun PodcastHomeScreen(
     modifier: Modifier = Modifier,
     initialEpisodeId: Long? = null,
@@ -774,7 +784,7 @@ fun PodcastHomeScreen(
     )
     PodcastHomeBackHandlers(
         routeState = routeState,
-        playbackViewModel = playbackViewModel,
+        onSwitchToAudioForBackground = playbackViewModel::switchToAudioForBackground,
         inboxSelectionMode = inboxSelectionMode,
         showGlobalSearch = showGlobalSearch,
         onCloseGlobalSearch = ::closeGlobalSearch,
@@ -987,7 +997,7 @@ fun PodcastHomeScreen(
                                         showSearchAction = false,
                                         onClearInbox = viewModel::clearInbox,
                                         onClearQueue = viewModel::clearQueue,
-                                        onQueueReorderDone = { queueReorderMode = false },
+                                        onQueueReorderComplete = { queueReorderMode = false },
                                         onOpenDiscoverySearch = ::openGlobalSearch,
                                         onOpenAddPodcast = { routeState.showAddPodcast.value = true },
                                         onMenuExpandedChange = { rootMenuExpanded = it },
@@ -1134,7 +1144,7 @@ fun PodcastHomeScreen(
                                             showSearchAction = false,
                                             onClearInbox = viewModel::clearInbox,
                                             onClearQueue = viewModel::clearQueue,
-                                            onQueueReorderDone = { queueReorderMode = false },
+                                            onQueueReorderComplete = { queueReorderMode = false },
                                             onOpenDiscoverySearch = ::openGlobalSearch,
                                             onOpenAddPodcast = { routeState.showAddPodcast.value = true },
                                             onMenuExpandedChange = { rootMenuExpanded = it },
@@ -1290,7 +1300,7 @@ fun PodcastHomeScreen(
                     visible = !useNavigationRail && atRoot,
                     selectedTab = selectedTab,
                     inboxCount = inbox.itemCount,
-                    onTabSelected = ::selectTabFromHome,
+                    onSelectTab = ::selectTabFromHome,
                 )
             },
         ) { padding ->
@@ -1308,7 +1318,7 @@ fun PodcastHomeScreen(
                         visible = false,
                         selectedTab = selectedTab,
                         inboxCount = inbox.itemCount,
-                        onTabSelected = ::selectTabFromHome,
+                        onSelectTab = ::selectTabFromHome,
                     )
                     Box(
                         Modifier
@@ -1497,7 +1507,7 @@ fun PodcastHomeScreen(
                                             },
                                             isLoadingCategory =
                                                 gettingStartedCategoryId != null && state.isLoadingCategory,
-                                            onCategorySelected = { category ->
+                                            onSelectCategory = { category ->
                                                 gettingStartedCategoryId = category?.id
                                                 category?.let(viewModel::loadCategory)
                                             },
@@ -1546,7 +1556,7 @@ fun PodcastHomeScreen(
                                             PodcastEpisodeSwipePager(
                                                 episodes = swipeEpisodes,
                                                 selectedEpisodeId = episode.id,
-                                                onEpisodeSelected = { nextEpisode ->
+                                                onSelectEpisode = { nextEpisode ->
                                                     viewModel.resolveMediaSizes(nextEpisode)
                                                 },
                                                 modifier = Modifier.fillMaxSize(),
@@ -1689,7 +1699,7 @@ fun PodcastHomeScreen(
                                             PodcastDetailSwipePager(
                                                 podcasts = podcastPages,
                                                 selectedPodcastId = podcast.id,
-                                                onPodcastSelected = { podcastDetailPageId = it.id },
+                                                onSelectPodcast = { podcastDetailPageId = it.id },
                                                 modifier = Modifier.fillMaxSize(),
                                             ) { pagePodcast ->
                                                 // Scoped to the page: the position ticks twice a
@@ -1926,7 +1936,7 @@ fun PodcastHomeScreen(
                                 onStopAndClear = playbackViewModel::stopAndClear,
                                 onOpen = { showNowPlaying = true },
                                 onDismiss = ::dismissNowPlaying,
-                                onHeightChanged = { miniPlayerHeightPx = it },
+                                onHeightChange = { miniPlayerHeightPx = it },
                             )
                             PodcastHomeSecondaryOverlays(
                                 routeState = routeState,
@@ -1937,7 +1947,7 @@ fun PodcastHomeScreen(
                                 onSearch = viewModel::search,
 
                                 undoActions = undoActions,
-                                onUnsubscribeConfirmed = { retainedPodcastAfterUnsubscribe = it },
+                                onConfirmUnsubscribe = { retainedPodcastAfterUnsubscribe = it },
                                 directFeedUrl = directFeedUrl,
                                 onDirectFeedUrlChange = { directFeedUrl = it },
                                 onAddPodcast = {
@@ -1963,7 +1973,7 @@ fun PodcastHomeScreen(
             visible = useNavigationRail,
             selectedTab = selectedTab,
             inboxCount = inbox.itemCount,
-            onTabSelected = ::selectTabFromHome,
+            onSelectTab = ::selectTabFromHome,
             modifier = Modifier.align(Alignment.CenterStart),
         )
         PodcastHomeNowPlayingOverlay(

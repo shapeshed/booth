@@ -200,7 +200,7 @@ internal fun PodcastHomeEpisodeActionsOverlay(
                     }
                 }
             },
-            onSetPlayed = { played ->
+            onPlayedChange = { played ->
                 routeState.pendingEpisodeAction.value = null
                 actions.setPlayed(action, played)
             },

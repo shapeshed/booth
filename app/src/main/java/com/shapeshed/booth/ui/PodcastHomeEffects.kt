@@ -81,16 +81,21 @@ internal fun PodcastHomeEffects(
     }
 }
 
+/**
+ * The back gestures, and the one thing the now-playing one has to do beyond dismissing it.
+ *
+ * Takes that as a callback rather than the ViewModel, which it needed for exactly this one call.
+ */
 @Composable
 internal fun PodcastHomeBackHandlers(
     routeState: PodcastHomeRouteState,
-    playbackViewModel: PodcastPlaybackViewModel,
+    onSwitchToAudioForBackground: () -> Unit,
     inboxSelectionMode: Boolean,
     showGlobalSearch: Boolean,
     onCloseGlobalSearch: () -> Unit,
 ) {
     BackHandler(enabled = routeState.showNowPlaying.value) {
-        playbackViewModel.switchToAudioForBackground()
+        onSwitchToAudioForBackground()
         routeState.showNowPlaying.value = false
     }
     BackHandler(enabled = routeState.queueReorderMode.value) {

@@ -30,7 +30,7 @@ internal fun PodcastHomeRootActions(
     menuExpanded: Boolean,
     onClearInbox: () -> Unit,
     onClearQueue: () -> Unit,
-    onQueueReorderDone: () -> Unit,
+    onQueueReorderComplete: () -> Unit,
     onOpenDiscoverySearch: () -> Unit,
     onOpenAddPodcast: () -> Unit,
     onMenuExpandedChange: (Boolean) -> Unit,
@@ -41,7 +41,7 @@ internal fun PodcastHomeRootActions(
 ) {
     val showClearQueueConfirmation = rememberSaveable { mutableStateOf(false) }
     if (selectedTab == PodcastTab.UP_NEXT && queueReorderMode) {
-        TextButton(onClick = onQueueReorderDone) {
+        TextButton(onClick = onQueueReorderComplete) {
             Text(stringResource(R.string.done))
         }
     } else {

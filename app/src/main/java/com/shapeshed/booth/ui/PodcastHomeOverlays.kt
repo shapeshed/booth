@@ -35,7 +35,7 @@ internal fun PodcastHomeSecondaryOverlays(
     onSearchQueryChange: (String) -> Unit,
     onSearch: () -> Unit,
     undoActions: PodcastHomeUndoActions,
-    onUnsubscribeConfirmed: (PodcastEntity) -> Unit,
+    onConfirmUnsubscribe: (PodcastEntity) -> Unit,
     directFeedUrl: String,
     onDirectFeedUrlChange: (String) -> Unit,
     onAddPodcast: () -> Unit,
@@ -123,7 +123,7 @@ internal fun PodcastHomeSecondaryOverlays(
                     onClick = {
                         routeState.showUnsubscribeConfirmation.value = false
                         routeState.showPodcastDescription.value = false
-                        onUnsubscribeConfirmed(selectedPodcast)
+                        onConfirmUnsubscribe(selectedPodcast)
                         undoActions.requestPodcastRemoval(selectedPodcast)
                     },
                 ) { Text(stringResource(R.string.unfollow)) }

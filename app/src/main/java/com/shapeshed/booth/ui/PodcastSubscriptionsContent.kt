@@ -36,7 +36,7 @@ internal fun PodcastSubscriptionsContent(
     categoryResults: List<com.shapeshed.booth.data.PodcastSearchResult> = emptyList(),
     categoryResultsById: Map<String, List<com.shapeshed.booth.data.PodcastSearchResult>> = emptyMap(),
     isLoadingCategory: Boolean = false,
-    onCategorySelected: (com.shapeshed.booth.data.PodcastDiscoveryCategory?) -> Unit = {},
+    onSelectCategory: (com.shapeshed.booth.data.PodcastDiscoveryCategory?) -> Unit = {},
     onPreloadCategory: (com.shapeshed.booth.data.PodcastDiscoveryCategory) -> Unit = {},
     categories: List<com.shapeshed.booth.data.PodcastDiscoveryCategory> = emptyList(),
 ) {
@@ -67,7 +67,7 @@ internal fun PodcastSubscriptionsContent(
         categoryResults = categoryResults,
         categoryResultsById = categoryResultsById,
         isLoadingCategory = isLoadingCategory,
-        onCategorySelected = onCategorySelected,
+        onSelectCategory = onSelectCategory,
         onPreloadCategory = onPreloadCategory,
         categories = categories,
         onRefresh = onRefresh,

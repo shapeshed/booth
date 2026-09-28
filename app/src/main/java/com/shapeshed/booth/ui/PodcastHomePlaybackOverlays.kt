@@ -47,7 +47,7 @@ internal fun PodcastHomeMiniPlayerOverlay(
     onStopAndClear: () -> Unit,
     onOpen: () -> Unit,
     onDismiss: () -> Unit,
-    onHeightChanged: (Int) -> Unit,
+    onHeightChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val transitionState = remember { MutableTransitionState(false) }
@@ -60,7 +60,7 @@ internal fun PodcastHomeMiniPlayerOverlay(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .zIndex(2f)
-                .onSizeChanged { onHeightChanged(it.height) }
+                .onSizeChanged { onHeightChange(it.height) }
                 .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 12.dp),
         ) {
             episode?.let {

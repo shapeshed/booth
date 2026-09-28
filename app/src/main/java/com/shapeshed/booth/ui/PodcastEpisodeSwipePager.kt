@@ -19,7 +19,7 @@ internal fun episodeSwipeIndex(episodes: List<EpisodeEntity>, episodeId: Long): 
 internal fun PodcastEpisodeSwipePager(
     episodes: List<EpisodeEntity>,
     selectedEpisodeId: Long,
-    onEpisodeSelected: (EpisodeEntity) -> Unit,
+    onSelectEpisode: (EpisodeEntity) -> Unit,
     modifier: Modifier = Modifier,
     content: @Composable (EpisodeEntity) -> Unit,
 ) {
@@ -38,7 +38,7 @@ internal fun PodcastEpisodeSwipePager(
     }
     LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.settledPage }.collectLatest { page ->
-            episodes.getOrNull(page)?.let(onEpisodeSelected)
+            episodes.getOrNull(page)?.let(onSelectEpisode)
         }
     }
 

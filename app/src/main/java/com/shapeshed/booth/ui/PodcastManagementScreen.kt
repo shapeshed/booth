@@ -20,7 +20,7 @@ internal fun PodcastManagementScreen(
     podcasts: List<PodcastEntity>,
     onPodcastFlagsChange: (PodcastEntity, Boolean, Boolean, Boolean) -> Unit,
     onPodcastAutoQueueChange: (PodcastEntity, Boolean) -> Unit,
-    onSetAllEnabled: (Boolean) -> Unit,
+    onAllEnabledChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyColumn(
@@ -45,7 +45,7 @@ internal fun PodcastManagementScreen(
                 trailingContent = {
                     Switch(
                         checked = allEnabled,
-                        onCheckedChange = onSetAllEnabled,
+                        onCheckedChange = onAllEnabledChange,
                     )
                 },
             ) { Text(stringResource(R.string.enable_all_podcasts)) }
