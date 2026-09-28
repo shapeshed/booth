@@ -19,6 +19,42 @@ ktlint {
     // `./gradlew :app:ktlintGenerateBaseline`. Only new violations fail the build.
 }
 
+/**
+ * Fails if the ktlint baseline contains any `standard` rule entry.
+ *
+ * A baseline entry is positional, so it breaks whenever anything above it shifts a line, and it
+ * never ratchets: regenerating it is enough to make any new violation pass. That is tolerable for
+ * the architectural rules the baseline is for, which are expensive to fix and genuinely
+ * pre-existing, but not for formatting. Formatting violations are cheap to fix and baselining one
+ * hides the same class of mistake in every later edit to that file, so the baseline is held to
+ * `compose:` and `detekt:` entries only.
+ *
+ * The count is reported rather than merely asserted so the failure says what to look for.
+ */
+tasks.register('verifyKtlintBaselineHasNoFormattingEntries') {
+    group = 'verification'
+    description = 'Fails if the ktlint baseline contains formatting (standard) rule entries.'
+    def baseline = layout.projectDirectory.file('config/ktlint/baseline.xml')
+    inputs.file(baseline)
+    def offenders = providers.provider {
+        def text = baseline.asFile.text
+        def matcher = (text =~ /source="(standard:[^"]+)"/)
+        matcher.collect { it[1] }
+    }
+    doLast {
+        def found = offenders.get()
+        if (found) {
+            throw new GradleException(
+                "The ktlint baseline contains ${found.size()} formatting entries, which are for " +
+                "fixing rather than recording:\n  " + found.unique().join('\n  ') +
+                "\n\nFix them. If a standard rule is genuinely unusable here, that belongs in " +
+                ".editorconfig or a reasoned @Suppress at the declaration, both of which survive " +
+                "a line move. A baseline entry does not.")
+        }
+        logger.lifecycle('ktlint baseline holds no formatting entries.')
+    }
+}
+
 android {
     experimentalProperties["android.experimental.enableScreenshotTest"] = true
     namespace = 'com.shapeshed.booth'

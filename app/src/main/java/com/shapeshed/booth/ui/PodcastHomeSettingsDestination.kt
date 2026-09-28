@@ -6,8 +6,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.shapeshed.booth.data.PodcastDeleteBeforeAutoDownload
-import com.shapeshed.booth.data.PodcastDownloadLimit
 import com.shapeshed.booth.data.PodcastDownloadNetwork
 import com.shapeshed.booth.data.PodcastIndexCredentials
 import com.shapeshed.booth.data.PodcastRefreshInterval
@@ -31,8 +29,6 @@ internal class PodcastSettingsActions(
     val setRefreshInterval: (PodcastRefreshInterval) -> Unit,
     val setRefreshNetwork: (PodcastRefreshNetwork) -> Unit,
     val setDownloadNetwork: (PodcastDownloadNetwork) -> Unit,
-    val setDownloadLimit: (PodcastDownloadLimit) -> Unit,
-    val setDeleteBeforeAutoDownload: (PodcastDeleteBeforeAutoDownload) -> Unit,
     val setRemovePlayedDownloads: (Boolean) -> Unit,
     val setSearchProvider: (String) -> Unit,
     val setPodcastIndexCredentials: (apiKey: String, apiSecret: String) -> Unit,
@@ -48,8 +44,6 @@ internal fun rememberSettingsActions(viewModel: PodcastViewModel): PodcastSettin
         setRefreshInterval = viewModel::setPodcastRefreshInterval,
         setRefreshNetwork = viewModel::setPodcastRefreshNetwork,
         setDownloadNetwork = viewModel::setPodcastDownloadNetwork,
-        setDownloadLimit = viewModel::setPodcastDownloadLimit,
-        setDeleteBeforeAutoDownload = viewModel::setPodcastDeleteBeforeAutoDownload,
         setRemovePlayedDownloads = viewModel::setPodcastRemovePlayedDownloads,
         setSearchProvider = viewModel::setPodcastSearchProvider,
         setPodcastIndexCredentials = { apiKey, apiSecret ->
@@ -95,10 +89,6 @@ internal fun PodcastHomeSettingsDestination(
         onRefreshNetworkChange = actions.setRefreshNetwork,
         downloadNetwork = homeUiState.settings.downloadNetwork,
         onDownloadNetworkChange = actions.setDownloadNetwork,
-        downloadLimit = homeUiState.settings.downloadLimit,
-        onDownloadLimitChange = actions.setDownloadLimit,
-        deleteBeforeAutoDownload = homeUiState.settings.deleteBeforeAutoDownload,
-        onDeleteBeforeAutoDownloadChange = actions.setDeleteBeforeAutoDownload,
         removePlayedDownloads = homeUiState.settings.removePlayedDownloads,
         onRemovePlayedDownloadsChange = actions.setRemovePlayedDownloads,
         notificationsEnabled = homeUiState.settings.notificationsEnabled &&

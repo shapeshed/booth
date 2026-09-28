@@ -13,8 +13,15 @@ tasks.register('quality') {
     description = 'Runs the maintenance quality gate for compile errors, formatting, lint, unit tests, and coverage.'
     dependsOn(
         ':app:compileDebugKotlin',
+        // The androidTest source set is a separate compilation that nothing above pulls in, so a
+        // rename in main can leave instrumentation referencing a parameter that no longer exists and
+        // still pass this gate. It happened: a renamed composable parameter was green locally and on
+        // CI, and only failed when the device job compiled it. This costs a few seconds and catches
+        // it here instead.
+        ':app:compileDeviceTestAndroidTestKotlin',
         ':app:lintDebug',
         ':app:ktlintCheck',
+        ':app:verifyKtlintBaselineHasNoFormattingEntries',
         ':app:testDeviceTestUnitTest',
         ':app:jacocoDeviceTestUnitTestCoverageVerification',
     )

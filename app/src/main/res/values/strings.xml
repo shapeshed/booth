@@ -156,17 +156,8 @@
     <string name="selected_item">Selected</string>
     <string name="discovery_settings_group" translatable="false">Podcast discovery</string>
     <string name="download_network" translatable="false">Download network</string>
-    <string name="download_limit" translatable="false">Download limit</string>
-    <string name="delete_before_auto_download" translatable="false">Delete before downloading</string>
     <string name="remove_played_downloads" translatable="false">Remove played downloads</string>
     <string name="remove_played_downloads_summary" translatable="false">24 hours after playback</string>
-    <string name="download_limit_25" translatable="false">25 episodes</string>
-    <string name="download_limit_50" translatable="false">50 episodes</string>
-    <string name="download_limit_100" translatable="false">100 episodes</string>
-    <string name="download_limit_unlimited" translatable="false">Unlimited</string>
-    <string name="download_cleanup_off" translatable="false">Off</string>
-    <string name="download_cleanup_played" translatable="false">Played episodes</string>
-    <string name="download_cleanup_all_eligible" translatable="false">All eligible episodes</string>
     <string name="download_wifi_or_mobile" translatable="false">Wi-Fi or mobile data</string>
     <string name="download_wifi_only" translatable="false">Wi-Fi only</string>
     <string name="podcast_search">Podcast search</string>

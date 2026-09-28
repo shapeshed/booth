@@ -51,8 +51,6 @@ class PodcastRefreshWorker(context: Context, workerParams: WorkerParameters) : C
         val autoQueueEnabled = settings.podcastAutoQueueEnabled.first()
         val downloadEpisodesAddedToUpNext = settings.podcastDownloadEpisodesAddedToUpNext.first()
         val downloadNetwork = settings.podcastDownloadNetwork.first()
-        val downloadLimit = settings.podcastDownloadLimit.first()
-        val deleteBeforeAutoDownload = settings.podcastDeleteBeforeAutoDownload.first()
         val newEpisodes = mutableListOf<NewPodcastEpisodeNotification>()
         val queuedDownloadCandidates = mutableListOf<EpisodeEntity>()
         val podcasts = repository.podcasts.first().filter { it.includeInAutoRefresh }
@@ -100,13 +98,10 @@ class PodcastRefreshWorker(context: Context, workerParams: WorkerParameters) : C
         }
         val allEpisodes = repository.podcasts.first()
             .flatMap { subscribed -> repository.episodes(subscribed.id).first() }
-        val downloadsToEnqueue = entryPoint.downloadManager.downloadsWithinLimit(
+        val downloadsToEnqueue = entryPoint.downloadManager.episodesToDownload(
             candidates = queuedDownloadCandidates,
             downloadedEpisodes = allEpisodes,
             downloadAssets = repository.downloadAssets.first(),
-            queuedEpisodeIds = repository.queue.first().mapTo(mutableSetOf(), QueueEntity::episodeId),
-            maximumDownloads = downloadLimit.episodeCount,
-            mode = deleteBeforeAutoDownload,
         )
         downloadsToEnqueue.forEach { episode ->
             val request = OneTimeWorkRequestBuilder<EpisodeDownloadWorker>()

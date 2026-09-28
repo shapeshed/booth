@@ -247,12 +247,6 @@ class PodcastViewModel @Inject constructor(
         .combine(settings.podcastDownloadNetwork) { state, downloadNetwork ->
             state.copy(downloadNetwork = downloadNetwork)
         }
-        .combine(settings.podcastDownloadLimit) { state, downloadLimit ->
-            state.copy(downloadLimit = downloadLimit)
-        }
-        .combine(settings.podcastDeleteBeforeAutoDownload) { state, deleteBeforeAutoDownload ->
-            state.copy(deleteBeforeAutoDownload = deleteBeforeAutoDownload)
-        }
         .combine(settings.podcastRemovePlayedDownloads) { state, removePlayedDownloads ->
             state.copy(removePlayedDownloads = removePlayedDownloads)
         }
@@ -441,14 +435,6 @@ class PodcastViewModel @Inject constructor(
         viewModelScope.launch {
             settings.setPodcastDownloadVideos(enabled)
         }
-    }
-
-    fun setPodcastDownloadLimit(limit: com.shapeshed.booth.data.PodcastDownloadLimit) {
-        viewModelScope.launch { settings.setPodcastDownloadLimit(limit) }
-    }
-
-    fun setPodcastDeleteBeforeAutoDownload(mode: com.shapeshed.booth.data.PodcastDeleteBeforeAutoDownload) {
-        viewModelScope.launch { settings.setPodcastDeleteBeforeAutoDownload(mode) }
     }
 
     fun setPodcastRemovePlayedDownloads(enabled: Boolean) {
@@ -1284,13 +1270,10 @@ class PodcastViewModel @Inject constructor(
         val network = settings.podcastDownloadNetwork.first()
         val allEpisodes = repository.podcasts.first()
             .flatMap { subscribed -> repository.episodes(subscribed.id).first() }
-        val downloadsToEnqueue = downloadManager.downloadsWithinLimit(
+        val downloadsToEnqueue = downloadManager.episodesToDownload(
             candidates = episodes,
             downloadedEpisodes = allEpisodes,
             downloadAssets = repository.downloadAssets.first(),
-            queuedEpisodeIds = repository.queue.first().mapTo(mutableSetOf()) { it.episodeId },
-            maximumDownloads = settings.podcastDownloadLimit.first().episodeCount,
-            mode = settings.podcastDeleteBeforeAutoDownload.first(),
         )
         downloadsToEnqueue.forEach { episode -> enqueueDownload(context, episode.id, network) }
     }
