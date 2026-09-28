@@ -77,7 +77,7 @@ internal fun PodcastHomeManagementDestination(
         onPodcastAutoQueueChange = { podcast, enabled ->
             actions.setAutoQueue(podcast.id, enabled)
         },
-        onSetAllEnabled = { enabled ->
+        onAllEnabledChange = { enabled ->
             when (destination.category) {
                 PodcastManagementCategory.AUTO_REFRESH -> actions.setAllAutoRefresh(enabled)
                 PodcastManagementCategory.AUTO_QUEUE -> actions.setAllAutoQueue(enabled)

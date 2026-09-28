@@ -106,7 +106,7 @@ internal fun PodcastLibrary(
     categoryResults: List<com.shapeshed.booth.data.PodcastSearchResult> = emptyList(),
     categoryResultsById: Map<String, List<com.shapeshed.booth.data.PodcastSearchResult>> = emptyMap(),
     isLoadingCategory: Boolean = false,
-    onCategorySelected: (com.shapeshed.booth.data.PodcastDiscoveryCategory?) -> Unit = {},
+    onSelectCategory: (com.shapeshed.booth.data.PodcastDiscoveryCategory?) -> Unit = {},
     onPreloadCategory: (com.shapeshed.booth.data.PodcastDiscoveryCategory) -> Unit = {},
     categories: List<com.shapeshed.booth.data.PodcastDiscoveryCategory> = emptyList(),
 ) {
@@ -181,7 +181,7 @@ internal fun PodcastLibrary(
                         categoryResults = categoryResults,
                         categoryResultsById = categoryResultsById,
                         isLoadingCategory = isLoadingCategory,
-                        onCategorySelected = onCategorySelected,
+                        onSelectCategory = onSelectCategory,
                         onPreloadCategory = onPreloadCategory,
                         categories = categories,
                     )
@@ -303,7 +303,7 @@ internal fun PodcastLibraryControls(
         Spacer(Modifier.size(8.dp))
         PodcastViewModeToggle(
             selected = viewMode,
-            onSelected = onViewModeChange,
+            onViewModeSelect = onViewModeChange,
         )
     }
 }
@@ -312,7 +312,7 @@ internal fun PodcastLibraryControls(
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 internal fun PodcastViewModeToggle(
     selected: PodcastSubscriptionsViewMode,
-    onSelected: (PodcastSubscriptionsViewMode) -> Unit,
+    onViewModeSelect: (PodcastSubscriptionsViewMode) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val gridIconScale by animateFloatAsState(
@@ -334,7 +334,7 @@ internal fun PodcastViewModeToggle(
             buttonGroupContent = {
                 ToggleButton(
                     checked = selected == PodcastSubscriptionsViewMode.GRID,
-                    onCheckedChange = { if (it) onSelected(PodcastSubscriptionsViewMode.GRID) },
+                    onCheckedChange = { if (it) onViewModeSelect(PodcastSubscriptionsViewMode.GRID) },
                     shapes = ButtonGroupDefaults.connectedLeadingButtonShapes(),
                 ) {
                     Icon(
@@ -353,7 +353,7 @@ internal fun PodcastViewModeToggle(
             buttonGroupContent = {
                 ToggleButton(
                     checked = selected == PodcastSubscriptionsViewMode.LIST,
-                    onCheckedChange = { if (it) onSelected(PodcastSubscriptionsViewMode.LIST) },
+                    onCheckedChange = { if (it) onViewModeSelect(PodcastSubscriptionsViewMode.LIST) },
                     shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
                 ) {
                     Icon(

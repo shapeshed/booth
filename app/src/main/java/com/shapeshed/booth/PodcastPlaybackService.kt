@@ -38,6 +38,7 @@ import com.shapeshed.booth.data.orderedResumptionIds
 import com.shapeshed.booth.di.boothPlaybackEntryPoint
 import java.io.File
 import java.util.concurrent.Executor
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -53,6 +54,48 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
+
+/**
+ * Runs [compute] in [scope] and completes the returned future with its result.
+ *
+ * The client waiting on this is outside the app, such as Android Auto or the assistant, so the one
+ * thing that must not happen is a future left pending: `CallbackToFutureAdapter.Completer` has no
+ * `cancel()`, so there is nothing to time it out and the client would hang indefinitely.
+ *
+ * Two things guarantee the future always resolves:
+ *
+ * - `invokeOnCompletion` fires even for a coroutine that is cancelled before its body starts, which
+ *   is the window a plain `launch` leaves open. `set` and `setException` both no-op once the future
+ *   is resolved, so racing them is safe.
+ * - the `try`/`catch` covers the work itself once it is running.
+ *
+ * Cancellation is reported as the [CancellationException] it is, rather than being swallowed by
+ * `runCatching` and turned into a resumption failure. A service shutting down is not an error the
+ * client should be told about.
+ *
+ * Cancelling the future cancels the work, so a client that walks away does not leave the database
+ * being queried on its behalf.
+ */
+internal fun <T> resumptionFuture(
+    scope: CoroutineScope,
+    dispatcher: CoroutineDispatcher = Dispatchers.IO,
+    compute: suspend () -> T,
+): ListenableFuture<T> = CallbackToFutureAdapter.getFuture { completer ->
+    val job = scope.launch(dispatcher) {
+        try {
+            completer.set(compute())
+        } catch (error: Exception) {
+            completer.setException(error)
+        }
+    }
+    job.invokeOnCompletion { cause ->
+        if (cause != null) {
+            completer.setException(cause)
+        }
+    }
+    completer.addCancellationListener({ job.cancel() }, Executor { it.run() })
+    "podcast-playback-resumption"
+}
 
 @UnstableApi
 class PodcastPlaybackService : MediaLibraryService() {
@@ -405,36 +448,15 @@ class PodcastPlaybackService : MediaLibraryService() {
          * Answers an external controller's request to resume playback, such as Android Auto or the
          * assistant.
          *
-         * The work runs in the service scope, so it must always resolve the future, including when
-         * the scope is cancelled. `CallbackToFutureAdapter.Completer` has no `cancel()`, so a
-         * coroutine that is cancelled before its body starts would leave the future pending forever
-         * and hang whatever was waiting on it. `invokeOnCompletion` covers that window; the
-         * `try`/`catch` covers the rest. `set` and `setException` both no-op once the future is
-         * resolved, so racing them is safe.
-         *
-         * Cancellation is also no longer swallowed by `runCatching` and reported as a resumption
-         * failure: a service shutdown is not an error the client should be told about.
+         * The lifetime rules live in [resumptionFuture]; this override is only the wiring, so that
+         * the part that can hang a client is testable on its own.
          */
         override fun onPlaybackResumption(
             session: MediaSession,
             controller: MediaSession.ControllerInfo,
             isForPlayback: Boolean,
-        ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> = CallbackToFutureAdapter.getFuture { completer ->
-            val job = service.serviceScope.launch(Dispatchers.IO) {
-                try {
-                    completer.set(service.resumptionItems())
-                } catch (error: Exception) {
-                    completer.setException(error)
-                }
-            }
-            job.invokeOnCompletion { cause ->
-                if (cause != null) {
-                    completer.setException(cause)
-                }
-            }
-            // If the client walks away, stop hitting the database on its behalf.
-            completer.addCancellationListener({ job.cancel() }, Executor { it.run() })
-            "podcast-playback-resumption"
+        ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> = resumptionFuture(service.serviceScope) {
+            service.resumptionItems()
         }
 
         override fun onCustomCommand(

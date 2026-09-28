@@ -35,7 +35,7 @@ internal class PodcastHomePlatformActions internal constructor(
 internal fun rememberPodcastHomePlatformActions(
     context: Context,
     viewModel: PodcastViewModel,
-    onImportSelected: () -> Unit,
+    onSelectImport: () -> Unit,
 ): PodcastHomePlatformActions {
     val initialNotificationPermissionGranted = rememberPodcastNotificationPermission(context)
     var notificationPermissionGranted by remember {
@@ -44,7 +44,7 @@ internal fun rememberPodcastHomePlatformActions(
 
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri ?: return@rememberLauncherForActivityResult
-        onImportSelected()
+        onSelectImport()
         viewModel.importOpml(context, uri)
     }
     val exportLauncher = rememberLauncherForActivityResult(
@@ -86,7 +86,7 @@ internal fun rememberPodcastHomePlatformActions(
         notificationLauncher,
         mediaNotificationLauncher,
         notificationPermissionGranted,
-        onImportSelected,
+        onSelectImport,
     ) {
         PodcastHomePlatformActions(
             importOpml = { importLauncher.launch(arrayOf("text/xml", "text/x-opml", "application/xml", "*/*")) },

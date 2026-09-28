@@ -237,7 +237,11 @@ tasks.register("jacocoDeviceTestUnitTestReport", JacocoReport) {
 tasks.register("jacocoDeviceTestUnitTestCoverageVerification", JacocoCoverageVerification) {
     dependsOn("testDeviceTestUnitTest")
     group = "verification"
-    description = "Verifies local deviceTest unit-test line coverage."
+    // Named "unit" deliberately. This gate measures JVM unit tests only, so it does not see the
+    // instrumentation suite. PodcastRepository reads 0% here despite having instrumentation tests,
+    // and a change that breaks it can pass this floor while the report still shows nothing. Read
+    // it as "unit-test line coverage", not as coverage of the app.
+    description = "Verifies deviceTest JVM unit-test line coverage. Excludes instrumentation."
     executionData.from(fileTree(layout.buildDirectory).include(
         "jacoco/testDeviceTestUnitTest.exec",
         "outputs/unit_test_code_coverage/deviceTestUnitTest/testDeviceTestUnitTest.exec",
@@ -254,9 +258,14 @@ tasks.register("jacocoDeviceTestUnitTestCoverageVerification", JacocoCoverageVer
             limit {
                 counter = 'LINE'
                 value = 'COVEREDRATIO'
-                // Baseline measured on 2026-09-05: 1,198 / 16,983 lines (7.05%).
-                // Raise this floor with each coverage batch; never let the report pass empty.
-                minimum = 0.07
+                // Measured 2026-09-28: 1,444 / 18,610 lines (7.76%). Previously 7.05% on
+                // 2026-09-05, which the codebase outgrew by more than 1,600 lines while the floor
+                // sat unchanged and gated almost nothing.
+                //
+                // Raise this floor with each coverage batch; never let the report pass empty. This
+                // number is low because the orchestration layer is untested, not because the
+                // deterministic logic is. See docs/architecture-and-coverage-plan.md.
+                minimum = 0.077
             }
         }
     }

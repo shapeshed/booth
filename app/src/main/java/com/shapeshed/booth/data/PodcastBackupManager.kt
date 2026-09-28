@@ -213,6 +213,10 @@ class PodcastBackupManager(
         val subscriptions = document.optJSONArray("subscriptions") ?: JSONArray()
         val hasEpisodeIndex = document.has("episodes")
         val importedIds = mutableMapOf<String, Long>()
+        // Read each podcast's episodes once for the whole restore rather than once per backup
+        // entry, which is what made this quadratic. See SavedEpisodeIndex.
+        val savedEpisodes = SavedEpisodeIndex()
+        val loadEpisodes: suspend (Long) -> List<EpisodeEntity> = { id -> repository.episodes(id).first() }
         for (index in 0 until subscriptions.length()) {
             val item = subscriptions.optJSONObject(index) ?: continue
             val feedUrl = item.optString("feedUrl").trim().takeIf { it.isNotBlank() } ?: continue
@@ -273,34 +277,31 @@ class PodcastBackupManager(
             val podcastId = importedIds[feedUrl] ?: continue
             val guid = item.optString("guid").trim().takeIf { it.isNotBlank() } ?: continue
             val audioUrl = item.optString("audioUrl").trim().takeIf { it.isNotBlank() } ?: continue
-            val existing = repository.episodes(podcastId).first().firstOrNull {
-                it.guid == guid || it.audioUrl == audioUrl
-            }
+            val existing = savedEpisodes.find(podcastId, guid, audioUrl, loadEpisodes)
             if (existing == null) {
-                repository.upsertBackupEpisode(
-                    EpisodeEntity(
-                        id = episodeId(podcastId, guid, audioUrl),
-                        podcastId = podcastId,
-                        guid = guid,
-                        title = item.optString("title", guid),
-                        descriptionHtml = null,
-                        audioUrl = audioUrl,
-                        mimeType = item.optionalString("mimeType"),
-                        artworkUrl = item.optionalString("artworkUrl"),
-                        publishedAtMillis = item.optLongOrNull("publishedAtMillis"),
-                        durationMs = item.optLongOrNull("durationMs"),
-                        positionMs = 0L,
-                        completed = item.optBoolean("completed", false),
-                        localUri = null,
-                        inInbox = item.optBoolean("inInbox", false),
-                        firstSeenAtMillis = null,
-                    ),
+                // Recorded in the index as well as the database, because the passes below resolve
+                // it again and the index is what stops them re-reading.
+                val inserted = EpisodeEntity(
+                    id = episodeId(podcastId, guid, audioUrl),
+                    podcastId = podcastId,
+                    guid = guid,
+                    title = item.optString("title", guid),
+                    descriptionHtml = null,
+                    audioUrl = audioUrl,
+                    mimeType = item.optionalString("mimeType"),
+                    artworkUrl = item.optionalString("artworkUrl"),
+                    publishedAtMillis = item.optLongOrNull("publishedAtMillis"),
+                    durationMs = item.optLongOrNull("durationMs"),
+                    positionMs = 0L,
+                    completed = item.optBoolean("completed", false),
+                    localUri = null,
+                    inInbox = item.optBoolean("inInbox", false),
+                    firstSeenAtMillis = null,
                 )
+                repository.upsertBackupEpisode(inserted)
+                savedEpisodes.put(inserted)
             }
-            val restored = repository.episodes(podcastId).first().firstOrNull {
-                it.guid == guid ||
-                    it.audioUrl == audioUrl
-            }
+            val restored = savedEpisodes.find(podcastId, guid, audioUrl, loadEpisodes)
             if (restored != null &&
                 (
                     item.optLong("positionMs", 0L) > 0L || item.optBoolean("completed", false) ||
@@ -327,9 +328,7 @@ class PodcastBackupManager(
             val podcastId = importedIds[item.optString("feedUrl").trim()] ?: continue
             val guid = item.optString("guid").trim()
             val audioUrl = item.optString("audioUrl").trim()
-            val episode =
-                repository.episodes(podcastId).first().firstOrNull { it.guid == guid || it.audioUrl == audioUrl }
-                    ?: continue
+            val episode = savedEpisodes.find(podcastId, guid, audioUrl, loadEpisodes) ?: continue
             downloadCandidates += episode
         }
 
@@ -340,30 +339,28 @@ class PodcastBackupManager(
             val podcastId = importedIds[feedUrl] ?: repository.podcastByFeedUrl(feedUrl)?.id ?: continue
             val guid = item.optString("guid").trim().takeIf { it.isNotBlank() } ?: continue
             val audioUrl = item.optString("audioUrl").trim().takeIf { it.isNotBlank() } ?: continue
-            val existing = repository.episodes(podcastId).first().firstOrNull {
-                it.guid == guid || it.audioUrl == audioUrl
-            }
+            val existing = savedEpisodes.find(podcastId, guid, audioUrl, loadEpisodes)
             val episodeId = existing?.id ?: episodeId(podcastId, guid, audioUrl)
             if (existing == null) {
-                repository.upsertBackupEpisode(
-                    EpisodeEntity(
-                        id = episodeId,
-                        podcastId = podcastId,
-                        guid = guid,
-                        title = item.optString("title", guid),
-                        descriptionHtml = null,
-                        audioUrl = audioUrl,
-                        mimeType = null,
-                        artworkUrl = null,
-                        publishedAtMillis = null,
-                        durationMs = item.optLongOrNull("durationMs"),
-                        positionMs = 0L,
-                        completed = false,
-                        localUri = null,
-                        inInbox = false,
-                        firstSeenAtMillis = null,
-                    ),
+                val inserted = EpisodeEntity(
+                    id = episodeId,
+                    podcastId = podcastId,
+                    guid = guid,
+                    title = item.optString("title", guid),
+                    descriptionHtml = null,
+                    audioUrl = audioUrl,
+                    mimeType = null,
+                    artworkUrl = null,
+                    publishedAtMillis = null,
+                    durationMs = item.optLongOrNull("durationMs"),
+                    positionMs = 0L,
+                    completed = false,
+                    localUri = null,
+                    inInbox = false,
+                    firstSeenAtMillis = null,
                 )
+                repository.upsertBackupEpisode(inserted)
+                savedEpisodes.put(inserted)
             }
             repository.restoreBackupPlayback(
                 episodeId = episodeId,
@@ -381,9 +378,7 @@ class PodcastBackupManager(
             val podcastId = importedIds[item.optString("feedUrl").trim()] ?: continue
             val guid = item.optString("guid").trim()
             val audioUrl = item.optString("audioUrl").trim()
-            repository.episodes(podcastId).first().firstOrNull { it.guid == guid || it.audioUrl == audioUrl }?.let {
-                restoredQueue += it.id
-            }
+            savedEpisodes.find(podcastId, guid, audioUrl, loadEpisodes)?.let { restoredQueue += it.id }
         }
         if (restoredQueue.isNotEmpty()) repository.reorderQueue(restoredQueue)
 

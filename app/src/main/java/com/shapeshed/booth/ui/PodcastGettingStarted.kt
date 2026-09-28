@@ -31,6 +31,8 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,7 +58,7 @@ internal fun PodcastGettingStarted(
     categoryResults: List<PodcastSearchResult> = emptyList(),
     categoryResultsById: Map<String, List<PodcastSearchResult>> = emptyMap(),
     isLoadingCategory: Boolean = false,
-    onCategorySelected: (PodcastDiscoveryCategory?) -> Unit = {},
+    onSelectCategory: (PodcastDiscoveryCategory?) -> Unit = {},
     onPreloadCategory: (PodcastDiscoveryCategory) -> Unit = {},
     categories: List<PodcastDiscoveryCategory> = PodcastDiscoveryCategories,
 ) {
@@ -64,6 +66,10 @@ internal fun PodcastGettingStarted(
         categories.indexOfFirst { it.id == category.id } + 1
     } ?: 0
     val pagerState = rememberPagerState(initialPage = selectedPage) { categories.size + 1 }
+    // Both collectors are keyed on the pager and the list, so neither callback is a key; reading
+    // them through updated state keeps them pointing at the current instances.
+    val currentOnSelectCategory by rememberUpdatedState(onSelectCategory)
+    val currentOnPreloadCategory by rememberUpdatedState(onPreloadCategory)
     LaunchedEffect(selectedPage) {
         if (pagerState.currentPage != selectedPage) {
             pagerState.animateScrollToPage(selectedPage)
@@ -72,7 +78,7 @@ internal fun PodcastGettingStarted(
     LaunchedEffect(pagerState, categories) {
         snapshotFlow { pagerState.settledPage }
             .distinctUntilChanged()
-            .collect { page -> onCategorySelected(categories.getOrNull(page - 1)) }
+            .collect { page -> currentOnSelectCategory(categories.getOrNull(page - 1)) }
     }
     LaunchedEffect(pagerState, categories) {
         snapshotFlow { pagerState.currentPage }
@@ -81,7 +87,7 @@ internal fun PodcastGettingStarted(
                 listOf(page - 1, page + 1)
                     .mapNotNull { categories.getOrNull(it - 1) }
                     .distinctBy(PodcastDiscoveryCategory::id)
-                    .forEach(onPreloadCategory)
+                    .forEach(currentOnPreloadCategory)
             }
     }
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
@@ -144,13 +150,13 @@ internal fun PodcastGettingStarted(
             ) {
                 Tab(
                     selected = selectedCategory == null,
-                    onClick = { onCategorySelected(null) },
+                    onClick = { onSelectCategory(null) },
                     text = { Text(stringResource(R.string.popular_podcasts)) },
                 )
                 categories.forEach { category ->
                     Tab(
                         selected = selectedCategory?.id == category.id,
-                        onClick = { onCategorySelected(category) },
+                        onClick = { onSelectCategory(category) },
                         text = { Text(category.title) },
                     )
                 }
