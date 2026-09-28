@@ -175,8 +175,6 @@ class PodcastBackupManager(
                     .put("autoQueueEnabled", settings.podcastAutoQueueEnabled.first())
                     .put("downloadEpisodesAddedToUpNext", settings.podcastDownloadEpisodesAddedToUpNext.first())
                     .put("downloadNetwork", settings.podcastDownloadNetwork.first().name)
-                    .put("downloadLimit", settings.podcastDownloadLimit.first().name)
-                    .put("deleteBeforeAutoDownload", settings.podcastDeleteBeforeAutoDownload.first().name)
                     .put("removePlayedDownloads", settings.podcastRemovePlayedDownloads.first())
                     .put("downloadVideos", settings.podcastDownloadVideos.first())
                     .put("searchProvider", settings.podcastSearchProvider.first()),
@@ -405,12 +403,6 @@ class PodcastBackupManager(
             global.optionalString("downloadNetwork")?.toEnum<PodcastDownloadNetwork>()?.let {
                 settings.setPodcastDownloadNetwork(it)
             }
-            global.optionalString("downloadLimit")?.toEnum<PodcastDownloadLimit>()?.let {
-                settings.setPodcastDownloadLimit(it)
-            }
-            global.optionalString("deleteBeforeAutoDownload")?.toEnum<PodcastDeleteBeforeAutoDownload>()?.let {
-                settings.setPodcastDeleteBeforeAutoDownload(it)
-            }
             global.optionalBoolean("removePlayedDownloads")?.let { settings.setPodcastRemovePlayedDownloads(it) }
             global.optionalBoolean("downloadVideos")?.let { settings.setPodcastDownloadVideos(it) }
             global.optionalString("searchProvider")?.let { settings.setPodcastSearchProvider(it) }
@@ -418,13 +410,10 @@ class PodcastBackupManager(
         val allEpisodes = repository.podcasts.first()
             .flatMap { podcast -> repository.episodes(podcast.id).first() }
         val downloadsToRestore = context?.let {
-            downloadManager?.downloadsWithinLimit(
+            downloadManager?.episodesToDownload(
                 candidates = downloadCandidates,
                 downloadedEpisodes = allEpisodes,
                 downloadAssets = repository.downloadAssets.first(),
-                queuedEpisodeIds = repository.queue.first().mapTo(mutableSetOf(), QueueEntity::episodeId),
-                maximumDownloads = settings.podcastDownloadLimit.first().episodeCount,
-                mode = settings.podcastDeleteBeforeAutoDownload.first(),
             )
         } ?: downloadCandidates
         downloadsToRestore.forEach { episode ->

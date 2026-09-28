@@ -9,8 +9,6 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import com.shapeshed.booth.BuildConfig
-import com.shapeshed.booth.data.PodcastDeleteBeforeAutoDownload
-import com.shapeshed.booth.data.PodcastDownloadLimit
 import com.shapeshed.booth.data.PodcastDownloadNetwork
 import com.shapeshed.booth.data.PodcastRefreshInterval
 import com.shapeshed.booth.data.PodcastRefreshNetwork
@@ -171,25 +169,6 @@ class PodcastAppSettingsScreenTest {
         composeRule.runOnIdle { assertEquals(PodcastRefreshNetwork.ANY_CONNECTION, network) }
     }
 
-    @Test
-    fun downloadRetentionRowsChangeTheirSelectedValues() {
-        var limit: PodcastDownloadLimit? = null
-        var cleanup: PodcastDeleteBeforeAutoDownload? = null
-        setSettingsContent(
-            onDownloadLimitChange = { limit = it },
-            onDeleteBeforeAutoDownloadChange = { cleanup = it },
-        )
-
-        scrollTo("Download limit")
-        composeRule.onNodeWithText("Download limit").performClick()
-        composeRule.onNodeWithText("100 episodes").performClick()
-        composeRule.runOnIdle { assertEquals(PodcastDownloadLimit.ONE_HUNDRED, limit) }
-
-        scrollTo("Delete before downloading")
-        composeRule.onNodeWithText("Delete before downloading").performClick()
-        composeRule.onNodeWithText("All eligible episodes").performClick()
-        composeRule.runOnIdle { assertEquals(PodcastDeleteBeforeAutoDownload.ALL_ELIGIBLE, cleanup) }
-    }
 
     @Test
     fun backupRowsInvokeImportAndJsonAndZipExportCallbacks() {
@@ -224,8 +203,6 @@ class PodcastAppSettingsScreenTest {
         onDownloadEpisodesAddedToUpNextChange: (Boolean) -> Unit = {},
         onRefreshIntervalChange: (PodcastRefreshInterval) -> Unit = {},
         onRefreshNetworkChange: (PodcastRefreshNetwork) -> Unit = {},
-        onDownloadLimitChange: (PodcastDownloadLimit) -> Unit = {},
-        onDeleteBeforeAutoDownloadChange: (PodcastDeleteBeforeAutoDownload) -> Unit = {},
         onImportOpml: () -> Unit = {},
         onExportOpml: () -> Unit = {},
         onImportBackup: () -> Unit = {},
@@ -252,8 +229,6 @@ class PodcastAppSettingsScreenTest {
                     onRefreshNetworkChange = onRefreshNetworkChange,
                     downloadNetwork = PodcastDownloadNetwork.WIFI_ONLY,
                     onDownloadNetworkChange = {},
-                    onDownloadLimitChange = onDownloadLimitChange,
-                    onDeleteBeforeAutoDownloadChange = onDeleteBeforeAutoDownloadChange,
                     notificationsEnabled = true,
                     onNotificationsEnabledChange = {},
                     searchProviders = listOf(testSearchProvider),

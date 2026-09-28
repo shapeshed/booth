@@ -24,17 +24,6 @@ enum class PodcastRefreshNetwork { ANY_CONNECTION, WIFI_ONLY }
 
 enum class PodcastDownloadNetwork { ANY_CONNECTION, WIFI_ONLY }
 
-enum class PodcastDownloadLimit(val episodeCount: Int?) {
-    TWENTY_FIVE(
-        25,
-    ),
-    FIFTY(50),
-    ONE_HUNDRED(100),
-    UNLIMITED(null),
-}
-
-enum class PodcastDeleteBeforeAutoDownload { OFF, PLAYED, ALL_ELIGIBLE }
-
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 /** Podcast-only persisted settings backed by Preferences DataStore. */
@@ -50,8 +39,6 @@ class SettingsStore(private val context: Context) {
     private val autoQueueEnabledKey = booleanPreferencesKey("podcast_auto_queue_enabled")
     private val downloadEpisodesAddedToUpNextKey = booleanPreferencesKey("podcast_download_episodes_added_to_up_next")
     private val downloadNetworkKey = stringPreferencesKey("podcast_download_network")
-    private val downloadLimitKey = stringPreferencesKey("podcast_download_limit")
-    private val deleteBeforeAutoDownloadKey = stringPreferencesKey("podcast_delete_before_auto_download")
     private val removePlayedDownloadsKey = booleanPreferencesKey("podcast_remove_played_downloads")
     private val downloadVideosKey = booleanPreferencesKey("podcast_download_videos")
     private val searchProviderKey = stringPreferencesKey("podcast_search_provider")
@@ -174,25 +161,6 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setPodcastDownloadNetwork(network: PodcastDownloadNetwork) {
         context.dataStore.edit { it[downloadNetworkKey] = network.name }
-    }
-
-    val podcastDownloadLimit: Flow<PodcastDownloadLimit> = context.dataStore.data.map { prefs ->
-        prefs[downloadLimitKey]?.let { runCatching { PodcastDownloadLimit.valueOf(it) }.getOrNull() }
-            ?: PodcastDownloadLimit.FIFTY
-    }
-
-    suspend fun setPodcastDownloadLimit(limit: PodcastDownloadLimit) {
-        context.dataStore.edit { it[downloadLimitKey] = limit.name }
-    }
-
-    val podcastDeleteBeforeAutoDownload: Flow<PodcastDeleteBeforeAutoDownload> = context.dataStore.data.map { prefs ->
-        prefs[deleteBeforeAutoDownloadKey]
-            ?.let { runCatching { PodcastDeleteBeforeAutoDownload.valueOf(it) }.getOrNull() }
-            ?: PodcastDeleteBeforeAutoDownload.PLAYED
-    }
-
-    suspend fun setPodcastDeleteBeforeAutoDownload(mode: PodcastDeleteBeforeAutoDownload) {
-        context.dataStore.edit { it[deleteBeforeAutoDownloadKey] = mode.name }
     }
 
     val podcastRemovePlayedDownloads: Flow<Boolean> = context.dataStore.data.map {

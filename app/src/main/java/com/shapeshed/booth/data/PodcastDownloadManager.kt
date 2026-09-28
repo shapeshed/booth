@@ -216,13 +216,19 @@ class PodcastDownloadManager(
     }
 
     /** Frees safe downloads as needed and returns the candidates that fit within the limit. */
-    suspend fun downloadsWithinLimit(
+    // The episodes an auto-download pass should actually fetch: everything new that is not already
+    // downloaded or in flight.
+    //
+    // There is deliberately no cap and no eviction: an existing download is never removed to make
+    // room for a new one. Played downloads go on their own schedule, 24 hours after being marked
+    // played, which is the model Apple Podcasts uses and the only thing that should be removing
+    // files here. A count cap with eviction was the alternative, and it silently deleted unplayed
+    // downloads, oldest first, to hold a total under a number, which is not a policy a listener
+    // expects to lose episodes to.
+    suspend fun episodesToDownload(
         candidates: List<EpisodeEntity>,
         downloadedEpisodes: List<EpisodeEntity>,
         downloadAssets: List<DownloadAssetEntity>,
-        queuedEpisodeIds: Set<Long>,
-        maximumDownloads: Int?,
-        mode: PodcastDeleteBeforeAutoDownload,
     ): List<EpisodeEntity> {
         val currentEpisodeIds = downloadedEpisodes
             .asSequence()
@@ -232,23 +238,7 @@ class PodcastDownloadManager(
             .asSequence()
             .filter { it.status in ACTIVE_STATUSES || it.status == DownloadAssetStatus.COMPLETED }
             .mapTo(currentEpisodeIds, DownloadAssetEntity::episodeId)
-        val newCandidates = candidates.distinctBy(EpisodeEntity::id)
-            .filterNot { it.id in currentEpisodeIds }
-        if (newCandidates.isEmpty()) return emptyList()
-        if (maximumDownloads == null) return newCandidates
-
-        val excess = (currentEpisodeIds.size + newCandidates.size - maximumDownloads).coerceAtLeast(0)
-        if (mode != PodcastDeleteBeforeAutoDownload.OFF) {
-            downloadsEligibleForDeletion(downloadedEpisodes, queuedEpisodeIds, mode)
-                .asSequence()
-                .filter { it.id in currentEpisodeIds }
-                .take(excess)
-                .forEach { episode ->
-                    removeEpisodeDownloads(episode.id)
-                    currentEpisodeIds.remove(episode.id)
-                }
-        }
-        return newCandidates.take((maximumDownloads - currentEpisodeIds.size).coerceAtLeast(0))
+        return candidates.distinctBy(EpisodeEntity::id).filterNot { it.id in currentEpisodeIds }
     }
 
     companion object {

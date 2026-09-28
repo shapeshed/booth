@@ -67,8 +67,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.shapeshed.booth.BuildConfig
 import com.shapeshed.booth.R
-import com.shapeshed.booth.data.PodcastDeleteBeforeAutoDownload
-import com.shapeshed.booth.data.PodcastDownloadLimit
 import com.shapeshed.booth.data.PodcastDownloadNetwork
 import com.shapeshed.booth.data.PodcastEntity
 import com.shapeshed.booth.data.PodcastIndexCredentials
@@ -112,10 +110,6 @@ internal fun PodcastAppSettingsScreen(
     onManagePodcasts: (PodcastManagementCategory) -> Unit,
     onCopyVersion: (String) -> Unit,
     modifier: Modifier = Modifier,
-    downloadLimit: PodcastDownloadLimit = PodcastDownloadLimit.FIFTY,
-    onDownloadLimitChange: (PodcastDownloadLimit) -> Unit = {},
-    deleteBeforeAutoDownload: PodcastDeleteBeforeAutoDownload = PodcastDeleteBeforeAutoDownload.PLAYED,
-    onDeleteBeforeAutoDownloadChange: (PodcastDeleteBeforeAutoDownload) -> Unit = {},
     removePlayedDownloads: Boolean = true,
     onRemovePlayedDownloadsChange: (Boolean) -> Unit = {},
     onExportBackup: () -> Unit = {},
@@ -123,8 +117,6 @@ internal fun PodcastAppSettingsScreen(
     onImportBackup: () -> Unit = {},
 ) {
     var showDownloadNetworkChooser by rememberSaveable { mutableStateOf(false) }
-    var showDownloadLimitChooser by rememberSaveable { mutableStateOf(false) }
-    var showDeleteBeforeAutoDownloadChooser by rememberSaveable { mutableStateOf(false) }
     var showRefreshIntervalChooser by rememberSaveable { mutableStateOf(false) }
     var showRefreshNetworkChooser by rememberSaveable { mutableStateOf(false) }
     var showSearchProviderChooser by rememberSaveable { mutableStateOf(false) }
@@ -141,17 +133,6 @@ internal fun PodcastAppSettingsScreen(
     val refreshNetworkLabel = when (refreshNetwork) {
         PodcastRefreshNetwork.ANY_CONNECTION -> stringResource(R.string.download_wifi_or_mobile)
         PodcastRefreshNetwork.WIFI_ONLY -> stringResource(R.string.download_wifi_only)
-    }
-    val downloadLimitLabel = when (downloadLimit) {
-        PodcastDownloadLimit.TWENTY_FIVE -> stringResource(R.string.download_limit_25)
-        PodcastDownloadLimit.FIFTY -> stringResource(R.string.download_limit_50)
-        PodcastDownloadLimit.ONE_HUNDRED -> stringResource(R.string.download_limit_100)
-        PodcastDownloadLimit.UNLIMITED -> stringResource(R.string.download_limit_unlimited)
-    }
-    val deleteBeforeAutoDownloadLabel = when (deleteBeforeAutoDownload) {
-        PodcastDeleteBeforeAutoDownload.OFF -> stringResource(R.string.download_cleanup_off)
-        PodcastDeleteBeforeAutoDownload.PLAYED -> stringResource(R.string.download_cleanup_played)
-        PodcastDeleteBeforeAutoDownload.ALL_ELIGIBLE -> stringResource(R.string.download_cleanup_all_eligible)
     }
     val autoQueueCountLabel = if (
         podcastManagementCounts.total > 0 &&
@@ -250,22 +231,6 @@ internal fun PodcastAppSettingsScreen(
                     supportingContent = { Text(downloadNetworkLabel) },
                     leadingContent = { Icon(Icons.Rounded.Wifi, contentDescription = null) },
                     modifier = Modifier.clickable { showDownloadNetworkChooser = true },
-                )
-            }
-            item {
-                PodcastActionListItem(
-                    headlineContent = { Text(stringResource(R.string.download_limit)) },
-                    supportingContent = { Text(downloadLimitLabel) },
-                    leadingContent = { Icon(Icons.Rounded.FileDownload, contentDescription = null) },
-                    modifier = Modifier.clickable { showDownloadLimitChooser = true },
-                )
-            }
-            item {
-                PodcastActionListItem(
-                    headlineContent = { Text(stringResource(R.string.delete_before_auto_download)) },
-                    supportingContent = { Text(deleteBeforeAutoDownloadLabel) },
-                    leadingContent = { Icon(Icons.Rounded.Delete, contentDescription = null) },
-                    modifier = Modifier.clickable { showDeleteBeforeAutoDownloadChooser = true },
                 )
             }
             item {
@@ -516,97 +481,6 @@ internal fun PodcastAppSettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showDownloadNetworkChooser = false }) { Text(stringResource(R.string.cancel)) }
-            },
-        )
-    }
-    if (showDownloadLimitChooser) {
-        AlertDialog(
-            onDismissRequest = { showDownloadLimitChooser = false },
-            title = { Text(stringResource(R.string.download_limit)) },
-            text = {
-                Column {
-                    PodcastDownloadLimit.entries.forEach { option ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    onDownloadLimitChange(option)
-                                    showDownloadLimitChooser = false
-                                }
-                                .padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RadioButton(
-                                selected = downloadLimit == option,
-                                onClick = {
-                                    onDownloadLimitChange(option)
-                                    showDownloadLimitChooser = false
-                                },
-                            )
-                            Text(
-                                text = when (option) {
-                                    PodcastDownloadLimit.TWENTY_FIVE -> stringResource(R.string.download_limit_25)
-                                    PodcastDownloadLimit.FIFTY -> stringResource(R.string.download_limit_50)
-                                    PodcastDownloadLimit.ONE_HUNDRED -> stringResource(R.string.download_limit_100)
-                                    PodcastDownloadLimit.UNLIMITED -> stringResource(R.string.download_limit_unlimited)
-                                },
-                                modifier = Modifier.padding(start = 8.dp),
-                            )
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showDownloadLimitChooser = false }) { Text(stringResource(R.string.cancel)) }
-            },
-        )
-    }
-    if (showDeleteBeforeAutoDownloadChooser) {
-        AlertDialog(
-            onDismissRequest = { showDeleteBeforeAutoDownloadChooser = false },
-            title = { Text(stringResource(R.string.delete_before_auto_download)) },
-            text = {
-                Column {
-                    PodcastDeleteBeforeAutoDownload.entries.forEach { option ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    onDeleteBeforeAutoDownloadChange(option)
-                                    showDeleteBeforeAutoDownloadChooser = false
-                                }
-                                .padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RadioButton(
-                                selected = deleteBeforeAutoDownload == option,
-                                onClick = {
-                                    onDeleteBeforeAutoDownloadChange(option)
-                                    showDeleteBeforeAutoDownloadChooser = false
-                                },
-                            )
-                            Text(
-                                text = when (option) {
-                                    PodcastDeleteBeforeAutoDownload.OFF -> stringResource(R.string.download_cleanup_off)
-
-                                    PodcastDeleteBeforeAutoDownload.PLAYED -> stringResource(
-                                        R.string.download_cleanup_played,
-                                    )
-
-                                    PodcastDeleteBeforeAutoDownload.ALL_ELIGIBLE -> stringResource(
-                                        R.string.download_cleanup_all_eligible,
-                                    )
-                                },
-                                modifier = Modifier.padding(start = 8.dp),
-                            )
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    showDeleteBeforeAutoDownloadChooser = false
-                }) { Text(stringResource(R.string.cancel)) }
             },
         )
     }

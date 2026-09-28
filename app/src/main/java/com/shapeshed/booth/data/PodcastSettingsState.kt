@@ -8,8 +8,6 @@ data class PodcastSettingsState(
     val autoQueueEnabled: Boolean = false,
     val downloadEpisodesAddedToUpNext: Boolean = false,
     val downloadNetwork: PodcastDownloadNetwork = PodcastDownloadNetwork.WIFI_ONLY,
-    val downloadLimit: PodcastDownloadLimit = PodcastDownloadLimit.FIFTY,
-    val deleteBeforeAutoDownload: PodcastDeleteBeforeAutoDownload = PodcastDeleteBeforeAutoDownload.PLAYED,
     val removePlayedDownloads: Boolean = true,
     val savedPodcastTab: String? = null,
     val searchProviderId: String = "apple",
