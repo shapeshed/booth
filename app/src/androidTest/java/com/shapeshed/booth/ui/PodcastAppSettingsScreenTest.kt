@@ -169,7 +169,6 @@ class PodcastAppSettingsScreenTest {
         composeRule.runOnIdle { assertEquals(PodcastRefreshNetwork.ANY_CONNECTION, network) }
     }
 
-
     @Test
     fun backupRowsInvokeImportAndJsonAndZipExportCallbacks() {
         var importCalls = 0
