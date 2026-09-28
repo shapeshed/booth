@@ -9,6 +9,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import java.time.LocalDateTime
 
 internal class PodcastHomePlatformActions internal constructor(
     val importOpml: () -> Unit,
@@ -87,7 +88,7 @@ internal fun rememberPodcastHomePlatformActions(
                 backupImportLauncher.launch(arrayOf("application/zip", "*/*"))
             },
             exportOpml = { exportLauncher.launch("booth-subscriptions.opml") },
-            exportBackup = { backupExportLauncher.launch("booth-backup.zip") },
+            exportBackup = { backupExportLauncher.launch(backupFileName(LocalDateTime.now())) },
             setNotificationsEnabled = { enabled ->
                 when {
                     !enabled -> viewModel.setPodcastNotificationsEnabled(false)

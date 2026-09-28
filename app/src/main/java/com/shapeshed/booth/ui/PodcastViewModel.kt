@@ -64,6 +64,8 @@ import com.shapeshed.booth.data.podcastId
 import com.shapeshed.booth.data.searchableCategories
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
@@ -1289,3 +1291,17 @@ class PodcastViewModel @Inject constructor(
         }
     }
 }
+
+// Fixed pattern, deliberately not locale-sensitive: a backup name is written to a filesystem and
+// read back by a person sorting through them, so the digits must not change shape with the locale.
+// Seconds are included because two exports in the same minute is the exact collision this avoids.
+private val BACKUP_FILE_STAMP: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd-HH-mm-ss")
+
+/**
+ * The name offered when exporting a backup.
+ *
+ * Timestamped so repeated exports are separate files rather than the same name twice, which the
+ * picker would otherwise resolve by appending a counter or overwriting. Local time, because the
+ * person finding the backup later is the one reading the filename.
+ */
+internal fun backupFileName(now: LocalDateTime): String = "booth-backup-${BACKUP_FILE_STAMP.format(now)}.zip"
