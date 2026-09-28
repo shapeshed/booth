@@ -110,7 +110,6 @@ internal fun PodcastAppSettingsScreen(
     removePlayedDownloads: Boolean = true,
     onRemovePlayedDownloadsChange: (Boolean) -> Unit = {},
     onExportBackup: () -> Unit = {},
-    onExportBackupZip: () -> Unit = {},
     onImportBackup: () -> Unit = {},
 ) {
     var showDownloadNetworkChooser by rememberSaveable { mutableStateOf(false) }
@@ -403,14 +402,6 @@ internal fun PodcastAppSettingsScreen(
                     supportingContent = { Text(stringResource(R.string.export_backup_summary)) },
                     leadingContent = { Icon(Icons.Rounded.FileDownload, contentDescription = null) },
                     modifier = Modifier.clickable(onClick = onExportBackup),
-                )
-            }
-            item {
-                PodcastActionListItem(
-                    headlineContent = { Text(stringResource(R.string.export_backup_zip)) },
-                    supportingContent = { Text(stringResource(R.string.export_backup_zip_summary)) },
-                    leadingContent = { Icon(Icons.Rounded.FileDownload, contentDescription = null) },
-                    modifier = Modifier.clickable(onClick = onExportBackupZip),
                 )
             }
             if (statusMessage != null) {

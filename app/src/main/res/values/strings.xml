@@ -168,9 +168,7 @@
     <string name="import_opml_podcasts_summary">Add subscriptions from another podcast app</string>
     <string name="export_opml_podcasts_summary">Save your subscriptions as a portable file</string>
     <string name="export_backup" translatable="false">Export Booth backup</string>
-    <string name="export_backup_summary" translatable="false">Subscriptions, playback settings, and positions</string>
-    <string name="export_backup_zip" translatable="false">Export Booth backup ZIP</string>
-    <string name="export_backup_zip_summary" translatable="false">Compressed backup with future asset support</string>
+    <string name="export_backup_summary" translatable="false">Subscriptions, playback settings, and positions, as a ZIP</string>
     <string name="import_backup" translatable="false">Import Booth backup</string>
     <string name="import_backup_summary" translatable="false">Restore subscriptions, playback settings, and positions</string>
     <string name="podcast_search_provider">Podcast search provider</string>

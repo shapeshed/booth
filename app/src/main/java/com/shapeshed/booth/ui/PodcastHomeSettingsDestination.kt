@@ -105,7 +105,6 @@ internal fun PodcastHomeSettingsDestination(
         onImportOpml = platformActions.importOpml,
         onExportOpml = platformActions.exportOpml,
         onExportBackup = platformActions.exportBackup,
-        onExportBackupZip = platformActions.exportBackupZip,
         onImportBackup = platformActions.importBackup,
         onManagePodcasts = onManagePodcasts,
         onCopyVersion = { label -> copyTextToClipboard(context, label, clipLabel = "version") },

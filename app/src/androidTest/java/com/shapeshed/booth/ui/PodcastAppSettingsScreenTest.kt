@@ -170,27 +170,22 @@ class PodcastAppSettingsScreenTest {
     }
 
     @Test
-    fun backupRowsInvokeImportAndJsonAndZipExportCallbacks() {
+    fun backupRowsInvokeImportAndExportCallbacks() {
         var importCalls = 0
-        var jsonExportCalls = 0
-        var zipExportCalls = 0
+        var exportCalls = 0
         setSettingsContent(
             onImportBackup = { importCalls++ },
-            onExportBackup = { jsonExportCalls++ },
-            onExportBackupZip = { zipExportCalls++ },
+            onExportBackup = { exportCalls++ },
         )
 
         scrollTo("Import Booth backup")
         composeRule.onNodeWithText("Import Booth backup").performClick()
         scrollTo("Export Booth backup")
         composeRule.onNodeWithText("Export Booth backup").performClick()
-        scrollTo("Export Booth backup ZIP")
-        composeRule.onNodeWithText("Export Booth backup ZIP").performClick()
 
         composeRule.runOnIdle {
             assertEquals(1, importCalls)
-            assertEquals(1, jsonExportCalls)
-            assertEquals(1, zipExportCalls)
+            assertEquals(1, exportCalls)
         }
     }
 
@@ -206,7 +201,6 @@ class PodcastAppSettingsScreenTest {
         onExportOpml: () -> Unit = {},
         onImportBackup: () -> Unit = {},
         onExportBackup: () -> Unit = {},
-        onExportBackupZip: () -> Unit = {},
         onCopyVersion: (String) -> Unit = {},
     ) {
         composeRule.setContent {
@@ -242,7 +236,6 @@ class PodcastAppSettingsScreenTest {
                     onExportOpml = onExportOpml,
                     onImportBackup = onImportBackup,
                     onExportBackup = onExportBackup,
-                    onExportBackupZip = onExportBackupZip,
                     onManagePodcasts = onManagePodcasts,
                     onCopyVersion = onCopyVersion,
                 )

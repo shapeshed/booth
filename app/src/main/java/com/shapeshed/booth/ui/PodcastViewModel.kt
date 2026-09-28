@@ -950,23 +950,8 @@ class PodcastViewModel @Inject constructor(
         }
     }
 
+    /** Writes a ZIP backup. The document inside is the same JSON the import path reads. */
     fun exportBackup(context: Context, uri: Uri) {
-        viewModelScope.launch {
-            runCancellableCatching {
-                val body = backupManager.export()
-                withContext(Dispatchers.IO) {
-                    context.contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { writer ->
-                        writer.write(body)
-                    } ?: error("Could not open backup destination")
-                }
-                _uiEvents.send(PodcastUiEvent.Exported)
-            }.onFailure {
-                _state.value = state.value.copy(error = PodcastUiError.ExportFailed)
-            }
-        }
-    }
-
-    fun exportBackupZip(context: Context, uri: Uri) {
         viewModelScope.launch {
             runCancellableCatching {
                 val body = backupManager.exportZip()
@@ -975,7 +960,9 @@ class PodcastViewModel @Inject constructor(
                         ?: error("Could not open backup destination")
                 }
                 _uiEvents.send(PodcastUiEvent.Exported)
-            }.onFailure { _state.value = state.value.copy(error = PodcastUiError.ExportFailed) }
+            }.onFailure {
+                _state.value = state.value.copy(error = PodcastUiError.ExportFailed)
+            }
         }
     }
 
@@ -992,11 +979,7 @@ class PodcastViewModel @Inject constructor(
                 return@launch
             }
             runCancellableCatching {
-                if (body.size >= 2 && body[0] == 'P'.code.toByte() && body[1] == 'K'.code.toByte()) {
-                    backupManager.importZip(body)
-                } else {
-                    backupManager.import(body.toString(Charsets.UTF_8))
-                }
+                backupManager.importZip(body)
             }.onSuccess { imported ->
                 _uiEvents.send(PodcastUiEvent.Imported(imported))
                 com.shapeshed.booth.data.PodcastRefreshWorker.enqueueNow(context)

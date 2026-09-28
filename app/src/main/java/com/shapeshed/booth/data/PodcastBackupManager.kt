@@ -53,7 +53,15 @@ class PodcastBackupManager(
         }
     },
 ) {
-    suspend fun export(): String {
+    /**
+     * The backup document itself, as JSON.
+     *
+     * Not a user-facing format: [exportZip] wraps these exact bytes in `backup.json`, and that ZIP is
+     * what the export UI writes. This is internal so the round-trip test can assert on the document
+     * without unpacking the container, and it stays public-with-internal-name because the format is
+     * the thing the version check below describes.
+     */
+    internal suspend fun export(): String {
         val subscriptions = repository.podcasts.first()
         val podcastsById = subscriptions.associateBy(PodcastEntity::id)
         val episodes = repository.allEpisodesSnapshot()
@@ -204,8 +212,15 @@ class PodcastBackupManager(
         return import(json)
     }
 
-    /** Merges a portable backup without deleting current subscriptions, episodes, or downloads. */
-    suspend fun import(json: String): Int {
+    /**
+     * The backup document itself, as JSON.
+     *
+     * Not a user-facing format and not an entry point: [exportZip] writes these bytes as
+     * `backup.json`, [importZip] reads them back out, and nothing else touches them. The ZIP is the
+     * only format Booth exports or accepts, so a `.json` file is not something a user can produce
+     * or restore with.
+     */
+    internal suspend fun import(json: String): Int {
         val document = JSONObject(json)
         require(isSupported(document)) { "Unsupported Booth backup format" }
         val subscriptions = document.optJSONArray("subscriptions") ?: JSONArray()
