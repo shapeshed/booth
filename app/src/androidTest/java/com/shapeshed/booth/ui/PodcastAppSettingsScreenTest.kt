@@ -112,6 +112,7 @@ class PodcastAppSettingsScreenTest {
             assertEquals(null, managedCategory)
         }
 
+        managedCategory = null
         scrollTo("Podcasts added to Up Next")
         composeRule.onNodeWithText("Podcasts added to Up Next").performClick()
         composeRule.runOnIdle {
@@ -133,6 +134,31 @@ class PodcastAppSettingsScreenTest {
         scrollTo("Export OPML")
         composeRule.onNodeWithText("Export OPML").assertIsDisplayed().performClick()
         composeRule.runOnIdle { assertEquals(1, exportCalls) }
+    }
+
+    @Test
+    fun podcastNotificationsIsHiddenWhileNotificationsAreOff() {
+        // Which podcasts notify cannot take effect while notifications are off. The walk-through
+        // covers the on case, so together they pin both directions.
+        setSettingsContent(notificationsEnabled = false)
+
+        scrollTo("Notifications")
+        composeRule.onNodeWithText("Notifications").assertIsDisplayed()
+        composeRule.onNodeWithText("Podcast notifications").assertDoesNotExist()
+        composeRule.onNodeWithText("All podcasts").assertDoesNotExist()
+    }
+
+    @Test
+    fun podcastsAddedToUpNextIsHiddenWhileTheFeatureIsOff() {
+        // With the global toggle off, which podcasts are opted in cannot take effect, so the row is
+        // hidden rather than shown with a "disabled globally" summary. The walk-through covers the
+        // on case, so the two together pin both directions.
+        setSettingsContent(autoQueueEnabled = false)
+
+        scrollTo("Add new episodes to Up Next")
+        composeRule.onNodeWithText("Add new episodes to Up Next").assertIsDisplayed()
+        composeRule.onNodeWithText("Podcasts added to Up Next").assertDoesNotExist()
+        composeRule.onNodeWithText("3 podcasts").assertDoesNotExist()
     }
 
     @Test
@@ -171,6 +197,7 @@ class PodcastAppSettingsScreenTest {
     private fun setSettingsContent(
         onManagePodcasts: (PodcastManagementCategory) -> Unit = {},
         autoQueueEnabled: Boolean = true,
+        notificationsEnabled: Boolean = true,
         onAutoQueueEnabledChange: (Boolean) -> Unit = {},
         downloadEpisodesAddedToUpNext: Boolean = false,
         onDownloadEpisodesAddedToUpNextChange: (Boolean) -> Unit = {},
@@ -194,7 +221,7 @@ class PodcastAppSettingsScreenTest {
                     onDownloadEpisodesAddedToUpNextChange = onDownloadEpisodesAddedToUpNextChange,
                     downloadNetwork = PodcastDownloadNetwork.WIFI_ONLY,
                     onDownloadNetworkChange = {},
-                    notificationsEnabled = true,
+                    notificationsEnabled = notificationsEnabled,
                     onNotificationsEnabledChange = {},
                     searchProviders = listOf(testSearchProvider),
                     selectedSearchProviderId = testSearchProvider.id,

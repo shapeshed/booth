@@ -185,17 +185,21 @@ internal fun PodcastAppSettingsScreen(
                     modifier = Modifier.clickable { onAutoQueueEnabledChange(!autoQueueEnabled) },
                 )
             }
-            item {
-                PodcastActionListItem(
-                    headlineContent = { Text(stringResource(R.string.podcast_auto_queue)) },
-                    supportingContent = {
-                        Text(if (autoQueueEnabled) autoQueueCountLabel else stringResource(R.string.disabled_globally))
-                    },
-                    leadingContent = { Icon(Icons.Rounded.Settings, contentDescription = null) },
-                    modifier = Modifier.clickable(enabled = autoQueueEnabled) {
-                        onManagePodcasts(PodcastManagementCategory.AUTO_QUEUE)
-                    },
-                )
+            // Which podcasts are added to Up Next only matters while the feature is on. With it off
+            // the row led to a screen of switches that changed nothing, and its summary had to read
+            // "Disabled globally" to admit as much. Hidden instead, which is the same treatment the
+            // Download network row gets for the same reason.
+            if (autoQueueEnabled) {
+                item {
+                    PodcastActionListItem(
+                        headlineContent = { Text(stringResource(R.string.podcast_auto_queue)) },
+                        supportingContent = { Text(autoQueueCountLabel) },
+                        leadingContent = { Icon(Icons.Rounded.Settings, contentDescription = null) },
+                        modifier = Modifier.clickable {
+                            onManagePodcasts(PodcastManagementCategory.AUTO_QUEUE)
+                        },
+                    )
+                }
             }
             item {
                 PodcastActionListItem(
@@ -271,25 +275,20 @@ internal fun PodcastAppSettingsScreen(
                     modifier = Modifier.clickable { onNotificationsEnabledChange(!notificationsEnabled) },
                 )
             }
-            item {
-                PodcastActionListItem(
-                    headlineContent = { Text(stringResource(R.string.podcast_notifications)) },
-                    supportingContent = {
-                        Text(
-                            if (notificationsEnabled) {
-                                notificationCountLabel
-                            } else {
-                                stringResource(
-                                    R.string.disabled_globally,
-                                )
-                            },
-                        )
-                    },
-                    leadingContent = { Icon(Icons.Rounded.Settings, contentDescription = null) },
-                    modifier = Modifier.clickable(enabled = notificationsEnabled) {
-                        onManagePodcasts(PodcastManagementCategory.NOTIFICATIONS)
-                    },
-                )
+            // Which podcasts notify cannot take effect while notifications are off, so the row is
+            // hidden rather than shown disabled. Same treatment as the Up Next and Download network
+            // rows, for the same reason: a control wired to nothing is worse than no control.
+            if (notificationsEnabled) {
+                item {
+                    PodcastActionListItem(
+                        headlineContent = { Text(stringResource(R.string.podcast_notifications)) },
+                        supportingContent = { Text(notificationCountLabel) },
+                        leadingContent = { Icon(Icons.Rounded.Settings, contentDescription = null) },
+                        modifier = Modifier.clickable {
+                            onManagePodcasts(PodcastManagementCategory.NOTIFICATIONS)
+                        },
+                    )
+                }
             }
             item {
                 SettingsGroupLabel(text = stringResource(R.string.discovery_settings_group))
