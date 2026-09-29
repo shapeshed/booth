@@ -28,7 +28,6 @@ internal fun PodcastHomeEffects(
     onOpenInitialEpisode: (com.shapeshed.booth.data.EpisodeEntity) -> Unit,
     onSelectSavedTab: (PodcastTab) -> Unit,
 ) {
-    val settings by viewModel.podcastSettings.collectAsStateWithLifecycle()
     // Both effects below are keyed on data, not on these callbacks, so neither should restart when
     // the parent recreates them. Reading them through updated state keeps them current.
     val currentOnOpenInitialEpisode by rememberUpdatedState(onOpenInitialEpisode)
@@ -37,13 +36,7 @@ internal fun PodcastHomeEffects(
     // on and nothing to re-key when settings change. This only makes sure the schedule exists when
     // the app opens; each feed re-arms itself after it is fetched, and a periodic pass repairs
     // anything that went missing while the app was closed.
-    LaunchedEffect(Unit) {
-        com.shapeshed.booth.data.PodcastRefreshScheduler.ensureSweep(context)
-        com.shapeshed.booth.data.PodcastRefreshScheduler.scheduleAll(
-            context,
-            com.shapeshed.booth.di.boothWorkerEntryPoint(context).podcastRepository,
-        )
-    }
+    LaunchedEffect(Unit) { viewModel.ensureRefreshSchedule(context) }
     LaunchedEffect(Unit) { playbackViewModel.connect(context) }
     // Warm the selected catalogue while the home screen is settling. The locale is part of
     // the key so changing the app language cannot leave the previous region's shelf visible.

@@ -48,7 +48,12 @@ internal fun PodcastEpisodeSwipePager(
     }
 
     if (episodes.size <= 1) {
-        episodes.firstOrNull()?.let { content(it) }
+        // Same shape as the pager below, and for the same reason: the modifier has to reach the
+        // container, or the episode list wrap-sizes inside its pane. This is not a rare path, it is
+        // every open from search or now playing, where there is one episode and nothing to swipe.
+        episodes.firstOrNull()?.let { single ->
+            Box(modifier) { content(single) }
+        }
     } else {
         HorizontalPager(
             state = pagerState,

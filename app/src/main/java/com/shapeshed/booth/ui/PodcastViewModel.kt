@@ -36,6 +36,7 @@ import com.shapeshed.booth.data.PodcastEntity
 import com.shapeshed.booth.data.PodcastFeed
 import com.shapeshed.booth.data.PodcastIndexCredentials
 import com.shapeshed.booth.data.PodcastIndexCredentialsStore
+import com.shapeshed.booth.data.PodcastRefreshScheduler
 import com.shapeshed.booth.data.PodcastRepository
 import com.shapeshed.booth.data.PodcastSearchCatalog
 import com.shapeshed.booth.data.PodcastSearchProvider
@@ -1149,6 +1150,15 @@ class PodcastViewModel @Inject constructor(
      * discard a deliberate per-podcast override; that is what "Use global playback speed" on a
      * podcast is for.
      */
+    // Makes sure every subscription has a scheduled refresh, and that the periodic sweep is armed.
+    // Called once when the home screen opens. It goes through the ViewModel rather than the worker
+    // entry point on purpose: AGENTS.md scopes that entry point to workers, receivers and services,
+    // and a composable that needs the graph should ask the ViewModel for it.
+    suspend fun ensureRefreshSchedule(context: Context) {
+        PodcastRefreshScheduler.ensureSweep(context)
+        PodcastRefreshScheduler.scheduleAll(context, repository)
+    }
+
     fun setGlobalPlaybackSpeed(speed: Float) {
         viewModelScope.launch { settings.setPodcastPlaybackSpeed(speed) }
     }
