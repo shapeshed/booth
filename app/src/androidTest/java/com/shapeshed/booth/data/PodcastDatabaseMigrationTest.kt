@@ -44,8 +44,8 @@ class PodcastDatabaseMigrationTest {
                 "INSERT INTO directory_providers (id, name) VALUES (1, 'Apple')",
             )
             execSQL(
-                "INSERT INTO categories (id, providerId, name, externalId, parentId) "
-                        + "VALUES (1, 1, 'Technology', NULL, NULL)",
+                "INSERT INTO categories (id, providerId, name, externalId, parentId) " +
+                    "VALUES (1, 1, 'Technology', NULL, NULL)",
             )
             execSQL("INSERT INTO categories_podcasts (categoryId, podcastId) VALUES (1, 1)")
             close()
