@@ -191,7 +191,7 @@ internal fun rememberNowPlayingActions(
 internal fun PodcastHomeNowPlayingOverlay(
     visible: Boolean,
     playback: PlaybackUiState,
-    sleepTimer: com.shapeshed.booth.data.SleepTimerState?,
+    sleepTimerFlow: kotlinx.coroutines.flow.StateFlow<com.shapeshed.booth.data.SleepTimerState?>,
     podcastTitle: String?,
     onOpenPodcast: (Long) -> Unit,
     actions: PodcastNowPlayingActions,
@@ -202,9 +202,12 @@ internal fun PodcastHomeNowPlayingOverlay(
     podcastTitlesById: Map<Long, String>,
     onDismiss: () -> Unit,
 ) {
-    // Collected here rather than in a parent: this is the only overlay that draws a scrubber, and
-    // routing the 2 Hz position through a parent would recompose that parent's whole subtree.
+    // Both collected here rather than in a parent, for the same reason and for the same class of
+    // value: this is the only overlay that draws either one, and routing a high-frequency value
+    // through a parent recomposes that parent's whole subtree four times a second. The sleep timer
+    // ticks every 250ms, so it is the faster of the two and was the more expensive mistake.
     val progress by playbackProgressFlow.collectAsStateWithLifecycle()
+    val sleepTimer by sleepTimerFlow.collectAsStateWithLifecycle()
     AnimatedVisibility(
         visible = visible && playback.episode != null,
         enter = fadeIn() + slideInVertically(initialOffsetY = { it }),

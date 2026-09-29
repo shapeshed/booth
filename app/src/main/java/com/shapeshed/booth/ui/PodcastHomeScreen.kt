@@ -1980,7 +1980,7 @@ fun PodcastHomeScreen(
         PodcastHomeNowPlayingOverlay(
             visible = showNowPlaying,
             playback = playback,
-            sleepTimer = homeUiState.sleepTimer,
+            sleepTimerFlow = playbackViewModel.sleepTimer,
             podcastTitle = playingPodcastTitle,
             onOpenPodcast = { podcastId ->
                 showNowPlaying = false
