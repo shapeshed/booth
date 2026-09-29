@@ -30,6 +30,8 @@ internal class PodcastSettingsActions(
     val setRefreshNetwork: (PodcastRefreshNetwork) -> Unit,
     val setDownloadNetwork: (PodcastDownloadNetwork) -> Unit,
     val setRemovePlayedDownloads: (Boolean) -> Unit,
+    val setGlobalPlaybackSpeed: (Float) -> Unit,
+    val setGlobalSkipSilence: (Boolean) -> Unit,
     val setSearchProvider: (String) -> Unit,
     val setPodcastIndexCredentials: (apiKey: String, apiSecret: String) -> Unit,
     val clearPodcastIndexCredentials: () -> Unit,
@@ -45,6 +47,8 @@ internal fun rememberSettingsActions(viewModel: PodcastViewModel): PodcastSettin
         setRefreshNetwork = viewModel::setPodcastRefreshNetwork,
         setDownloadNetwork = viewModel::setPodcastDownloadNetwork,
         setRemovePlayedDownloads = viewModel::setPodcastRemovePlayedDownloads,
+        setGlobalPlaybackSpeed = viewModel::setGlobalPlaybackSpeed,
+        setGlobalSkipSilence = viewModel::setGlobalSkipSilence,
         setSearchProvider = viewModel::setPodcastSearchProvider,
         setPodcastIndexCredentials = { apiKey, apiSecret ->
             viewModel.setPodcastIndexCredentials(apiKey, apiSecret)
@@ -90,6 +94,10 @@ internal fun PodcastHomeSettingsDestination(
         onDownloadNetworkChange = actions.setDownloadNetwork,
         removePlayedDownloads = homeUiState.settings.removePlayedDownloads,
         onRemovePlayedDownloadsChange = actions.setRemovePlayedDownloads,
+        globalPlaybackSpeed = homeUiState.settings.globalPlaybackSpeed,
+        onGlobalPlaybackSpeedChange = actions.setGlobalPlaybackSpeed,
+        globalSkipSilence = homeUiState.settings.globalSkipSilence,
+        onGlobalSkipSilenceChange = actions.setGlobalSkipSilence,
         notificationsEnabled = homeUiState.settings.notificationsEnabled &&
             platformActions.notificationsPermissionGranted,
         onNotificationsEnabledChange = platformActions.setNotificationsEnabled,

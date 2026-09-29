@@ -100,11 +100,11 @@ class SettingsStore(private val context: Context) {
     }
 
     val podcastPlaybackSpeed: Flow<Float> = context.dataStore.data.map { prefs ->
-        (prefs[playbackSpeedKey] ?: DEFAULT_PLAYBACK_SPEED).coerceIn(MIN_PLAYBACK_SPEED, MAX_PLAYBACK_SPEED)
+        PlaybackSettings.clampSpeed(prefs[playbackSpeedKey] ?: PlaybackSettings.DEFAULT_SPEED)
     }
 
     suspend fun setPodcastPlaybackSpeed(speed: Float) {
-        context.dataStore.edit { it[playbackSpeedKey] = speed.coerceIn(MIN_PLAYBACK_SPEED, MAX_PLAYBACK_SPEED) }
+        context.dataStore.edit { it[playbackSpeedKey] = PlaybackSettings.clampSpeed(speed) }
     }
 
     val podcastSkipSilence: Flow<Boolean> = context.dataStore.data.map { it[skipSilenceKey] ?: false }
@@ -187,9 +187,6 @@ class SettingsStore(private val context: Context) {
     }
 
     private companion object {
-        const val DEFAULT_PLAYBACK_SPEED = 1f
-        const val MIN_PLAYBACK_SPEED = 0.5f
-        const val MAX_PLAYBACK_SPEED = 3f
         const val DEFAULT_SEARCH_PROVIDER = "apple"
     }
 }

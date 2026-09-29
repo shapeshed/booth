@@ -30,11 +30,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.shapeshed.booth.R
+import com.shapeshed.booth.data.PlaybackSettings
 import java.util.Locale
 
-internal const val MIN_PLAYBACK_SPEED = 0.5f
-internal const val MAX_PLAYBACK_SPEED = 3f
-
+// The slider range is the clamp range, deliberately the same constants. If they were separate,
+// the slider could offer a speed the store would silently reject, or clamp away a speed the
+// slider promised.
 private val PlaybackSpeedPresets = listOf(0.75f, 1f, 1.25f, 1.5f, 2f)
 
 @Composable
@@ -165,7 +166,7 @@ internal fun PlaybackSpeedSheet(
                 // drag fires this at display refresh rate. Same shape as SleepTimerSheet.
                 onValueChange = { sliderSpeed = it },
                 onValueChangeFinished = { onSpeedChange(sliderSpeed) },
-                valueRange = MIN_PLAYBACK_SPEED..MAX_PLAYBACK_SPEED,
+                valueRange = PlaybackSettings.MIN_SPEED..PlaybackSettings.MAX_SPEED,
                 steps = 24,
                 modifier = Modifier.fillMaxWidth(),
             )

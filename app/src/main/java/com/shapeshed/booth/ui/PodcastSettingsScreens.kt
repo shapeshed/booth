@@ -106,12 +106,17 @@ internal fun PodcastAppSettingsScreen(
     onRemovePlayedDownloadsChange: (Boolean) -> Unit = {},
     onExportBackup: () -> Unit = {},
     onImportBackup: () -> Unit = {},
+    globalPlaybackSpeed: Float = 1f,
+    onGlobalPlaybackSpeedChange: (Float) -> Unit = {},
+    globalSkipSilence: Boolean = false,
+    onGlobalSkipSilenceChange: (Boolean) -> Unit = {},
 ) {
     var showDownloadNetworkChooser by rememberSaveable { mutableStateOf(false) }
     var showRefreshIntervalChooser by rememberSaveable { mutableStateOf(false) }
     var showRefreshNetworkChooser by rememberSaveable { mutableStateOf(false) }
     var showSearchProviderChooser by rememberSaveable { mutableStateOf(false) }
     var showPodcastIndexCredentials by rememberSaveable { mutableStateOf(false) }
+    var showGlobalSpeedEditor by rememberSaveable { mutableStateOf(false) }
     val downloadNetworkLabel = when (downloadNetwork) {
         PodcastDownloadNetwork.ANY_CONNECTION -> stringResource(R.string.download_wifi_or_mobile)
         PodcastDownloadNetwork.WIFI_ONLY -> stringResource(R.string.download_wifi_only)
@@ -169,6 +174,17 @@ internal fun PodcastAppSettingsScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
+            item {
+                SettingsGroupLabel(text = stringResource(R.string.playback))
+            }
+            item {
+                PodcastActionListItem(
+                    headlineContent = { Text(stringResource(R.string.global_playback_speed)) },
+                    supportingContent = { Text(formatPlaybackSpeed(globalPlaybackSpeed)) },
+                    leadingContent = { Icon(Icons.Outlined.Speed, contentDescription = null) },
+                    modifier = Modifier.clickable { showGlobalSpeedEditor = true },
+                )
+            }
             item {
                 SettingsGroupLabel(text = stringResource(R.string.up_next))
             }
@@ -524,6 +540,23 @@ internal fun PodcastAppSettingsScreen(
             confirmButton = {
                 TextButton(onClick = { showRefreshNetworkChooser = false }) { Text(stringResource(R.string.cancel)) }
             },
+        )
+    }
+    if (showGlobalSpeedEditor) {
+        // The same sheet the per-podcast screen uses, minus the "use global" escape: this *is* the
+        // global, so offering to go back to it would be a no-op.
+        PlaybackSpeedSheet(
+            speed = globalPlaybackSpeed,
+            skipSilence = globalSkipSilence,
+            onSpeedChange = {
+                onGlobalPlaybackSpeedChange(it)
+                showGlobalSpeedEditor = false
+            },
+            // Skip silence is a global setting in the same fallback shape as the speed, and the
+            // sheet shows it unconditionally. Wiring only the speed would have left a checkbox here
+            // that looked live and did nothing.
+            onSkipSilenceChange = onGlobalSkipSilenceChange,
+            onDismiss = { showGlobalSpeedEditor = false },
         )
     }
     if (showSearchProviderChooser) {

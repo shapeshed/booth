@@ -249,6 +249,12 @@ class PodcastViewModel @Inject constructor(
         .combine(settings.podcastDownloadNetwork) { state, downloadNetwork ->
             state.copy(downloadNetwork = downloadNetwork)
         }
+        .combine(settings.podcastPlaybackSpeed) { state, globalPlaybackSpeed ->
+            state.copy(globalPlaybackSpeed = globalPlaybackSpeed)
+        }
+        .combine(settings.podcastSkipSilence) { state, globalSkipSilence ->
+            state.copy(globalSkipSilence = globalSkipSilence)
+        }
         .combine(settings.podcastRemovePlayedDownloads) { state, removePlayedDownloads ->
             state.copy(removePlayedDownloads = removePlayedDownloads)
         }
@@ -1146,6 +1152,22 @@ class PodcastViewModel @Inject constructor(
         viewModelScope.launch {
             repository.setPodcastPlaybackSpeed(podcastId, speed)
         }
+    }
+
+    /**
+     * Sets the app-wide speed, which is the fallback for podcasts that have not set their own.
+     *
+     * Deliberately does not touch any podcast's own value. Changing the default should not silently
+     * discard a deliberate per-podcast override; that is what "Use global playback speed" on a
+     * podcast is for.
+     */
+    fun setGlobalPlaybackSpeed(speed: Float) {
+        viewModelScope.launch { settings.setPodcastPlaybackSpeed(speed) }
+    }
+
+    /** The app-wide skip-silence default, and the fallback for podcasts with no override. */
+    fun setGlobalSkipSilence(enabled: Boolean) {
+        viewModelScope.launch { settings.setPodcastSkipSilence(enabled) }
     }
 
     fun setPodcastVideoDownload(podcastId: Long, enabled: Boolean) {

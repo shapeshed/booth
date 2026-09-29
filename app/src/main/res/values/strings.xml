@@ -91,6 +91,7 @@
     <string name="playback_speed_custom">Playback speed %1$s</string>
     <string name="inherited_global_playback_speed" translatable="false">Global default (%1$s)</string>
     <string name="use_global_playback_speed" translatable="false">Use global playback speed</string>
+    <string name="global_playback_speed" translatable="false">Default playback speed</string>
     <string name="use_global_skip_silence" translatable="false">Use global skip silence</string>
     <string name="global_setting_value" translatable="false">Global default (%1$s)</string>
     <string name="enable_all_podcasts" translatable="false">Enable for all podcasts</string>
