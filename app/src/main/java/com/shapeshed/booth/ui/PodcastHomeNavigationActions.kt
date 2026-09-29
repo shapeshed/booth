@@ -38,4 +38,5 @@ internal fun createSubscribedEpisodeAction(
     isCompleted = episode.completed,
     isInQueue = queueEpisodeIds.contains(episode.id),
     hasPlaybackPosition = episode.positionMs > 0L,
+    inInbox = episode.inInbox,
 )

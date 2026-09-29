@@ -126,6 +126,9 @@ internal enum class PodcastTab { HOME, UP_NEXT, SUBSCRIPTIONS }
 internal enum class EpisodeOrigin { INBOX, UP_NEXT, DOWNLOADS, ALL_EPISODES, PODCAST, SEARCH }
 
 internal sealed interface PodcastEpisodeAction {
+    /** True when the episode is in the inbox, so it can be dismissed from there. */
+    val inInbox: Boolean
+
     data class Subscribed(
         val episode: EpisodeEntity,
         val podcastTitle: String,
@@ -136,6 +139,7 @@ internal sealed interface PodcastEpisodeAction {
         val isCompleted: Boolean,
         val isInQueue: Boolean,
         val hasPlaybackPosition: Boolean,
+        override val inInbox: Boolean = false,
     ) : PodcastEpisodeAction
     data class Preview(
         val episode: com.shapeshed.booth.data.Episode,
@@ -148,6 +152,7 @@ internal sealed interface PodcastEpisodeAction {
         val isCompleted: Boolean,
         val isInQueue: Boolean,
         val hasPlaybackPosition: Boolean,
+        override val inInbox: Boolean = false,
     ) : PodcastEpisodeAction
 }
 
