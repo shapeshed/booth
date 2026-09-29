@@ -137,6 +137,28 @@ class PodcastAppSettingsScreenTest {
     }
 
     @Test
+    fun theDefaultPlaybackSpeedRowOpensTheSheetAndReportsTheChosenSpeed() {
+        // The row and its sheet are new and this is their only coverage. It shows the app-wide
+        // speed, and choosing a preset has to reach the callback, or the setting silently does
+        // nothing while looking entirely functional.
+        var chosen: Float? = null
+        setSettingsContent(
+            globalPlaybackSpeed = 1.25f,
+            onGlobalPlaybackSpeedChange = { chosen = it },
+        )
+
+        scrollTo("Default playback speed")
+        composeRule.onNodeWithText("Default playback speed").assertIsDisplayed()
+        // The supporting text is the current value, so the row states what it is set to.
+        composeRule.onNodeWithText("Default playback speed").assertTextContains("1.25×")
+
+        composeRule.onNodeWithText("Default playback speed").performClick()
+        composeRule.runOnIdle { assertEquals(null, chosen) }
+        composeRule.onNodeWithText("1.5×").performClick()
+        composeRule.runOnIdle { assertEquals(1.5f, chosen) }
+    }
+
+    @Test
     fun podcastNotificationsIsHiddenWhileNotificationsAreOff() {
         // Which podcasts notify cannot take effect while notifications are off. The walk-through
         // covers the on case, so together they pin both directions.
@@ -201,6 +223,8 @@ class PodcastAppSettingsScreenTest {
         onManagePodcasts: (PodcastManagementCategory) -> Unit = {},
         autoQueueEnabled: Boolean = true,
         notificationsEnabled: Boolean = true,
+        globalPlaybackSpeed: Float = 1f,
+        onGlobalPlaybackSpeedChange: (Float) -> Unit = {},
         onAutoQueueEnabledChange: (Boolean) -> Unit = {},
         downloadEpisodesAddedToUpNext: Boolean = false,
         onDownloadEpisodesAddedToUpNextChange: (Boolean) -> Unit = {},
@@ -225,6 +249,8 @@ class PodcastAppSettingsScreenTest {
                     downloadNetwork = PodcastDownloadNetwork.WIFI_ONLY,
                     onDownloadNetworkChange = {},
                     notificationsEnabled = notificationsEnabled,
+                    globalPlaybackSpeed = globalPlaybackSpeed,
+                    onGlobalPlaybackSpeedChange = onGlobalPlaybackSpeedChange,
                     onNotificationsEnabledChange = {},
                     searchProviders = listOf(testSearchProvider),
                     selectedSearchProviderId = testSearchProvider.id,
