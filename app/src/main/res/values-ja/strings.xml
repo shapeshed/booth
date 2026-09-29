@@ -23,7 +23,6 @@
     <string name="export_opml">OPMLをエクスポート</string>
     <string name="clear">クリア</string>
     <string name="no_filter_matches">No matches</string>
-    <string name="auto_refresh">自動更新</string>
     <string name="notifications">通知</string>
     <string name="on">オン</string>
     <string name="off">オフ</string>

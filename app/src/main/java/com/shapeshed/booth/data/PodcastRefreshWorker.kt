@@ -53,7 +53,11 @@ class PodcastRefreshWorker(context: Context, workerParams: WorkerParameters) : C
         val downloadNetwork = settings.podcastDownloadNetwork.first()
         val newEpisodes = mutableListOf<NewPodcastEpisodeNotification>()
         val queuedDownloadCandidates = mutableListOf<EpisodeEntity>()
-        val podcasts = repository.podcasts.first().filter { it.includeInAutoRefresh }
+        // Every subscribed podcast is refreshed. The per-podcast opt-out is gone: a feed you
+        // subscribe to is a feed you want updated, and the algorithmic cadence and network policy
+        // are the controls for how often, not per-podcast switches that could silently stop a feed
+        // going stale.
+        val podcasts = repository.podcasts.first()
         val existingEpisodeIdentities = podcasts.associate { podcast ->
             podcast.id to repository.episodes(podcast.id).first()
                 .map { it.guid to it.audioUrl }

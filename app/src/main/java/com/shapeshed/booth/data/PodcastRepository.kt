@@ -412,8 +412,6 @@ class PodcastRepository(
         dao.podcast(podcastId)?.let { dao.upsertPodcast(it.copy(includeInVideoDownload = enabled)) }
     }
 
-    suspend fun setAllPodcastAutoRefresh(enabled: Boolean) = dao.setAllAutoRefresh(enabled)
-
     suspend fun setAllPodcastAutoDownload(enabled: Boolean) = dao.setAllAutoDownload(enabled)
 
     suspend fun setAllPodcastVideoDownload(enabled: Boolean) = dao.setAllVideoDownload(enabled)
@@ -431,7 +429,6 @@ class PodcastRepository(
         tags: String,
         skipStartSeconds: Int,
         skipEndSeconds: Int,
-        includeInAutoRefresh: Boolean,
         includeInAutoDownload: Boolean,
         includeInAutoQueue: Boolean,
         includeInNotifications: Boolean,
@@ -442,7 +439,6 @@ class PodcastRepository(
                 tags = tags.normalizedPodcastTags().orEmpty(),
                 skipStartSeconds = skipStartSeconds.coerceAtLeast(0),
                 skipEndSeconds = skipEndSeconds.coerceAtLeast(0),
-                includeInAutoRefresh = includeInAutoRefresh,
                 includeInAutoDownload = includeInAutoDownload,
                 includeInAutoQueue = includeInAutoQueue,
                 includeInNotifications = includeInNotifications,
@@ -745,7 +741,6 @@ private fun Podcast.toEntity(
     skipStartSeconds = existing?.skipStartSeconds ?: 0,
     skipEndSeconds = existing?.skipEndSeconds ?: 0,
     playbackSpeed = existing?.playbackSpeed,
-    includeInAutoRefresh = existing?.includeInAutoRefresh ?: true,
     includeInAutoDownload = existing?.includeInAutoDownload ?: false,
     includeInVideoDownload = existing?.includeInVideoDownload ?: true,
     includeInNotifications = existing?.includeInNotifications ?: false,

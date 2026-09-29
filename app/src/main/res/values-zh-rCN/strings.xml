@@ -23,7 +23,6 @@
     <string name="export_opml">导出 OPML</string>
     <string name="clear">清除</string>
     <string name="no_filter_matches">No matches</string>
-    <string name="auto_refresh">自动刷新</string>
     <string name="notifications">通知</string>
     <string name="on">开启</string>
     <string name="off">关闭</string>

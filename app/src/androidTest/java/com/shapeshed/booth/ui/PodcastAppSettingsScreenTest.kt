@@ -44,11 +44,6 @@ class PodcastAppSettingsScreenTest {
         // ListItem merges each row's headline and supporting text into one node, so assert
         // the value against the Download network row rather than matching the label alone.
         composeRule.onNodeWithText("Download network").assertTextContains("Wi-Fi only")
-        scrollTo("Auto refresh")
-        composeRule.onNodeWithText("Auto refresh").assertIsDisplayed()
-        scrollTo("Refresh podcasts automatically")
-        composeRule.onNodeWithText("Refresh podcasts automatically").assertIsDisplayed()
-        composeRule.onNodeWithText("0 podcasts").assertIsDisplayed()
         scrollTo("Refresh interval")
         composeRule.onNodeWithText("Refresh interval").assertIsDisplayed()
         composeRule.onNodeWithText("Every 6 hours").assertIsDisplayed()
@@ -124,12 +119,6 @@ class PodcastAppSettingsScreenTest {
         composeRule.onNodeWithText("Podcasts added to Up Next").performClick()
         composeRule.runOnIdle {
             assertEquals(PodcastManagementCategory.AUTO_QUEUE, managedCategory)
-        }
-
-        scrollTo("Refresh podcasts automatically")
-        composeRule.onNodeWithText("Refresh podcasts automatically").performClick()
-        composeRule.runOnIdle {
-            assertEquals(PodcastManagementCategory.AUTO_REFRESH, managedCategory)
         }
 
         managedCategory = null
@@ -208,7 +197,6 @@ class PodcastAppSettingsScreenTest {
                 PodcastAppSettingsScreen(
                     podcastManagementCounts = PodcastManagementCounts(
                         total = 4,
-                        autoRefresh = 0,
                         autoQueue = 3,
                         notifications = 4,
                     ),

@@ -16,7 +16,6 @@ class PodcastSettingsScreenTest {
 
     @Test
     fun automaticEpisodeTogglesPersistTheirPodcastPreferences() {
-        var savedAutoRefresh: Boolean? = null
         composeRule.setContent {
             BoothAppTheme {
                 PodcastSettingsScreen(
@@ -28,16 +27,14 @@ class PodcastSettingsScreenTest {
                     globalAutoQueueEnabled = false,
                     globalNotificationsEnabled = false,
                     availableTags = emptyList(),
-                    onSaveSettings = { _, _, _, refresh, _, _, _ ->
-                        savedAutoRefresh = refresh
-                    },
+                    onSaveSettings = { _, _, _, _, _, _ -> },
                 )
             }
         }
 
-        composeRule.onNodeWithText("Refresh podcasts automatically").assertIsDisplayed().performClick()
-
-        composeRule.runOnIdle { assertEquals(false, savedAutoRefresh) }
+        // The per-podcast auto refresh row is gone. Refresh is a property of being subscribed, not
+        // a per-podcast choice, so its absence is the behaviour worth pinning.
+        composeRule.onNodeWithText("Refresh podcasts automatically").assertDoesNotExist()
 
         composeRule.onNodeWithText("Download episodes added to Up Next").assertDoesNotExist()
     }
@@ -55,7 +52,7 @@ class PodcastSettingsScreenTest {
                     globalAutoQueueEnabled = true,
                     globalNotificationsEnabled = true,
                     availableTags = emptyList(),
-                    onSaveSettings = { _, _, _, _, _, _, _ -> },
+                    onSaveSettings = { _, _, _, _, _, _ -> },
                 )
             }
         }
@@ -78,7 +75,7 @@ class PodcastSettingsScreenTest {
                     globalAutoQueueEnabled = false,
                     globalNotificationsEnabled = false,
                     availableTags = emptyList(),
-                    onSaveSettings = { _, _, _, _, _, _, _ -> },
+                    onSaveSettings = { _, _, _, _, _, _ -> },
                 )
             }
         }

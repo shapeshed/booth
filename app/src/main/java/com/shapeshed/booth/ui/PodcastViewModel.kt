@@ -1125,7 +1125,6 @@ class PodcastViewModel @Inject constructor(
         tags: String,
         skipStartSeconds: Int,
         skipEndSeconds: Int,
-        includeInAutoRefresh: Boolean,
         includeInAutoDownload: Boolean,
         includeInAutoQueue: Boolean,
         includeInNotifications: Boolean,
@@ -1136,7 +1135,6 @@ class PodcastViewModel @Inject constructor(
                 tags,
                 skipStartSeconds,
                 skipEndSeconds,
-                includeInAutoRefresh,
                 includeInAutoDownload,
                 includeInAutoQueue,
                 includeInNotifications,
@@ -1152,10 +1150,6 @@ class PodcastViewModel @Inject constructor(
 
     fun setPodcastVideoDownload(podcastId: Long, enabled: Boolean) {
         viewModelScope.launch { repository.setPodcastVideoDownload(podcastId, enabled) }
-    }
-
-    fun setAllPodcastAutoRefresh(enabled: Boolean) {
-        viewModelScope.launch { repository.setAllPodcastAutoRefresh(enabled) }
     }
 
     fun setAllPodcastAutoDownload(enabled: Boolean) {

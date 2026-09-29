@@ -150,7 +150,6 @@ class PodcastBackupManager(
                     .put("skipEndSeconds", podcast.skipEndSeconds)
                     .put("playbackSpeed", podcast.playbackSpeed ?: JSONObject.NULL)
                     .put("skipSilence", podcast.skipSilence ?: JSONObject.NULL)
-                    .put("includeInAutoRefresh", podcast.includeInAutoRefresh)
                     .put("includeInAutoDownload", podcast.includeInAutoDownload)
                     .put("includeInVideoDownload", podcast.includeInVideoDownload)
                     .put("includeInNotifications", podcast.includeInNotifications)
@@ -250,10 +249,6 @@ class PodcastBackupManager(
                     skipEndSeconds = item.optInt("skipEndSeconds", existing?.skipEndSeconds ?: 0),
                     playbackSpeed = item.optionalDouble("playbackSpeed")?.toFloat() ?: existing?.playbackSpeed,
                     skipSilence = item.optionalBoolean("skipSilence") ?: existing?.skipSilence,
-                    includeInAutoRefresh = item.optBoolean(
-                        "includeInAutoRefresh",
-                        existing?.includeInAutoRefresh ?: true,
-                    ),
                     // Backups created before the episode index was added cannot tell which feed
                     // items were already known. Keep those subscriptions safe from downloading
                     // the entire historical feed until the user explicitly enables this again.

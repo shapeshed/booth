@@ -29,8 +29,6 @@
     <string name="export_opml">Export OPML</string>
     <string name="clear">Clear</string>
     <string name="no_filter_matches">No matches</string>
-    <string name="auto_refresh">Auto refresh</string>
-    <string name="refresh_podcasts_automatically" translatable="false">Refresh podcasts automatically</string>
     <string name="refresh_interval" translatable="false">Refresh interval</string>
     <string name="refresh_network" translatable="false">Refresh network</string>
     <string name="refresh_every_hour" translatable="false">Every hour</string>

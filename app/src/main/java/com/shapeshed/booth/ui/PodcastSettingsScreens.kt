@@ -72,12 +72,7 @@ import com.shapeshed.booth.data.PodcastRefreshNetwork
 import com.shapeshed.booth.data.PodcastSearchProvider
 
 /** How many podcasts currently opt in to each automatic behaviour, for the management screens. */
-internal data class PodcastManagementCounts(
-    val total: Int,
-    val autoRefresh: Int,
-    val autoQueue: Int,
-    val notifications: Int,
-)
+internal data class PodcastManagementCounts(val total: Int, val autoQueue: Int, val notifications: Int)
 
 @Composable
 internal fun PodcastAppSettingsScreen(
@@ -249,31 +244,6 @@ internal fun PodcastAppSettingsScreen(
                     modifier = Modifier.clickable {
                         onRemovePlayedDownloadsChange(!removePlayedDownloads)
                     },
-                )
-            }
-            item {
-                SettingsGroupLabel(text = stringResource(R.string.auto_refresh))
-            }
-            item {
-                PodcastActionListItem(
-                    headlineContent = { Text(stringResource(R.string.refresh_podcasts_automatically)) },
-                    supportingContent = {
-                        val autoRefreshCountLabel = if (
-                            podcastManagementCounts.total > 0 &&
-                            podcastManagementCounts.autoRefresh == podcastManagementCounts.total
-                        ) {
-                            stringResource(R.string.all_podcasts)
-                        } else {
-                            pluralStringResource(
-                                R.plurals.podcast_count,
-                                podcastManagementCounts.autoRefresh,
-                                podcastManagementCounts.autoRefresh,
-                            )
-                        }
-                        Text(autoRefreshCountLabel)
-                    },
-                    leadingContent = { Icon(Icons.Rounded.Sync, contentDescription = null) },
-                    modifier = Modifier.clickable { onManagePodcasts(PodcastManagementCategory.AUTO_REFRESH) },
                 )
             }
             item {
@@ -681,7 +651,7 @@ internal fun PodcastSettingsScreen(
     globalAutoQueueEnabled: Boolean,
     globalNotificationsEnabled: Boolean,
     availableTags: List<String>,
-    onSaveSettings: (String, Int, Int, Boolean, Boolean, Boolean, Boolean) -> Unit,
+    onSaveSettings: (String, Int, Int, Boolean, Boolean, Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var tags by rememberSaveable(podcast.id) {
@@ -693,7 +663,6 @@ internal fun PodcastSettingsScreen(
     var tagInput by rememberSaveable(podcast.id) { mutableStateOf("") }
     var skipStartInput by rememberSaveable(podcast.id) { mutableStateOf(podcast.skipStartSeconds.toString()) }
     var skipEndInput by rememberSaveable(podcast.id) { mutableStateOf(podcast.skipEndSeconds.toString()) }
-    var includeInAutoRefresh by rememberSaveable(podcast.id) { mutableStateOf(podcast.includeInAutoRefresh) }
     var includeInAutoQueue by rememberSaveable(podcast.id) { mutableStateOf(podcast.includeInAutoQueue) }
     var includeInNotifications by rememberSaveable(podcast.id) { mutableStateOf(podcast.includeInNotifications) }
     var showTagsEditor by rememberSaveable(podcast.id) { mutableStateOf(false) }
@@ -728,7 +697,6 @@ internal fun PodcastSettingsScreen(
         nextTags: List<String> = tags,
         nextSkipStart: String = skipStartInput,
         nextSkipEnd: String = skipEndInput,
-        nextAutoRefresh: Boolean = includeInAutoRefresh,
         nextAutoQueue: Boolean = includeInAutoQueue,
         nextNotifications: Boolean = includeInNotifications,
     ) {
@@ -736,7 +704,6 @@ internal fun PodcastSettingsScreen(
             nextTags.joinToString(","),
             nextSkipStart.toIntOrNull()?.coerceAtLeast(0) ?: 0,
             nextSkipEnd.toIntOrNull()?.coerceAtLeast(0) ?: 0,
-            nextAutoRefresh,
             podcast.includeInAutoDownload,
             nextAutoQueue,
             nextNotifications,
@@ -782,32 +749,6 @@ internal fun PodcastSettingsScreen(
                     supportingContent = { Text(skipSummary) },
                     leadingContent = { Icon(Icons.Rounded.FastForward, contentDescription = null) },
                     modifier = Modifier.clickable { showSkipEditor = true },
-                )
-            }
-            item {
-                SettingsGroupLabel(text = stringResource(R.string.auto_refresh))
-            }
-            item {
-                PodcastActionListItem(
-                    headlineContent = { Text(stringResource(R.string.refresh_podcasts_automatically)) },
-                    supportingContent = {
-                        Text(stringResource(if (includeInAutoRefresh) R.string.on else R.string.off))
-                    },
-                    leadingContent = { Icon(Icons.Rounded.Sync, contentDescription = null) },
-                    trailingContent = {
-                        Switch(
-                            checked = includeInAutoRefresh,
-                            onCheckedChange = {
-                                includeInAutoRefresh = it
-                                persistSettings(nextAutoRefresh = it)
-                            },
-                        )
-                    },
-                    modifier = Modifier.clickable {
-                        val next = !includeInAutoRefresh
-                        includeInAutoRefresh = next
-                        persistSettings(nextAutoRefresh = next)
-                    },
                 )
             }
             item {

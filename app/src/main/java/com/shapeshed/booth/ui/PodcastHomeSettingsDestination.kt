@@ -66,7 +66,6 @@ internal fun PodcastHomeSettingsDestination(
 ) {
     val podcastManagementCounts = PodcastManagementCounts(
         total = homeUiState.allPodcasts.size,
-        autoRefresh = homeUiState.allPodcasts.count { it.includeInAutoRefresh },
         autoQueue = homeUiState.allPodcasts.count { it.includeInAutoQueue },
         notifications = homeUiState.allPodcasts.count { it.includeInNotifications },
     )

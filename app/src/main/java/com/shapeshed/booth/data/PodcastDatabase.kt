@@ -40,7 +40,6 @@ data class PodcastEntity(
     val playbackSpeed: Float? = null,
     /** Null means that playback inherits the global skip-silence setting. */
     val skipSilence: Boolean? = null,
-    val includeInAutoRefresh: Boolean = true,
     val includeInAutoDownload: Boolean = false,
     val includeInVideoDownload: Boolean = true,
     val includeInNotifications: Boolean = false,
@@ -352,9 +351,6 @@ interface PodcastDao {
     @Query("UPDATE podcasts SET playbackSpeed = :speed WHERE id = :podcastId")
     suspend fun setPlaybackSpeed(podcastId: Long, speed: Float?)
 
-    @Query("UPDATE podcasts SET includeInAutoRefresh = :enabled")
-    suspend fun setAllAutoRefresh(enabled: Boolean)
-
     @Query("UPDATE podcasts SET includeInAutoDownload = :enabled")
     suspend fun setAllAutoDownload(enabled: Boolean)
 
@@ -490,7 +486,7 @@ interface PodcastDao {
         CategoryEntity::class,
         CategoryPodcastEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 abstract class PodcastDatabase : RoomDatabase() {
@@ -499,19 +495,20 @@ abstract class PodcastDatabase : RoomDatabase() {
 
     companion object {
         /**
-         * Note for anyone with Booth already installed: the schema was squashed from v27 to v1
-         * before the first release, so an existing database file is at a *higher* version than this
-         * code declares. Room treats that as a downgrade and throws on open rather than migrating
+         * Note for anyone upgrading from a build that predates the first release: that schema was
+         * squashed from v27 to v1, so a database file from it is at a *higher* version than this code
+         * declares. Room treats that as a downgrade and throws on open rather than migrating
          * backwards. Uninstall before running, which drops the old file and lets v1 be created.
          *
          * `fallbackToDestructiveMigration` would paper over that, and must not be added: it would
-         * silently wipe a real library the first time a genuine v2 migration was needed. The first
-         * post-release schema change is a normal v1 to v2 Migration.
+         * silently wipe a real library the first time a genuine migration ran. Migrations from here
+         * on are real and belong in [PodcastDatabaseMigrations], each with a MigrationTestHelper
+         * test.
          */
         fun create(context: Context): PodcastDatabase = Room.databaseBuilder(
             context,
             PodcastDatabase::class.java,
             "podcasts.db",
-        ).build()
+        ).addMigrations(MIGRATION_1_2).build()
     }
 }

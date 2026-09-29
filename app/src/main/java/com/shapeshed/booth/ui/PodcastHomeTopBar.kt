@@ -31,7 +31,6 @@ internal fun PodcastHomeTopBarTitle(
 
         showPodcastAppSettings -> Text(
             when (podcastManagementCategory) {
-                PodcastManagementCategory.AUTO_REFRESH -> stringResource(R.string.auto_refresh)
                 PodcastManagementCategory.AUTO_QUEUE -> stringResource(R.string.add_new_episodes_to_up_next)
                 PodcastManagementCategory.NOTIFICATIONS -> stringResource(R.string.notifications)
                 null -> stringResource(R.string.podcast_settings)

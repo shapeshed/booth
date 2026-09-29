@@ -18,7 +18,7 @@ import com.shapeshed.booth.data.PodcastEntity
 internal fun PodcastManagementScreen(
     category: PodcastManagementCategory,
     podcasts: List<PodcastEntity>,
-    onPodcastFlagsChange: (PodcastEntity, Boolean, Boolean, Boolean) -> Unit,
+    onPodcastFlagsChange: (PodcastEntity, Boolean, Boolean) -> Unit,
     onPodcastAutoQueueChange: (PodcastEntity, Boolean) -> Unit,
     onAllEnabledChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
@@ -36,7 +36,6 @@ internal fun PodcastManagementScreen(
         item {
             val allEnabled = podcasts.isNotEmpty() && podcasts.all {
                 when (category) {
-                    PodcastManagementCategory.AUTO_REFRESH -> it.includeInAutoRefresh
                     PodcastManagementCategory.AUTO_QUEUE -> it.includeInAutoQueue
                     PodcastManagementCategory.NOTIFICATIONS -> it.includeInNotifications
                 }
@@ -52,14 +51,6 @@ internal fun PodcastManagementScreen(
         }
         items(podcasts, key = PodcastEntity::id) { podcast ->
             when (category) {
-                PodcastManagementCategory.AUTO_REFRESH -> PodcastToggleItem(
-                    podcast = podcast,
-                    checked = podcast.includeInAutoRefresh,
-                    onCheckedChange = {
-                        onPodcastFlagsChange(podcast, it, podcast.includeInAutoDownload, podcast.includeInNotifications)
-                    },
-                )
-
                 PodcastManagementCategory.AUTO_QUEUE -> PodcastToggleItem(
                     podcast = podcast,
                     checked = podcast.includeInAutoQueue,
@@ -70,7 +61,7 @@ internal fun PodcastManagementScreen(
                     podcast = podcast,
                     checked = podcast.includeInNotifications,
                     onCheckedChange = {
-                        onPodcastFlagsChange(podcast, podcast.includeInAutoRefresh, podcast.includeInAutoDownload, it)
+                        onPodcastFlagsChange(podcast, podcast.includeInAutoDownload, it)
                     },
                 )
             }
