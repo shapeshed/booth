@@ -123,7 +123,12 @@ internal fun PodcastGlobalSearchContent(
 
     LazyColumn(
         modifier = modifier,
-        contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp),
+        // Global search renders at the root while the mini player can be up, so its last results
+        // would sit underneath it. Every other scrolling list in the app adds this.
+        contentPadding = PaddingValues(
+            top = 8.dp,
+            bottom = 24.dp + LocalPodcastMiniPlayerInset.current,
+        ),
         verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
         if (selectedTab == PodcastTab.SUBSCRIPTIONS) {
