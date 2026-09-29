@@ -9,18 +9,27 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  * The refresh policy is no longer per podcast. Every subscribed podcast is refreshed on the
  * scheduled cadence, so the column recorded a decision that no longer exists.
  *
- * The column cannot simply be dropped with `ALTER TABLE ... DROP COLUMN`, because that needs SQLite
- * 3.35 and Booth supports API 26. Nor can this rebuild `podcasts` on its own, because
+ * Two things make this less mechanical than it looks.
+ *
+ * The column cannot be dropped with `ALTER TABLE ... DROP COLUMN`, which needs SQLite 3.35, because
+ * Booth supports API 26. So `podcasts` is rebuilt without it.
+ *
+ * And rebuilding `podcasts` on its own would silently delete every category assignment:
  * `categories_podcasts` holds `FOREIGN KEY(podcastId) REFERENCES podcasts(id) ON DELETE CASCADE`,
- * and SQLite's `DROP TABLE` is an implicit `DELETE FROM`: dropping the parent would cascade away
- * every category assignment the user had. The child is therefore rebuilt against the new table
- * first, so that when the old parent is dropped nothing references it and there is nothing to
- * cascade to.
+ * and SQLite's `DROP TABLE` is an implicit `DELETE FROM`, so dropping the parent cascades the child
+ * away. Room's schema validation then passes, because rows were deleted rather than a table being
+ * malformed. So the child is rebuilt too, against a temporary parent, and the old parent is only
+ * dropped once nothing references it.
+ *
+ * The child is rebuilt a second time at the end because renaming a table does not reliably rewrite
+ * foreign keys that point at it. Android's SQLite left the child's key pointing at `podcasts_v2`
+ * after the parent was renamed, and Room rejected the database for it. The first attempt relied on
+ * the rename doing that rewrite, which a desktop SQLite does and a device does not. This version
+ * does not depend on it at all: every table is created with the name it will be validated under.
  */
 val MIGRATION_1_2: Migration = object : Migration(1, 2) {
     override fun migrate(db: SupportSQLiteDatabase) {
-        // SQLite cannot drop a column on the oldest supported release, so the table is rebuilt
-        // without it. Column order and types must match what Room expects for v2 exactly.
+        // The new parent, under a temporary name because the old one is still in the way.
         db.execSQL(
             "CREATE TABLE IF NOT EXISTS `podcasts_v2` (" +
                 "`id` INTEGER NOT NULL, " +
@@ -69,8 +78,8 @@ val MIGRATION_1_2: Migration = object : Migration(1, 2) {
                 " FROM `podcasts`",
         )
 
-        // Rebuild the child against the new parent, so the old parent has no referencing child left
-        // when it is dropped. Without this, the drop cascades and every category assignment is lost.
+        // The child, pointing at the temporary parent. It cannot point at `podcasts` yet, because
+        // dropping `podcasts` would then cascade the rows just copied.
         db.execSQL(
             "CREATE TABLE IF NOT EXISTS `categories_podcasts_v2` (" +
                 "`categoryId` INTEGER NOT NULL, " +
@@ -83,20 +92,29 @@ val MIGRATION_1_2: Migration = object : Migration(1, 2) {
             "INSERT INTO `categories_podcasts_v2` (`categoryId`, `podcastId`) " +
                 "SELECT `categoryId`, `podcastId` FROM `categories_podcasts`",
         )
-        db.execSQL(
-            "CREATE INDEX IF NOT EXISTS `index_categories_podcasts_v2_podcastId` " +
-                "ON `categories_podcasts_v2` (`podcastId`)",
-        )
 
-        // Safe now in this order: the child referencing `podcasts` is already gone, and the only
-        // table referencing `podcasts_v2` is the new child.
+        // The old child goes first, so the old parent has no referencing child left. Dropping the
+        // parent while anything still references it is the cascade this ordering exists to avoid.
         db.execSQL("DROP TABLE `categories_podcasts`")
         db.execSQL("DROP TABLE `podcasts`")
-
-        // Renaming rewrites the new child's foreign key onto the final table name.
         db.execSQL("ALTER TABLE `podcasts_v2` RENAME TO `podcasts`")
-        db.execSQL("ALTER TABLE `categories_podcasts_v2` RENAME TO `categories_podcasts`")
-        db.execSQL("DROP INDEX IF EXISTS `index_categories_podcasts_v2_podcastId`")
+
+        // The child is rebuilt once more so its foreign key names `podcasts` outright. Renaming the
+        // parent above is not enough: on Android the key still read `podcasts_v2` afterwards, and
+        // Room refuses a database whose foreign keys do not match the entities.
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `categories_podcasts` (" +
+                "`categoryId` INTEGER NOT NULL, " +
+                "`podcastId` INTEGER NOT NULL, " +
+                "PRIMARY KEY(`categoryId`, `podcastId`), " +
+                "FOREIGN KEY(`categoryId`) REFERENCES `categories`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE, " +
+                "FOREIGN KEY(`podcastId`) REFERENCES `podcasts`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)",
+        )
+        db.execSQL(
+            "INSERT INTO `categories_podcasts` (`categoryId`, `podcastId`) " +
+                "SELECT `categoryId`, `podcastId` FROM `categories_podcasts_v2`",
+        )
+        db.execSQL("DROP TABLE `categories_podcasts_v2`")
         db.execSQL(
             "CREATE INDEX IF NOT EXISTS `index_categories_podcasts_podcastId` " +
                 "ON `categories_podcasts` (`podcastId`)",

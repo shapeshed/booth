@@ -41,10 +41,11 @@ class PodcastDatabaseMigrationTest {
                     "(1, 'Kept', 'https://example.com/feed', '', '', '', 0, 0, 0, 1, 1, 0, 0, 1, 100)",
             )
             execSQL(
-                "INSERT INTO directory_providers (id, name, baseUrl) VALUES (1, 'Apple', 'https://itunes')",
+                "INSERT INTO directory_providers (id, name) VALUES (1, 'Apple')",
             )
             execSQL(
-                "INSERT INTO categories (id, providerId, name) VALUES (1, 1, 'Technology')",
+                "INSERT INTO categories (id, providerId, name, externalId, parentId) "
+                        + "VALUES (1, 1, 'Technology', NULL, NULL)",
             )
             execSQL("INSERT INTO categories_podcasts (categoryId, podcastId) VALUES (1, 1)")
             close()
