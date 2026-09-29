@@ -38,15 +38,15 @@ class PodcastAppSettingsScreenTest {
         composeRule.onNodeWithText("Podcast video downloads").assertDoesNotExist()
         scrollTo("Download network")
         composeRule.onNodeWithText("Download network").assertIsDisplayed()
-        // The Download network and Refresh network rows can both show "Wi-Fi only", and
-        // ListItem merges each row's headline and supporting text into one node, so assert
-        // the value against the Download network row rather than matching the label alone.
+        // ListItem merges each row's headline and supporting text into one node, so assert the value
+        // against the Download network row rather than matching the label alone.
         composeRule.onNodeWithText("Download network").assertTextContains("Wi-Fi only")
-        scrollTo("Refresh interval")
-        composeRule.onNodeWithText("Refresh interval").assertIsDisplayed()
-        composeRule.onNodeWithText("Every 6 hours").assertIsDisplayed()
-        scrollTo("Refresh network")
-        composeRule.onNodeWithText("Refresh network").assertIsDisplayed()
+        // Refresh is scheduled per feed from its own publishing pattern, so the interval and network
+        // rows are gone. Their absence is the behaviour, and the other rows are asserted around them
+        // so a row that moved cannot quietly satisfy this by shifting position.
+        composeRule.onNodeWithText("Refresh interval").assertDoesNotExist()
+        composeRule.onNodeWithText("Refresh network").assertDoesNotExist()
+        composeRule.onNodeWithText("Every 6 hours").assertDoesNotExist()
         scrollTo("Podcast notifications")
         composeRule.onNodeWithText("Podcast notifications").assertIsDisplayed()
         composeRule.onNodeWithText("All podcasts").assertIsDisplayed()
