@@ -90,12 +90,18 @@ object RefreshCadence {
         nowMillis >= nextDueMillis(lastRefreshMillis, publishedAtMillis, nowMillis)
 
     /**
-     * How often the reconciliation pass runs.
+     * How often every feed is refreshed regardless of its own schedule.
      *
-     * Not a cadence: this does no fetching, it only notices subscriptions that have lost their
-     * scheduled refresh, such as after a subscribe, a reboot that pruned pending work, or a clock
-     * change. WorkManager will not run a one-time request for a month, so feeds with long cadences
-     * need something to re-arm them.
+     * The per-feed schedule is the efficient path, but it is derived from observed history and history
+     * lies. A feed that quietly moves from weekly to daily keeps its weekly schedule until a daily
+     * run happens to catch the new episode, which could be most of a week. A feed that stops
+     * publishing looks the same as one that has merely gone quiet. And a schedule that was wrong
+     * before the app had enough history has no other way to be corrected.
+     *
+     * So this is a backstop rather than the mechanism: it bounds how stale anything can get, so no
+     * feed is ever more than this old, whatever its own pattern says. Most of these fetches cost
+     * almost nothing, because Booth stores each feed's ETag and Last-Modified and a feed that has
+     * not changed answers with a 304 and no body.
      */
-    const val RECONCILE_INTERVAL_MILLIS = 12L * 60 * 60 * 1000
+    const val SWEEP_INTERVAL_MILLIS = 6L * 60 * 60 * 1000
 }

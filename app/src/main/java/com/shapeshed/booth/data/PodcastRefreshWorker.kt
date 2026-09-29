@@ -53,23 +53,27 @@ class PodcastRefreshWorker(context: Context, workerParams: WorkerParameters) : C
         val downloadNetwork = settings.podcastDownloadNetwork.first()
         val newEpisodes = mutableListOf<NewPodcastEpisodeNotification>()
         val queuedDownloadCandidates = mutableListOf<EpisodeEntity>()
-        // Every subscribed podcast is refreshed. The per-podcast opt-out is gone: a feed you
-        // subscribe to is a feed you want updated, and the algorithmic cadence and network policy
-        // are the controls for how often, not per-podcast switches that could silently stop a feed
-        // going stale.
-        // Each feed is scheduled separately, so a normal run has exactly one podcast in it. A run
-        // with no podcast id is the reconciliation pass: it re-arms the schedule and fetches
-        // nothing, so it costs no network and never marks a feed as refreshed.
+        // Each feed is scheduled separately, so a normal run has exactly one podcast in it. A run with
+        // no podcast id is the periodic sweep, which refreshes every subscription regardless of when
+        // each was due.
+        //
+        // The sweep is the backstop, not the mechanism. Per-feed scheduling is right when the pattern
+        // is right, but the pattern is inferred from history and history goes stale: a feed that moves
+        // from weekly to daily keeps its weekly schedule until a daily run happens to catch the new
+        // episode. The sweep bounds that, so nothing is ever more than SWEEP_INTERVAL_MILLIS old.
+        //
+        // It is cheap because Booth stores each feed's ETag and Last-Modified, so a feed that has not
+        // changed answers 304 with no body.
         val requestedPodcastId = inputData.getLong(PODCAST_ID_INPUT, NO_PODCAST_ID)
-        if (requestedPodcastId == NO_PODCAST_ID) {
-            PodcastRefreshScheduler.scheduleAll(applicationContext)
-            PodcastRefreshScheduler.ensureReconciliation(applicationContext)
-            return Result.success()
-        }
+        val isSweep = requestedPodcastId == NO_PODCAST_ID
 
-        val podcasts = listOfNotNull(repository.podcast(requestedPodcastId))
-            .filter { it.isSubscribed }
+        val podcasts = if (isSweep) {
+            repository.podcasts.first().filter { it.isSubscribed }
+        } else {
+            listOfNotNull(repository.podcast(requestedPodcastId)).filter { it.isSubscribed }
+        }
         if (podcasts.isEmpty()) return Result.success()
+        PodcastRefreshScheduler.ensureSweep(applicationContext)
         val existingEpisodeIdentities = podcasts.associate { podcast ->
             podcast.id to repository.episodes(podcast.id).first()
                 .map { it.guid to it.audioUrl }
@@ -149,7 +153,10 @@ class PodcastRefreshWorker(context: Context, workerParams: WorkerParameters) : C
         // looked for again on a daily rhythm. Skipped on a retry: WorkManager already holds the
         // request, and re-arming would restart its backoff.
         if (!retryableFailure) {
-            PodcastRefreshScheduler.schedule(applicationContext, requestedPodcastId)
+            // Re-arm from the pattern as it now stands, so a feed that turns out to be weekly is not
+            // looked for again daily. On a sweep that is every feed, which is also how a feed whose
+            // schedule changed has its next time corrected.
+            PodcastRefreshScheduler.scheduleAll(applicationContext, repository)
         }
         return if (retryableFailure) Result.retry() else Result.success()
     }
@@ -194,7 +201,7 @@ class PodcastRefreshWorker(context: Context, workerParams: WorkerParameters) : C
                     )
                 }
             }
-            PodcastRefreshScheduler.ensureReconciliation(context)
+            PodcastRefreshScheduler.ensureSweep(context)
         }
     }
 }

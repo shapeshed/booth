@@ -38,8 +38,11 @@ internal fun PodcastHomeEffects(
     // the app opens; each feed re-arms itself after it is fetched, and a periodic pass repairs
     // anything that went missing while the app was closed.
     LaunchedEffect(Unit) {
-        com.shapeshed.booth.data.PodcastRefreshScheduler.ensureReconciliation(context)
-        com.shapeshed.booth.data.PodcastRefreshScheduler.scheduleAll(context)
+        com.shapeshed.booth.data.PodcastRefreshScheduler.ensureSweep(context)
+        com.shapeshed.booth.data.PodcastRefreshScheduler.scheduleAll(
+            context,
+            com.shapeshed.booth.di.boothWorkerEntryPoint(context).podcastRepository,
+        )
     }
     LaunchedEffect(Unit) { playbackViewModel.connect(context) }
     // Warm the selected catalogue while the home screen is settling. The locale is part of

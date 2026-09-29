@@ -128,8 +128,8 @@ class PodcastRefreshSchedulerTest {
         feed(id = 1L, episodes = 10, interval = day, newestAgo = hour, lastRefresh = now - 2 * hour)
         feed(id = 2L, episodes = 10, interval = 7 * day, newestAgo = hour, lastRefresh = now - 2 * hour)
 
-        PodcastRefreshScheduler.schedule(context, 1L, now)
-        PodcastRefreshScheduler.schedule(context, 2L, now)
+        PodcastRefreshScheduler.schedule(context, 1L, repository, now)
+        PodcastRefreshScheduler.schedule(context, 2L, repository, now)
 
         val daily = workInfosFor("podcast-refresh-1")
         val weekly = workInfosFor("podcast-refresh-2")
@@ -154,12 +154,12 @@ class PodcastRefreshSchedulerTest {
     fun reschedulingReplacesRatherThanQueuingASecondRequest() = runBlocking {
         feed(id = 1L, episodes = 10, interval = day, newestAgo = hour, lastRefresh = now - 2 * hour)
 
-        PodcastRefreshScheduler.schedule(context, 1L, now)
+        PodcastRefreshScheduler.schedule(context, 1L, repository, now)
         val firstId = workInfosFor("podcast-refresh-1").single().id
 
         // A second call with different history must not leave the old request queued behind the new
         // one, which is what would cause a feed to be fetched twice.
-        PodcastRefreshScheduler.schedule(context, 1L, now + day)
+        PodcastRefreshScheduler.schedule(context, 1L, repository, now + day)
         val afterSecond = workInfosFor("podcast-refresh-1")
 
         assertTrue("expected one request, got ${afterSecond.size}", afterSecond.size <= 1)
@@ -170,7 +170,7 @@ class PodcastRefreshSchedulerTest {
     fun aFeedWithNoHistoryIsStillScheduled() = runBlocking {
         repository.upsertBackupPodcast(podcast(id = 9L, lastRefreshMillis = null, episodes = 0))
 
-        PodcastRefreshScheduler.schedule(context, 9L, now)
+        PodcastRefreshScheduler.schedule(context, 9L, repository, now)
 
         assertEquals(1, workInfosFor("podcast-refresh-9").size)
     }
@@ -178,7 +178,7 @@ class PodcastRefreshSchedulerTest {
     @Test
     fun unsubscribingCancelsThePendingRequest() = runBlocking {
         feed(id = 3L, episodes = 10, interval = day, newestAgo = hour, lastRefresh = now - 2 * hour)
-        PodcastRefreshScheduler.schedule(context, 3L, now)
+        PodcastRefreshScheduler.schedule(context, 3L, repository, now)
         assertEquals(1, workInfosFor("podcast-refresh-3").size)
 
         PodcastRefreshScheduler.cancel(context, 3L)
@@ -193,7 +193,7 @@ class PodcastRefreshSchedulerTest {
         // The feed provider above throws on any fetch, so a successful schedule proves the cadence is
         // worked out from local episode dates rather than by asking the feed when it next publishes.
         feed(id = 4L, episodes = 10, interval = day, newestAgo = hour, lastRefresh = null)
-        PodcastRefreshScheduler.schedule(context, 4L, now)
+        PodcastRefreshScheduler.schedule(context, 4L, repository, now)
         assertEquals(1, workInfosFor("podcast-refresh-4").size)
     }
 
@@ -214,32 +214,19 @@ class PodcastRefreshSchedulerTest {
     }
 
     @Test
-    fun theEntryPointSeesTheSameRepository() = runBlocking {
-        // The scheduler resolves its repository through the worker entry point rather than building
-        // its own, which is the single-object-graph rule. If that ever diverged, the scheduler would
-        // be writing to a different database than the one the app reads.
-        val fromEntryPoint = boothWorkerEntryPoint(context).podcastRepository
-        withTimeout(5_000L) {
-            while (fromEntryPoint.podcasts.first().isEmpty()) delay(10L)
-        }
-        assertTrue("entry point should reach the same in-memory database", fromEntryPoint.podcasts.first().isNotEmpty())
-    }
-
-    @Test
     fun reconciliationIsScheduledOnceAndIsNotAFetch() = runBlocking {
-        PodcastRefreshScheduler.ensureReconciliation(context)
-        PodcastRefreshScheduler.ensureReconciliation(context)
+        PodcastRefreshScheduler.ensureSweep(context)
+        PodcastRefreshScheduler.ensureSweep(context)
 
         val reconcileWork = WorkManager.getInstance(context)
-            .getWorkInfosForUniqueWork("podcast-refresh-reconcile").get()
+            .getWorkInfosForUniqueWork("podcast-refresh-sweep").get()
         assertEquals("reconciliation must not stack up", 1, reconcileWork.size)
         assertEquals(WorkInfo.State.ENQUEUED, reconcileWork.single().state)
 
-        // The important half: arming the reconciliation pass must not itself queue a fetch for any
-        // feed. If it did, a subscription would be checked every twelve hours regardless of how
-        // rarely it publishes, which is the polling this replaced.
+        // Arming the sweep must not itself queue per-feed work, only the periodic one. If it queued
+        // a request per feed, there would be nothing left of the per-feed scheduling.
         assertTrue(
-            "reconciliation must not schedule any feed",
+            "the sweep must not stand in for the per-feed schedule",
             workInfosFor("podcast-refresh-1").isEmpty() && workInfosFor("podcast-refresh-2").isEmpty(),
         )
     }
@@ -247,7 +234,7 @@ class PodcastRefreshSchedulerTest {
     @Test
     fun aScheduledRequestCarriesTheFeedItIsFor() = runBlocking {
         feed(id = 6L, episodes = 10, interval = day, newestAgo = hour, lastRefresh = now - 2 * hour)
-        PodcastRefreshScheduler.schedule(context, 6L, now)
+        PodcastRefreshScheduler.schedule(context, 6L, repository, now)
 
         val info = workInfosFor("podcast-refresh-6").single()
         // Without the id in the input data the worker cannot tell which feed it is for, and would

@@ -10,7 +10,6 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
-import com.shapeshed.booth.di.boothWorkerEntryPoint
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.flow.first
 
@@ -32,7 +31,7 @@ import kotlinx.coroutines.flow.first
  * that pruned pending work, or a clock change.
  */
 object PodcastRefreshScheduler {
-    private const val RECONCILE_WORK_NAME = "podcast-refresh-reconcile"
+    private const val SWEEP_WORK_NAME = "podcast-refresh-sweep"
 
     /** Feeds are small text documents, so any connection is fine and nothing waits for Wi-Fi. */
     private fun constraints() = Constraints.Builder()
@@ -47,8 +46,12 @@ object PodcastRefreshScheduler {
      * Replace rather than keep, because the answer changes as the feed's pattern becomes clearer and
      * a request left over from a sparser history would be checked at the wrong time.
      */
-    suspend fun schedule(context: Context, podcastId: Long, nowMillis: Long = System.currentTimeMillis()) {
-        val repository = boothWorkerEntryPoint(context).podcastRepository
+    suspend fun schedule(
+        context: Context,
+        podcastId: Long,
+        repository: PodcastRepository,
+        nowMillis: Long = System.currentTimeMillis(),
+    ) {
         val podcast = repository.podcast(podcastId) ?: return
         if (!podcast.isSubscribed) {
             cancel(context, podcastId)
@@ -71,10 +74,13 @@ object PodcastRefreshScheduler {
     }
 
     /** Schedules every current subscription. Used on subscribe and by the reconciliation pass. */
-    suspend fun scheduleAll(context: Context, nowMillis: Long = System.currentTimeMillis()) {
-        val repository = boothWorkerEntryPoint(context).podcastRepository
+    suspend fun scheduleAll(
+        context: Context,
+        repository: PodcastRepository,
+        nowMillis: Long = System.currentTimeMillis(),
+    ) {
         repository.podcasts.first().forEach { podcast ->
-            schedule(context, podcast.id, nowMillis)
+            schedule(context, podcast.id, repository, nowMillis)
         }
     }
 
@@ -84,14 +90,14 @@ object PodcastRefreshScheduler {
     }
 
     /**
-     * Keeps the reconciliation pass itself scheduled.
+     * Keeps the periodic sweep scheduled.
      *
      * Idempotent, and deliberately not keyed on any setting: there is no longer a refresh interval
      * for the listener to change, so nothing needs to re-key this when settings change.
      */
-    fun ensureReconciliation(context: Context) {
+    fun ensureSweep(context: Context) {
         val request = PeriodicWorkRequestBuilder<PodcastRefreshWorker>(
-            RefreshCadence.RECONCILE_INTERVAL_MILLIS,
+            RefreshCadence.SWEEP_INTERVAL_MILLIS,
             TimeUnit.MILLISECONDS,
         )
             .setConstraints(constraints())
@@ -99,7 +105,7 @@ object PodcastRefreshScheduler {
             .addTag(PodcastRefreshWorker.REFRESH_WORK_TAG)
             .build()
         WorkManager.getInstance(context.applicationContext).enqueueUniquePeriodicWork(
-            RECONCILE_WORK_NAME,
+            SWEEP_WORK_NAME,
             ExistingPeriodicWorkPolicy.KEEP,
             request,
         )
