@@ -142,8 +142,11 @@ class PodcastAppSettingsScreenTest {
         // covers the on case, so together they pin both directions.
         setSettingsContent(notificationsEnabled = false)
 
-        scrollTo("Notifications")
-        composeRule.onNodeWithText("Notifications").assertIsDisplayed()
+        // Anchored on the group label below the notifications group rather than on "Notifications"
+        // itself, which matches both the group label and the global toggle's headline and so is
+        // ambiguous. The anchor matters: an absence assertion against a blank screen proves nothing.
+        scrollTo("Podcast discovery")
+        composeRule.onNodeWithText("Podcast discovery").assertIsDisplayed()
         composeRule.onNodeWithText("Podcast notifications").assertDoesNotExist()
         composeRule.onNodeWithText("All podcasts").assertDoesNotExist()
     }

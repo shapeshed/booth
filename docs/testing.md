@@ -66,6 +66,27 @@ Two traps, both of which cost real time here:
 Note that `./gradlew quality` does not clear this, and neither does `--rerun-tasks` on the Kotlin
 compile alone. The generated Compose and Hilt code has to be regenerated too.
 
+### The same signature, from a locked device
+
+**A locked test device produces this identical error, and a clean build does not fix it.** The test
+`ComponentActivity` launches behind the keyguard, so the window never becomes visible and the
+semantics tree never registers. It is indistinguishable from the stale-build case by looking at the
+test results alone, and it is intermittent, which makes it worse: it passes and fails on the same
+commit minutes apart.
+
+The discriminator is the device, not the build:
+
+```sh
+adb shell dumpsys window | grep -E 'mDreamingLockscreen|mCurrentFocus'
+```
+
+`mDreamingLockscreen=true`, or a `mCurrentFocus` naming the notification shade or a keyguard view,
+means every Compose test will fail this way. Unlock the device and re-run; no build step is
+involved. To keep it unlocked across a session, `adb shell svc power stayon usb`.
+
+Order matters: check this **before** the clean. A clean costs a couple of minutes and fixes nothing
+here, and reaching for it first is what makes this look like a build problem.
+
 ## Hilt test bindings
 
 Directory providers are replaceable in instrumentation tests with
