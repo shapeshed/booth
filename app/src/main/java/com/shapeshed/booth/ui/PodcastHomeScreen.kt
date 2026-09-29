@@ -607,8 +607,12 @@ fun PodcastHomeScreen(
 
             is PodcastNavigationKey.PodcastDetail -> {
                 selectedEpisodeId = null
-                selectedPodcastId = destination.podcastId
-                podcastDetailPageId = destination.podcastId
+                // The pager is authoritative for which podcast is on screen: it can be showing a
+                // different one from the stack entry, because it swipes. Re-seeding from the stack
+                // here is what made back appear to do nothing, jumping the pager back to whichever
+                // podcast the list was opened from rather than the one being read. Keep the
+                // selected id, and only fall back to the stack when the pager has nothing set.
+                selectedPodcastId = podcastDetailPageId ?: destination.podcastId
             }
 
             else -> {

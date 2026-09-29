@@ -657,7 +657,17 @@ internal fun PodcastNowPlayingOverlay(
         if (isWideWindow) {
             NavDisplay(
                 backStack = nowPlayingBackStack,
-                onBack = { nowPlayingBackStack.removeLastOrNull() },
+                // Must not be able to empty the stack: NavDisplay requires a non-empty back stack
+                // and throws if it ever sees one, so a bare removeLastOrNull would turn a back press
+                // into a crash on the next recomposition. With only the main pane there is nothing
+                // to pop, so dismiss instead, which is what the listener asked for anyway.
+                onBack = {
+                    if (nowPlayingBackStack.size > 1) {
+                        nowPlayingBackStack.removeLastOrNull()
+                    } else {
+                        onDismiss()
+                    }
+                },
                 sceneStrategies = listOf(supportingPaneStrategy),
                 entryProvider = entryProvider {
                     entry(
