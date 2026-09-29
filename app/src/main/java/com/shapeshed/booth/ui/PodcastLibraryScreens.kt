@@ -438,10 +438,13 @@ internal fun PodcastSwipeRow(
         state = dismissState,
         enableDismissFromStartToEnd = true,
         enableDismissFromEndToStart = true,
+        // No contentDescription here on purpose. The one this used to set was a hardcoded developer
+        // string, so a screen reader announced "Podcast swipe row" instead of the podcast, and a
+        // contentDescription on a container replaces the text of everything inside it. Letting the
+        // card speak for itself is both correct and localised.
         modifier = modifier
             .fillMaxWidth()
-            .clip(MaterialTheme.shapes.medium)
-            .semantics { contentDescription = "Podcast swipe row ${podcast.title}" },
+            .clip(MaterialTheme.shapes.medium),
         backgroundContent = {
             Box(
                 modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.errorContainer),

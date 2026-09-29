@@ -375,7 +375,7 @@ internal fun PodcastDownloadsScreen(
                 }
             }
         }
-        item(key = "download-summary") {
+        item(key = "download-summary", contentType = "summary") {
             val knownBytes = assets.sumOf { it.totalBytes ?: 0L }
             val downloadedBytes = assets.sumOf { it.bytesDownloaded }
             val sizeLabel = when {
@@ -391,7 +391,7 @@ internal fun PodcastDownloadsScreen(
             )
         }
         if (visibleAssets.isEmpty()) {
-            item(key = "empty-downloads") {
+            item(key = "empty-downloads", contentType = "status") {
                 Column(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 80.dp, horizontal = 24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -412,7 +412,7 @@ internal fun PodcastDownloadsScreen(
                 }
             }
         }
-        items(visibleAssets, key = { "download-${it.episodeId}" }) { asset ->
+        items(visibleAssets, key = { "download-${it.episodeId}" }, contentType = { "download" }) { asset ->
             val episode = episodes[asset.episodeId] ?: return@items
             val episodeProgress = downloadProgress[episode.id]
             // The asset row is authoritative for this list, and the live progress covers the

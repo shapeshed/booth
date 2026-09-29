@@ -133,14 +133,14 @@ internal fun PodcastGlobalSearchContent(
     ) {
         if (selectedTab == PodcastTab.SUBSCRIPTIONS) {
             if (localPodcasts.isNotEmpty() || pendingPodcasts.isNotEmpty()) {
-                item(key = "your-subscriptions") {
+                item(key = "your-subscriptions", contentType = "header") {
                     Text(
                         stringResource(R.string.your_subscriptions),
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                     )
                 }
-                items(localPodcasts, key = { "subscription-${it.id}" }) { podcast ->
+                items(localPodcasts, key = { "subscription-${it.id}" }, contentType = { "subscription" }) { podcast ->
                     PodcastActionListItem(
                         leadingContent = { PodcastArtwork(podcast.artworkUrl, podcast.title, Modifier.size(64.dp)) },
                         supportingContent = {
@@ -165,7 +165,9 @@ internal fun PodcastGlobalSearchContent(
                     }
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 }
-                items(pendingPodcasts, key = { "pending-subscription-${it.podcast.feedUrl}" }) { result ->
+                items(pendingPodcasts, key = {
+                    "pending-subscription-${it.podcast.feedUrl}"
+                }, contentType = { "pending" }) { result ->
                     PodcastActionListItem(
                         leadingContent = {
                             PodcastArtwork(result.podcast.artworkUrl, result.podcast.title, Modifier.size(64.dp))
@@ -194,7 +196,7 @@ internal fun PodcastGlobalSearchContent(
                 }
             }
             if (discoverablePodcasts.isNotEmpty()) {
-                item(key = "discover-podcasts") {
+                item(key = "discover-podcasts", contentType = "header") {
                     Text(
                         if (query.isBlank()) {
                             stringResource(
@@ -210,7 +212,9 @@ internal fun PodcastGlobalSearchContent(
                 // Feed URLs are the stable identity at this boundary. Catalogue IDs can be
                 // duplicated or recycled by providers (especially Apple search results), which
                 // would otherwise crash LazyColumn with duplicate keys.
-                items(discoverablePodcasts, key = { "remote-${it.podcast.feedUrl}" }) { result ->
+                items(discoverablePodcasts, key = {
+                    "remote-${it.podcast.feedUrl}"
+                }, contentType = { "discover" }) { result ->
                     PodcastActionListItem(
                         leadingContent = {
                             PodcastArtwork(result.podcast.artworkUrl, result.podcast.title, Modifier.size(64.dp))
@@ -243,14 +247,14 @@ internal fun PodcastGlobalSearchContent(
                 }
             }
             if (isLoadingRemote) {
-                item(key = "remote-loading") {
+                item(key = "remote-loading", contentType = "status") {
                     Text(stringResource(R.string.searching_podcasts), modifier = Modifier.padding(16.dp))
                 }
             }
             if (error !=
                 null
             ) {
-                item(key = "remote-error") {
+                item(key = "remote-error", contentType = "status") {
                     Text(
                         podcastErrorMessage(error),
                         color = MaterialTheme.colorScheme.error,
@@ -259,7 +263,7 @@ internal fun PodcastGlobalSearchContent(
                 }
             }
         } else {
-            item(key = "episode-search-filters") {
+            item(key = "episode-search-filters", contentType = "filters") {
                 EpisodeSearchFilters(
                     availableTags = availableTags,
                     selectedTag = selectedTag,
@@ -271,7 +275,7 @@ internal fun PodcastGlobalSearchContent(
                 )
             }
             if (filteredEpisodes.isNotEmpty()) {
-                items(filteredEpisodes, key = { "episode-${it.episode.id}" }) { result ->
+                items(filteredEpisodes, key = { "episode-${it.episode.id}" }, contentType = { "episode" }) { result ->
                     SearchEpisodeRow(
                         result = result,
                         onOpen = { onOpenEpisode(result.episode) },
@@ -285,7 +289,7 @@ internal fun PodcastGlobalSearchContent(
             discoverablePodcasts.isEmpty() &&
             !isLoadingRemote
         if (showNoResults) {
-            item(key = "no-results") {
+            item(key = "no-results", contentType = "status") {
                 Text(
                     stringResource(R.string.no_results),
                     modifier = Modifier.padding(16.dp),
