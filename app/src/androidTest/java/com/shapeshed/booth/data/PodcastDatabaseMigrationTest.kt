@@ -35,8 +35,7 @@ class PodcastDatabaseMigrationTest {
         helper.createDatabase(TEST_DB, 1).apply {
             execSQL(
                 "INSERT INTO podcasts (id, title, feedUrl, tags, appleCategories, appleCategoryIds, " +
-                    "skipStartSeconds, skipEndSeconds, includeInAutoRefresh INTEGER NOT NULL, " +
-                    "includeInAutoDownload, " +
+                    "skipStartSeconds, skipEndSeconds, includeInAutoRefresh, includeInAutoDownload, " +
                     "includeInVideoDownload, includeInNotifications, includeInAutoQueue, " +
                     "isSubscribed, subscribedAtMillis) VALUES " +
                     "(1, 'Kept', 'https://example.com/feed', '', '', '', 0, 0, 0, 1, 1, 0, 0, 1, 100)",
@@ -95,8 +94,7 @@ class PodcastDatabaseMigrationTest {
         helper.createDatabase(VALIDATION_DB, 1).apply {
             execSQL(
                 "INSERT INTO podcasts (id, title, feedUrl, tags, appleCategories, appleCategoryIds, " +
-                    "skipStartSeconds, skipEndSeconds, includeInAutoRefresh INTEGER NOT NULL, " +
-                    "includeInAutoDownload, " +
+                    "skipStartSeconds, skipEndSeconds, includeInAutoRefresh, includeInAutoDownload, " +
                     "includeInVideoDownload, includeInNotifications, includeInAutoQueue, " +
                     "isSubscribed, subscribedAtMillis) VALUES " +
                     "(1, 'Kept', 'https://example.com/feed', '', '', '', 0, 0, 0, 1, 1, 0, 0, 1, 100)",

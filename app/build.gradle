@@ -60,6 +60,17 @@ android {
     namespace = 'com.shapeshed.booth'
     compileSdk 37
 
+    // MigrationTestHelper reads the exported schemas from the test APK's assets, not from the
+    // project directory, so without this every migration test fails with "Cannot find the schema
+    // file in the assets folder" before it reaches any assertion. Found by running the v1 to v2
+    // migration test on a device, which is the only place this shows up: it compiles and is absent
+    // from the unit test source set entirely.
+    sourceSets {
+        androidTest {
+            assets.srcDirs += files("$projectDir/schemas")
+        }
+    }
+
     def releaseKeystoreFile = System.getenv("BOOTH_KEYSTORE_FILE")
     def releaseKeystorePassword = System.getenv("BOOTH_KEYSTORE_PASSWORD")
     def releaseKeyAlias = System.getenv("BOOTH_KEY_ALIAS")
