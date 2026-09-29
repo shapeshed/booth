@@ -67,8 +67,6 @@ import com.shapeshed.booth.R
 import com.shapeshed.booth.data.PodcastDownloadNetwork
 import com.shapeshed.booth.data.PodcastEntity
 import com.shapeshed.booth.data.PodcastIndexCredentials
-import com.shapeshed.booth.data.PodcastRefreshInterval
-import com.shapeshed.booth.data.PodcastRefreshNetwork
 import com.shapeshed.booth.data.PodcastSearchProvider
 
 /** How many podcasts currently opt in to each automatic behaviour, for the management screens. */
@@ -81,10 +79,6 @@ internal fun PodcastAppSettingsScreen(
     onAutoQueueEnabledChange: (Boolean) -> Unit,
     downloadEpisodesAddedToUpNext: Boolean,
     onDownloadEpisodesAddedToUpNextChange: (Boolean) -> Unit,
-    refreshInterval: PodcastRefreshInterval,
-    onRefreshIntervalChange: (PodcastRefreshInterval) -> Unit,
-    refreshNetwork: PodcastRefreshNetwork,
-    onRefreshNetworkChange: (PodcastRefreshNetwork) -> Unit,
     downloadNetwork: PodcastDownloadNetwork,
     onDownloadNetworkChange: (PodcastDownloadNetwork) -> Unit,
     notificationsEnabled: Boolean,
@@ -112,23 +106,12 @@ internal fun PodcastAppSettingsScreen(
     onGlobalSkipSilenceChange: (Boolean) -> Unit = {},
 ) {
     var showDownloadNetworkChooser by rememberSaveable { mutableStateOf(false) }
-    var showRefreshIntervalChooser by rememberSaveable { mutableStateOf(false) }
-    var showRefreshNetworkChooser by rememberSaveable { mutableStateOf(false) }
     var showSearchProviderChooser by rememberSaveable { mutableStateOf(false) }
     var showPodcastIndexCredentials by rememberSaveable { mutableStateOf(false) }
     var showGlobalSpeedEditor by rememberSaveable { mutableStateOf(false) }
     val downloadNetworkLabel = when (downloadNetwork) {
         PodcastDownloadNetwork.ANY_CONNECTION -> stringResource(R.string.download_wifi_or_mobile)
         PodcastDownloadNetwork.WIFI_ONLY -> stringResource(R.string.download_wifi_only)
-    }
-    val refreshIntervalLabel = when (refreshInterval) {
-        PodcastRefreshInterval.HOURLY -> stringResource(R.string.refresh_every_hour)
-        PodcastRefreshInterval.SIX_HOURS -> stringResource(R.string.refresh_every_six_hours)
-        PodcastRefreshInterval.DAILY -> stringResource(R.string.refresh_daily)
-    }
-    val refreshNetworkLabel = when (refreshNetwork) {
-        PodcastRefreshNetwork.ANY_CONNECTION -> stringResource(R.string.download_wifi_or_mobile)
-        PodcastRefreshNetwork.WIFI_ONLY -> stringResource(R.string.download_wifi_only)
     }
     val autoQueueCountLabel = if (
         podcastManagementCounts.total > 0 &&
@@ -260,22 +243,6 @@ internal fun PodcastAppSettingsScreen(
                     modifier = Modifier.clickable {
                         onRemovePlayedDownloadsChange(!removePlayedDownloads)
                     },
-                )
-            }
-            item {
-                PodcastActionListItem(
-                    headlineContent = { Text(stringResource(R.string.refresh_interval)) },
-                    supportingContent = { Text(refreshIntervalLabel) },
-                    leadingContent = { Icon(Icons.Rounded.Sync, contentDescription = null) },
-                    modifier = Modifier.clickable { showRefreshIntervalChooser = true },
-                )
-            }
-            item {
-                PodcastActionListItem(
-                    headlineContent = { Text(stringResource(R.string.refresh_network)) },
-                    supportingContent = { Text(refreshNetworkLabel) },
-                    leadingContent = { Icon(Icons.Rounded.Wifi, contentDescription = null) },
-                    modifier = Modifier.clickable { showRefreshNetworkChooser = true },
                 )
             }
             item {
@@ -455,90 +422,6 @@ internal fun PodcastAppSettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showDownloadNetworkChooser = false }) { Text(stringResource(R.string.cancel)) }
-            },
-        )
-    }
-    if (showRefreshIntervalChooser) {
-        AlertDialog(
-            onDismissRequest = { showRefreshIntervalChooser = false },
-            title = { Text(stringResource(R.string.refresh_interval)) },
-            text = {
-                Column {
-                    PodcastRefreshInterval.entries.forEach { option ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    onRefreshIntervalChange(option)
-                                    showRefreshIntervalChooser = false
-                                }
-                                .padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RadioButton(
-                                selected = refreshInterval == option,
-                                onClick = {
-                                    onRefreshIntervalChange(option)
-                                    showRefreshIntervalChooser = false
-                                },
-                            )
-                            Text(
-                                when (option) {
-                                    PodcastRefreshInterval.HOURLY -> stringResource(R.string.refresh_every_hour)
-                                    PodcastRefreshInterval.SIX_HOURS -> stringResource(R.string.refresh_every_six_hours)
-                                    PodcastRefreshInterval.DAILY -> stringResource(R.string.refresh_daily)
-                                },
-                                modifier = Modifier.padding(start = 8.dp),
-                            )
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showRefreshIntervalChooser = false }) { Text(stringResource(R.string.cancel)) }
-            },
-        )
-    }
-    if (showRefreshNetworkChooser) {
-        AlertDialog(
-            onDismissRequest = { showRefreshNetworkChooser = false },
-            title = { Text(stringResource(R.string.refresh_network)) },
-            text = {
-                Column {
-                    PodcastRefreshNetwork.entries.forEach { option ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    onRefreshNetworkChange(option)
-                                    showRefreshNetworkChooser = false
-                                }
-                                .padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RadioButton(
-                                selected = refreshNetwork == option,
-                                onClick = {
-                                    onRefreshNetworkChange(option)
-                                    showRefreshNetworkChooser = false
-                                },
-                            )
-                            Text(
-                                when (option) {
-                                    PodcastRefreshNetwork.ANY_CONNECTION -> stringResource(
-                                        R.string.download_wifi_or_mobile,
-                                    )
-
-                                    PodcastRefreshNetwork.WIFI_ONLY -> stringResource(R.string.download_wifi_only)
-                                },
-                                modifier = Modifier.padding(start = 8.dp),
-                            )
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showRefreshNetworkChooser = false }) { Text(stringResource(R.string.cancel)) }
             },
         )
     }

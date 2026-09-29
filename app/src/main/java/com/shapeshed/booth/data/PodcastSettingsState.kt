@@ -11,8 +11,6 @@ data class PodcastSettingsState(
     val globalPlaybackSpeed: Float = 1f,
     val globalSkipSilence: Boolean = false,
     val downloadVideos: Boolean = false,
-    val refreshInterval: PodcastRefreshInterval = PodcastRefreshInterval.SIX_HOURS,
-    val refreshNetwork: PodcastRefreshNetwork = PodcastRefreshNetwork.ANY_CONNECTION,
     val notificationsEnabled: Boolean = false,
     val autoQueueEnabled: Boolean = false,
     val downloadEpisodesAddedToUpNext: Boolean = false,

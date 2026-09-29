@@ -176,8 +176,6 @@ class PodcastBackupManager(
                 JSONObject()
                     .put("subscriptionsViewMode", settings.podcastSubscriptionsViewMode.first().name)
                     .put("selectedTab", settings.podcastSelectedTab.first() ?: JSONObject.NULL)
-                    .put("refreshInterval", settings.podcastRefreshInterval.first().name)
-                    .put("refreshNetwork", settings.podcastRefreshNetwork.first().name)
                     .put("notificationsEnabled", settings.podcastNotificationsEnabled.first())
                     .put("autoQueueEnabled", settings.podcastAutoQueueEnabled.first())
                     .put("downloadEpisodesAddedToUpNext", settings.podcastDownloadEpisodesAddedToUpNext.first())
@@ -399,12 +397,6 @@ class PodcastBackupManager(
                 settings.setPodcastSubscriptionsViewMode(it)
             }
             global.optionalString("selectedTab")?.let { settings.setPodcastSelectedTab(it) }
-            global.optionalString("refreshInterval")?.toEnum<PodcastRefreshInterval>()?.let {
-                settings.setPodcastRefreshInterval(it)
-            }
-            global.optionalString("refreshNetwork")?.toEnum<PodcastRefreshNetwork>()?.let {
-                settings.setPodcastRefreshNetwork(it)
-            }
             global.optionalBoolean("notificationsEnabled")?.let { settings.setPodcastNotificationsEnabled(it) }
             global.optionalBoolean("autoQueueEnabled")?.let { settings.setPodcastAutoQueueEnabled(it) }
             global.optionalBoolean("downloadEpisodesAddedToUpNext")?.let {

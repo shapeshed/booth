@@ -229,14 +229,10 @@ class PodcastViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), buildPodcastCatalogIndex(emptyList()))
     val podcastSettings: StateFlow<PodcastSettingsState> = combine(
         settings.podcastDownloadVideos,
-        settings.podcastRefreshInterval,
-        settings.podcastRefreshNetwork,
         settings.podcastNotificationsEnabled,
-    ) { downloadVideos, refreshInterval, refreshNetwork, notificationsEnabled ->
+    ) { downloadVideos, notificationsEnabled ->
         PodcastSettingsState(
             downloadVideos = downloadVideos,
-            refreshInterval = refreshInterval,
-            refreshNetwork = refreshNetwork,
             notificationsEnabled = notificationsEnabled,
         )
     }
@@ -447,14 +443,6 @@ class PodcastViewModel @Inject constructor(
 
     fun setPodcastRemovePlayedDownloads(enabled: Boolean) {
         viewModelScope.launch { settings.setPodcastRemovePlayedDownloads(enabled) }
-    }
-
-    fun setPodcastRefreshInterval(interval: com.shapeshed.booth.data.PodcastRefreshInterval) {
-        viewModelScope.launch { settings.setPodcastRefreshInterval(interval) }
-    }
-
-    fun setPodcastRefreshNetwork(network: com.shapeshed.booth.data.PodcastRefreshNetwork) {
-        viewModelScope.launch { settings.setPodcastRefreshNetwork(network) }
     }
 
     fun setPodcastAutoQueueEnabled(enabled: Boolean) {

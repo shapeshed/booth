@@ -311,6 +311,21 @@ interface PodcastDao {
     @Query("DELETE FROM episode_search_fts")
     suspend fun clearEpisodeSearch()
 
+    /**
+     * The newest publish dates for one feed, for deriving its refresh cadence.
+     *
+     * Only a handful are needed: the median gap between the last few says how often a feed
+     * publishes, and older episodes describe a schedule it has moved on from. Deliberately selects
+     * the timestamps rather than the episode rows. A library holds tens of thousands of episodes,
+     * and loading them to work out a cadence is what makes a frequent check unaffordable.
+     */
+    @Query(
+        "SELECT publishedAtMillis FROM episodes " +
+            "WHERE podcastId = :podcastId AND publishedAtMillis IS NOT NULL " +
+            "ORDER BY publishedAtMillis DESC LIMIT :limit",
+    )
+    suspend fun recentPublishTimes(podcastId: Long, limit: Int): List<Long>
+
     @Query("SELECT * FROM episodes WHERE id = :episodeId LIMIT 1")
     suspend fun episode(episodeId: Long): EpisodeEntity?
 

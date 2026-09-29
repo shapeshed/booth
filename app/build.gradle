@@ -190,6 +190,9 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.11.0'
     implementation 'androidx.hilt:hilt-navigation-compose:1.4.0'
     implementation 'androidx.work:work-runtime-ktx:2.12.0'
+    // Lets a test drive WorkManager synchronously and inspect the requests the scheduler enqueues,
+    // which is the only way to assert that each feed is scheduled separately.
+    androidTestImplementation 'androidx.work:work-testing:2.12.0'
 
     def media3Version = '1.11.1'
     implementation "androidx.media3:media3-exoplayer:$media3Version"

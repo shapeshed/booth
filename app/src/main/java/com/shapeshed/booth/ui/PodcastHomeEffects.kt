@@ -33,15 +33,13 @@ internal fun PodcastHomeEffects(
     // the parent recreates them. Reading them through updated state keeps them current.
     val currentOnOpenInitialEpisode by rememberUpdatedState(onOpenInitialEpisode)
     val currentOnSelectSavedTab by rememberUpdatedState(onSelectSavedTab)
-    LaunchedEffect(
-        settings.refreshInterval,
-        settings.refreshNetwork,
-    ) {
-        com.shapeshed.booth.data.PodcastRefreshWorker.schedule(
-            context = context,
-            interval = settings.refreshInterval,
-            network = settings.refreshNetwork,
-        )
+    // Refresh is scheduled per feed from its own publishing pattern, so there is no interval to key
+    // on and nothing to re-key when settings change. This only makes sure the schedule exists when
+    // the app opens; each feed re-arms itself after it is fetched, and a periodic pass repairs
+    // anything that went missing while the app was closed.
+    LaunchedEffect(Unit) {
+        com.shapeshed.booth.data.PodcastRefreshScheduler.ensureReconciliation(context)
+        com.shapeshed.booth.data.PodcastRefreshScheduler.scheduleAll(context)
     }
     LaunchedEffect(Unit) { playbackViewModel.connect(context) }
     // Warm the selected catalogue while the home screen is settling. The locale is part of

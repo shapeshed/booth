@@ -8,8 +8,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.shapeshed.booth.data.PodcastDownloadNetwork
 import com.shapeshed.booth.data.PodcastIndexCredentials
-import com.shapeshed.booth.data.PodcastRefreshInterval
-import com.shapeshed.booth.data.PodcastRefreshNetwork
 import com.shapeshed.booth.data.PodcastSearchProvider
 import kotlinx.coroutines.flow.StateFlow
 
@@ -26,8 +24,6 @@ import kotlinx.coroutines.flow.StateFlow
 internal class PodcastSettingsActions(
     val setAutoQueueEnabled: (Boolean) -> Unit,
     val setDownloadEpisodesAddedToUpNext: (Boolean) -> Unit,
-    val setRefreshInterval: (PodcastRefreshInterval) -> Unit,
-    val setRefreshNetwork: (PodcastRefreshNetwork) -> Unit,
     val setDownloadNetwork: (PodcastDownloadNetwork) -> Unit,
     val setRemovePlayedDownloads: (Boolean) -> Unit,
     val setGlobalPlaybackSpeed: (Float) -> Unit,
@@ -43,8 +39,6 @@ internal fun rememberSettingsActions(viewModel: PodcastViewModel): PodcastSettin
     PodcastSettingsActions(
         setAutoQueueEnabled = viewModel::setPodcastAutoQueueEnabled,
         setDownloadEpisodesAddedToUpNext = viewModel::setPodcastDownloadEpisodesAddedToUpNext,
-        setRefreshInterval = viewModel::setPodcastRefreshInterval,
-        setRefreshNetwork = viewModel::setPodcastRefreshNetwork,
         setDownloadNetwork = viewModel::setPodcastDownloadNetwork,
         setRemovePlayedDownloads = viewModel::setPodcastRemovePlayedDownloads,
         setGlobalPlaybackSpeed = viewModel::setGlobalPlaybackSpeed,
@@ -86,10 +80,6 @@ internal fun PodcastHomeSettingsDestination(
         onAutoQueueEnabledChange = actions.setAutoQueueEnabled,
         downloadEpisodesAddedToUpNext = homeUiState.settings.downloadEpisodesAddedToUpNext,
         onDownloadEpisodesAddedToUpNextChange = actions.setDownloadEpisodesAddedToUpNext,
-        refreshInterval = homeUiState.settings.refreshInterval,
-        onRefreshIntervalChange = actions.setRefreshInterval,
-        refreshNetwork = homeUiState.settings.refreshNetwork,
-        onRefreshNetworkChange = actions.setRefreshNetwork,
         downloadNetwork = homeUiState.settings.downloadNetwork,
         onDownloadNetworkChange = actions.setDownloadNetwork,
         removePlayedDownloads = homeUiState.settings.removePlayedDownloads,

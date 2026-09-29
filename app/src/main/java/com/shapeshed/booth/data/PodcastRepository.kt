@@ -265,6 +265,22 @@ class PodcastRepository(
             refreshInternal(podcast)
         }
 
+    /**
+     * How often this feed publishes, inferred from its recent episode dates.
+     *
+     * Reads a handful of timestamps rather than the episode rows, because this runs for every
+     * subscription whenever refresh scheduling is reconciled.
+     */
+    suspend fun typicalPublishIntervalMillis(podcastId: Long): Long? =
+        RefreshCadence.typicalIntervalMillis(dao.recentPublishTimes(podcastId, CADENCE_SAMPLE_SIZE))
+
+    /** When this feed should next be fetched, according to its own publishing pattern. */
+    suspend fun nextRefreshDueMillis(podcast: PodcastEntity, nowMillis: Long): Long = RefreshCadence.nextDueMillis(
+        lastRefreshMillis = podcast.lastRefreshMillis,
+        publishedAtMillis = dao.recentPublishTimes(podcast.id, CADENCE_SAMPLE_SIZE),
+        nowMillis = nowMillis,
+    )
+
     suspend fun addNewEpisodesToQueue(podcast: PodcastEntity, existingEpisodeIdentities: Set<Pair<String, String>>) {
         if (!podcast.includeInAutoQueue) return
         newEpisodesSince(episodes(podcast.id).first(), existingEpisodeIdentities)
@@ -572,6 +588,14 @@ class PodcastRepository(
 
     private companion object {
         const val MIN_PLAUSIBLE_MEDIA_BYTES = 1024L
+
+        /**
+         * How many recent publish dates to read when inferring a feed's cadence.
+         *
+         * [RefreshCadence] considers at most eight gaps, and needs three episodes to have any
+         * pattern at all, so twelve is comfortably more than it uses.
+         */
+        const val CADENCE_SAMPLE_SIZE = 12
     }
 
     private sealed interface MediaSizeLookup {

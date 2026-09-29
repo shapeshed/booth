@@ -29,11 +29,6 @@
     <string name="export_opml">Export OPML</string>
     <string name="clear">Clear</string>
     <string name="no_filter_matches">No matches</string>
-    <string name="refresh_interval" translatable="false">Refresh interval</string>
-    <string name="refresh_network" translatable="false">Refresh network</string>
-    <string name="refresh_every_hour" translatable="false">Every hour</string>
-    <string name="refresh_every_six_hours" translatable="false">Every 6 hours</string>
-    <string name="refresh_daily" translatable="false">Daily</string>
     <string name="notifications">Notifications</string>
     <string name="on">On</string>
     <string name="off">Off</string>

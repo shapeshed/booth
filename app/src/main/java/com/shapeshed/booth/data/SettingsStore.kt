@@ -14,14 +14,6 @@ import kotlinx.coroutines.flow.map
 
 enum class PodcastSubscriptionsViewMode { LIST, GRID }
 
-enum class PodcastRefreshInterval(val minutes: Long) {
-    HOURLY(60),
-    SIX_HOURS(360),
-    DAILY(1_440),
-}
-
-enum class PodcastRefreshNetwork { ANY_CONNECTION, WIFI_ONLY }
-
 enum class PodcastDownloadNetwork { ANY_CONNECTION, WIFI_ONLY }
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
@@ -33,8 +25,6 @@ class SettingsStore(private val context: Context) {
     private val lastEpisodeIdKey = longPreferencesKey("podcast_last_episode_id")
     private val playbackSpeedKey = floatPreferencesKey("podcast_playback_speed")
     private val skipSilenceKey = booleanPreferencesKey("podcast_skip_silence")
-    private val refreshIntervalKey = stringPreferencesKey("podcast_refresh_interval")
-    private val refreshNetworkKey = stringPreferencesKey("podcast_refresh_network")
     private val notificationsEnabledKey = booleanPreferencesKey("podcast_notifications_enabled")
     private val autoQueueEnabledKey = booleanPreferencesKey("podcast_auto_queue_enabled")
     private val downloadEpisodesAddedToUpNextKey = booleanPreferencesKey("podcast_download_episodes_added_to_up_next")
@@ -111,26 +101,6 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setPodcastSkipSilence(enabled: Boolean) {
         context.dataStore.edit { it[skipSilenceKey] = enabled }
-    }
-
-    val podcastRefreshInterval: Flow<PodcastRefreshInterval> = context.dataStore.data.map { prefs ->
-        prefs[refreshIntervalKey]
-            ?.let { runCatching { PodcastRefreshInterval.valueOf(it) }.getOrNull() }
-            ?: PodcastRefreshInterval.SIX_HOURS
-    }
-
-    suspend fun setPodcastRefreshInterval(interval: PodcastRefreshInterval) {
-        context.dataStore.edit { it[refreshIntervalKey] = interval.name }
-    }
-
-    val podcastRefreshNetwork: Flow<PodcastRefreshNetwork> = context.dataStore.data.map { prefs ->
-        prefs[refreshNetworkKey]
-            ?.let { runCatching { PodcastRefreshNetwork.valueOf(it) }.getOrNull() }
-            ?: PodcastRefreshNetwork.ANY_CONNECTION
-    }
-
-    suspend fun setPodcastRefreshNetwork(network: PodcastRefreshNetwork) {
-        context.dataStore.edit { it[refreshNetworkKey] = network.name }
     }
 
     val podcastNotificationsEnabled: Flow<Boolean> = context.dataStore.data.map { it[notificationsEnabledKey] ?: false }

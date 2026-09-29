@@ -10,8 +10,6 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import com.shapeshed.booth.BuildConfig
 import com.shapeshed.booth.data.PodcastDownloadNetwork
-import com.shapeshed.booth.data.PodcastRefreshInterval
-import com.shapeshed.booth.data.PodcastRefreshNetwork
 import com.shapeshed.booth.data.PodcastSearchProvider
 import com.shapeshed.booth.data.PodcastSearchResult
 import com.shapeshed.booth.ui.theme.BoothAppTheme
@@ -139,26 +137,6 @@ class PodcastAppSettingsScreenTest {
     }
 
     @Test
-    fun refreshRowsChangeTheirSelectedValues() {
-        var interval: PodcastRefreshInterval? = null
-        var network: PodcastRefreshNetwork? = null
-        setSettingsContent(
-            onRefreshIntervalChange = { interval = it },
-            onRefreshNetworkChange = { network = it },
-        )
-
-        scrollTo("Refresh interval")
-        composeRule.onNodeWithText("Refresh interval").performClick()
-        composeRule.onNodeWithText("Daily").performClick()
-        composeRule.runOnIdle { assertEquals(PodcastRefreshInterval.DAILY, interval) }
-
-        scrollTo("Refresh network")
-        composeRule.onNodeWithText("Refresh network").performClick()
-        composeRule.onNodeWithText("Wi-Fi or mobile data").performClick()
-        composeRule.runOnIdle { assertEquals(PodcastRefreshNetwork.ANY_CONNECTION, network) }
-    }
-
-    @Test
     fun backupRowsInvokeImportAndExportCallbacks() {
         var importCalls = 0
         var exportCalls = 0
@@ -184,8 +162,6 @@ class PodcastAppSettingsScreenTest {
         onAutoQueueEnabledChange: (Boolean) -> Unit = {},
         downloadEpisodesAddedToUpNext: Boolean = false,
         onDownloadEpisodesAddedToUpNextChange: (Boolean) -> Unit = {},
-        onRefreshIntervalChange: (PodcastRefreshInterval) -> Unit = {},
-        onRefreshNetworkChange: (PodcastRefreshNetwork) -> Unit = {},
         onImportOpml: () -> Unit = {},
         onExportOpml: () -> Unit = {},
         onImportBackup: () -> Unit = {},
@@ -204,10 +180,6 @@ class PodcastAppSettingsScreenTest {
                     onAutoQueueEnabledChange = onAutoQueueEnabledChange,
                     downloadEpisodesAddedToUpNext = downloadEpisodesAddedToUpNext,
                     onDownloadEpisodesAddedToUpNextChange = onDownloadEpisodesAddedToUpNextChange,
-                    refreshInterval = PodcastRefreshInterval.SIX_HOURS,
-                    onRefreshIntervalChange = onRefreshIntervalChange,
-                    refreshNetwork = PodcastRefreshNetwork.WIFI_ONLY,
-                    onRefreshNetworkChange = onRefreshNetworkChange,
                     downloadNetwork = PodcastDownloadNetwork.WIFI_ONLY,
                     onDownloadNetworkChange = {},
                     notificationsEnabled = true,
