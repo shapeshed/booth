@@ -36,11 +36,10 @@ class PodcastAppSettingsScreenTest {
         composeRule.onNodeWithText("Download episodes added to Up Next").assertIsDisplayed()
         composeRule.onNodeWithText("Download videos when available").assertDoesNotExist()
         composeRule.onNodeWithText("Podcast video downloads").assertDoesNotExist()
-        scrollTo("Download network")
-        composeRule.onNodeWithText("Download network").assertIsDisplayed()
-        // ListItem merges each row's headline and supporting text into one node, so assert the value
-        // against the Download network row rather than matching the label alone.
-        composeRule.onNodeWithText("Download network").assertTextContains("Wi-Fi only")
+        // The Up Next automatic download toggle is off in this test's defaults, and Download network
+        // only gates that path, so the row must be absent rather than offering a choice that cannot
+        // change anything.
+        composeRule.onNodeWithText("Download network").assertDoesNotExist()
         // Refresh is scheduled per feed from its own publishing pattern, so the interval and network
         // rows are gone. Their absence is the behaviour, and the other rows are asserted around them
         // so a row that moved cannot quietly satisfy this by shifting position.
@@ -134,6 +133,19 @@ class PodcastAppSettingsScreenTest {
         scrollTo("Export OPML")
         composeRule.onNodeWithText("Export OPML").assertIsDisplayed().performClick()
         composeRule.runOnIdle { assertEquals(1, exportCalls) }
+    }
+
+    @Test
+    fun downloadNetworkAppearsOnlyWhenUpNextDownloadsAreOn() {
+        // The paired half of the absence asserted elsewhere: with automatic Up Next downloads on,
+        // the network row is there, because it is the only control over that path's network.
+        setSettingsContent(downloadEpisodesAddedToUpNext = true)
+
+        scrollTo("Download network")
+        composeRule.onNodeWithText("Download network").assertIsDisplayed()
+        // ListItem merges a row's headline and supporting text into one node, so the value is
+        // asserted against the row rather than by matching the label alone.
+        composeRule.onNodeWithText("Download network").assertTextContains("Wi-Fi only")
     }
 
     @Test

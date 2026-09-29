@@ -215,13 +215,20 @@ internal fun PodcastAppSettingsScreen(
                     },
                 )
             }
-            item {
-                PodcastActionListItem(
-                    headlineContent = { Text(stringResource(R.string.download_network)) },
-                    supportingContent = { Text(downloadNetworkLabel) },
-                    leadingContent = { Icon(Icons.Rounded.Wifi, contentDescription = null) },
-                    modifier = Modifier.clickable { showDownloadNetworkChooser = true },
-                )
+            // Only shown when there is automatic downloading to configure. This setting gates the
+            // network for the "download episodes added to Up Next" path and nothing else: a download
+            // the listener asks for deliberately is enqueued on any connection, because they asked
+            // for it now. With that toggle off, this row offered a choice that could not change
+            // anything, which is the same mistake the removed refresh rows were.
+            if (downloadEpisodesAddedToUpNext) {
+                item {
+                    PodcastActionListItem(
+                        headlineContent = { Text(stringResource(R.string.download_network)) },
+                        supportingContent = { Text(downloadNetworkLabel) },
+                        leadingContent = { Icon(Icons.Rounded.Wifi, contentDescription = null) },
+                        modifier = Modifier.clickable { showDownloadNetworkChooser = true },
+                    )
+                }
             }
             item {
                 PodcastActionListItem(
