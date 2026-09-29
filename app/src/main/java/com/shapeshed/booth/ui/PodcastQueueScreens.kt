@@ -324,15 +324,19 @@ internal fun QueueEpisodeSwipeRow(
     val dismissState = rememberSwipeToDismissBoxState(
         positionalThreshold = { distance -> distance * SWIPE_TO_DISMISS_THRESHOLD_FRACTION },
     )
-    LaunchedEffect(dismissState.currentValue) {
-        if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
-            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-            dismissState.snapTo(SwipeToDismissBoxValue.Settled)
-            showRemovalConfirmation = true
-        }
-    }
+    // One-shot onDismiss, not an effect on currentValue, for the same reason as the episode row:
+    // an effect keyed on observed state re-asks when the state is still dismissed after a rotation
+    // or a scroll, re-showing a confirmation dialog nobody swiped for.
+    val dismissScope = rememberCoroutineScope()
     SwipeToDismissBox(
         state = dismissState,
+        onDismiss = { value ->
+            if (value == SwipeToDismissBoxValue.EndToStart) {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                showRemovalConfirmation = true
+                dismissScope.launch { dismissState.reset() }
+            }
+        },
         enableDismissFromStartToEnd = false,
         enableDismissFromEndToStart = true,
         modifier = modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium),
@@ -494,29 +498,36 @@ internal fun InboxEpisodeSwipeRow(
     val dismissState = rememberSwipeToDismissBoxState(
         positionalThreshold = { distance -> distance * SWIPE_TO_DISMISS_THRESHOLD_FRACTION },
     )
-    // Keyed only on the swipe state, so neither callback restarting the effect is wanted. Read
-    // through updated state so both stay current.
+    // Read through updated state so the one-shot callback always calls the current lambda.
     val currentOnAddToQueue by rememberUpdatedState(onAddToQueue)
     val currentOnDismiss by rememberUpdatedState(onDismiss)
-    LaunchedEffect(dismissState.currentValue) {
-        when (dismissState.currentValue) {
-            SwipeToDismissBoxValue.StartToEnd -> {
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                currentOnAddToQueue()
-                dismissState.snapTo(SwipeToDismissBoxValue.Settled)
-            }
-
-            SwipeToDismissBoxValue.EndToStart -> {
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                dismissState.snapTo(SwipeToDismissBoxValue.Settled)
-                currentOnDismiss()
-            }
-
-            SwipeToDismissBoxValue.Settled -> Unit
-        }
-    }
+    // onDismiss, not an effect on dismissState.currentValue. Observing currentValue re-runs the
+    // action whenever the effect restarts with the state still dismissed, which is what happens on
+    // rotation and when the row scrolls out of and back into composition: the row then acts on
+    // itself again with no gesture. onDismiss is a one-shot callback fired once per completed
+    // swipe, so it cannot re-fire.
+    //
+    // reset() rather than snapTo(Settled), so the row animates back and is immediately usable.
+    val scope = rememberCoroutineScope()
     SwipeToDismissBox(
         state = dismissState,
+        onDismiss = { value ->
+            when (value) {
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    currentOnAddToQueue()
+                    scope.launch { dismissState.reset() }
+                }
+
+                SwipeToDismissBoxValue.EndToStart -> {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    currentOnDismiss()
+                    scope.launch { dismissState.reset() }
+                }
+
+                SwipeToDismissBoxValue.Settled -> Unit
+            }
+        },
         enableDismissFromStartToEnd = swipeEnabled && !selectionMode,
         enableDismissFromEndToStart = swipeEnabled && !selectionMode,
         modifier = modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium),

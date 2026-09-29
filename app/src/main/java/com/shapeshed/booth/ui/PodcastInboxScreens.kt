@@ -42,6 +42,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -66,6 +67,7 @@ import com.shapeshed.booth.data.EpisodeEntity
 import com.shapeshed.booth.data.PodcastDownloadManager
 import com.shapeshed.booth.data.PodcastEntity
 import com.shapeshed.booth.data.isDownloaded
+import kotlinx.coroutines.launch
 
 @Composable
 internal fun PodcastInbox(
@@ -433,19 +435,22 @@ internal fun PodcastDownloadsScreen(
             val dismissState = rememberSwipeToDismissBoxState(
                 positionalThreshold = { distance -> distance * SWIPE_TO_DISMISS_THRESHOLD_FRACTION },
             )
-            // The effect is keyed only on the swipe state, so it does not restart when this
-            // callback is recreated by the parent. Reading it through updated state keeps it
-            // pointing at the current one.
+            // Read through updated state so the one-shot callback always calls the current lambda.
             val currentOnRemove by rememberUpdatedState(onRemove)
-            LaunchedEffect(dismissState.currentValue) {
-                if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    dismissState.snapTo(SwipeToDismissBoxValue.Settled)
-                    currentOnRemove(episode)
-                }
-            }
+            // onDismiss rather than an effect on currentValue: observing currentValue re-runs the
+            // removal when the effect restarts with the state still dismissed, which is what
+            // rotation and scrolling the row back into composition do. A one-shot callback cannot
+            // re-fire, so the episode is only ever removed by an actual swipe.
+            val rowScope = rememberCoroutineScope()
             SwipeToDismissBox(
                 state = dismissState,
+                onDismiss = { value ->
+                    if (value == SwipeToDismissBoxValue.EndToStart) {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        currentOnRemove(episode)
+                        rowScope.launch { dismissState.reset() }
+                    }
+                },
                 enableDismissFromStartToEnd = false,
                 enableDismissFromEndToStart = true,
                 modifier = Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium),

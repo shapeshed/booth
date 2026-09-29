@@ -73,16 +73,19 @@ internal fun PodcastHomeMiniPlayerOverlay(
                 val currentOnDismiss by rememberUpdatedState(onDismiss)
                 val currentOnClearRememberedEpisode by rememberUpdatedState(onClearRememberedEpisode)
                 val currentOnStopAndClear by rememberUpdatedState(onStopAndClear)
-                LaunchedEffect(dismissState.currentValue) {
-                    if (dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        currentOnDismiss()
-                        currentOnClearRememberedEpisode()
-                        currentOnStopAndClear()
-                    }
-                }
+                // One-shot onDismiss, for the same reason as the other rows: an effect on
+                // currentValue re-runs when the state is still dismissed after a rotation or a
+                // scroll, which would dismiss the player and clear the episode with no gesture.
                 SwipeToDismissBox(
                     state = dismissState,
+                    onDismiss = { value ->
+                        if (value != SwipeToDismissBoxValue.Settled) {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            currentOnDismiss()
+                            currentOnClearRememberedEpisode()
+                            currentOnStopAndClear()
+                        }
+                    },
                     backgroundContent = {
                         if (dismissState.dismissDirection != SwipeToDismissBoxValue.Settled) {
                             Surface(
