@@ -29,6 +29,14 @@ start with a regression test that fails before the fix and passes afterward.
 ANDROID_SERIAL=<test-device-serial> ./gradlew preservingDebugAndroidTest
 ```
 
+`preservingDebugAndroidTest` drives `am instrument` directly, so it does its own reporting rather
+than leaving it to Gradle's connected-test task. It prints the runner's full output, writes
+`app/build/reports/androidTests/preserving/instrumentation.log` and a JUnit XML summary under
+`app/build/test-results/preservingDebugAndroidTest/`, and **fails the build when any test fails** —
+`am instrument` exits 0 on a red suite, so exit status alone is not a pass signal. It is never
+`UP-TO-DATE`; a test task that reports up to date has not run anything. It also refuses to start if
+no device is attached or the device is locked, rather than producing a confusing result.
+
 Instrumentation uses the `deviceTest` build type and the isolated application ID
 `com.shapeshed.booth.deviceTest`. `BoothTestRunner` fails fast if instrumentation targets the
 normal application ID. Keep `installDebug` for normal development. Never run connected tests
@@ -48,7 +56,17 @@ with no `FATAL EXCEPTION` in logcat, no crash, and the host `androidx.activity.C
 visibly launching once per test method. The activity comes up and the semantics tree never
 registers, so any `onNodeWith...` call throws before reaching the code under test.
 
-Do not investigate the application when you see this. Clear the build and run again:
+Two causes produce this signature, and they need different fixes. **Check the device before you
+clear the build** — a locked device gives the identical error and a clean build does nothing about
+it, so reaching for the clean first is what makes a lock look like a build problem. The device
+check is one command and takes a second:
+
+```sh
+adb shell dumpsys window | grep -E 'mDreamingLockscreen|mCurrentFocus'
+```
+
+See [the same signature, from a locked device](#the-same-signature-from-a-locked-device) below. If
+the device is unlocked, the stale build is the remaining explanation, and it does need a clean:
 
 ```sh
 ./gradlew clean
