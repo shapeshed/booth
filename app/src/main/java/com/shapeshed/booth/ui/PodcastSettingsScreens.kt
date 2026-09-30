@@ -67,17 +67,10 @@ import com.shapeshed.booth.R
 import com.shapeshed.booth.data.PodcastDownloadNetwork
 import com.shapeshed.booth.data.PodcastEntity
 import com.shapeshed.booth.data.PodcastIndexCredentials
-import com.shapeshed.booth.data.PodcastRefreshInterval
-import com.shapeshed.booth.data.PodcastRefreshNetwork
 import com.shapeshed.booth.data.PodcastSearchProvider
 
 /** How many podcasts currently opt in to each automatic behaviour, for the management screens. */
-internal data class PodcastManagementCounts(
-    val total: Int,
-    val autoRefresh: Int,
-    val autoQueue: Int,
-    val notifications: Int,
-)
+internal data class PodcastManagementCounts(val total: Int, val autoQueue: Int, val notifications: Int)
 
 @Composable
 internal fun PodcastAppSettingsScreen(
@@ -86,10 +79,6 @@ internal fun PodcastAppSettingsScreen(
     onAutoQueueEnabledChange: (Boolean) -> Unit,
     downloadEpisodesAddedToUpNext: Boolean,
     onDownloadEpisodesAddedToUpNextChange: (Boolean) -> Unit,
-    refreshInterval: PodcastRefreshInterval,
-    onRefreshIntervalChange: (PodcastRefreshInterval) -> Unit,
-    refreshNetwork: PodcastRefreshNetwork,
-    onRefreshNetworkChange: (PodcastRefreshNetwork) -> Unit,
     downloadNetwork: PodcastDownloadNetwork,
     onDownloadNetworkChange: (PodcastDownloadNetwork) -> Unit,
     notificationsEnabled: Boolean,
@@ -110,26 +99,19 @@ internal fun PodcastAppSettingsScreen(
     removePlayedDownloads: Boolean = true,
     onRemovePlayedDownloadsChange: (Boolean) -> Unit = {},
     onExportBackup: () -> Unit = {},
-    onExportBackupZip: () -> Unit = {},
     onImportBackup: () -> Unit = {},
+    globalPlaybackSpeed: Float = 1f,
+    onGlobalPlaybackSpeedChange: (Float) -> Unit = {},
+    globalSkipSilence: Boolean = false,
+    onGlobalSkipSilenceChange: (Boolean) -> Unit = {},
 ) {
     var showDownloadNetworkChooser by rememberSaveable { mutableStateOf(false) }
-    var showRefreshIntervalChooser by rememberSaveable { mutableStateOf(false) }
-    var showRefreshNetworkChooser by rememberSaveable { mutableStateOf(false) }
     var showSearchProviderChooser by rememberSaveable { mutableStateOf(false) }
     var showPodcastIndexCredentials by rememberSaveable { mutableStateOf(false) }
+    var showGlobalSpeedEditor by rememberSaveable { mutableStateOf(false) }
     val downloadNetworkLabel = when (downloadNetwork) {
         PodcastDownloadNetwork.ANY_CONNECTION -> stringResource(R.string.download_wifi_or_mobile)
         PodcastDownloadNetwork.WIFI_ONLY -> stringResource(R.string.download_wifi_only)
-    }
-    val refreshIntervalLabel = when (refreshInterval) {
-        PodcastRefreshInterval.HOURLY -> stringResource(R.string.refresh_every_hour)
-        PodcastRefreshInterval.SIX_HOURS -> stringResource(R.string.refresh_every_six_hours)
-        PodcastRefreshInterval.DAILY -> stringResource(R.string.refresh_daily)
-    }
-    val refreshNetworkLabel = when (refreshNetwork) {
-        PodcastRefreshNetwork.ANY_CONNECTION -> stringResource(R.string.download_wifi_or_mobile)
-        PodcastRefreshNetwork.WIFI_ONLY -> stringResource(R.string.download_wifi_only)
     }
     val autoQueueCountLabel = if (
         podcastManagementCounts.total > 0 &&
@@ -176,6 +158,17 @@ internal fun PodcastAppSettingsScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             item {
+                SettingsGroupLabel(text = stringResource(R.string.playback))
+            }
+            item {
+                PodcastActionListItem(
+                    headlineContent = { Text(stringResource(R.string.global_playback_speed)) },
+                    supportingContent = { Text(formatPlaybackSpeed(globalPlaybackSpeed)) },
+                    leadingContent = { Icon(Icons.Outlined.Speed, contentDescription = null) },
+                    modifier = Modifier.clickable { showGlobalSpeedEditor = true },
+                )
+            }
+            item {
                 SettingsGroupLabel(text = stringResource(R.string.up_next))
             }
             item {
@@ -192,17 +185,21 @@ internal fun PodcastAppSettingsScreen(
                     modifier = Modifier.clickable { onAutoQueueEnabledChange(!autoQueueEnabled) },
                 )
             }
-            item {
-                PodcastActionListItem(
-                    headlineContent = { Text(stringResource(R.string.podcast_auto_queue)) },
-                    supportingContent = {
-                        Text(if (autoQueueEnabled) autoQueueCountLabel else stringResource(R.string.disabled_globally))
-                    },
-                    leadingContent = { Icon(Icons.Rounded.Settings, contentDescription = null) },
-                    modifier = Modifier.clickable(enabled = autoQueueEnabled) {
-                        onManagePodcasts(PodcastManagementCategory.AUTO_QUEUE)
-                    },
-                )
+            // Which podcasts are added to Up Next only matters while the feature is on. With it off
+            // the row led to a screen of switches that changed nothing, and its summary had to read
+            // "Disabled globally" to admit as much. Hidden instead, which is the same treatment the
+            // Download network row gets for the same reason.
+            if (autoQueueEnabled) {
+                item {
+                    PodcastActionListItem(
+                        headlineContent = { Text(stringResource(R.string.podcast_auto_queue)) },
+                        supportingContent = { Text(autoQueueCountLabel) },
+                        leadingContent = { Icon(Icons.Rounded.Settings, contentDescription = null) },
+                        modifier = Modifier.clickable {
+                            onManagePodcasts(PodcastManagementCategory.AUTO_QUEUE)
+                        },
+                    )
+                }
             }
             item {
                 PodcastActionListItem(
@@ -222,13 +219,20 @@ internal fun PodcastAppSettingsScreen(
                     },
                 )
             }
-            item {
-                PodcastActionListItem(
-                    headlineContent = { Text(stringResource(R.string.download_network)) },
-                    supportingContent = { Text(downloadNetworkLabel) },
-                    leadingContent = { Icon(Icons.Rounded.Wifi, contentDescription = null) },
-                    modifier = Modifier.clickable { showDownloadNetworkChooser = true },
-                )
+            // Only shown when there is automatic downloading to configure. This setting gates the
+            // network for the "download episodes added to Up Next" path and nothing else: a download
+            // the listener asks for deliberately is enqueued on any connection, because they asked
+            // for it now. With that toggle off, this row offered a choice that could not change
+            // anything, which is the same mistake the removed refresh rows were.
+            if (downloadEpisodesAddedToUpNext) {
+                item {
+                    PodcastActionListItem(
+                        headlineContent = { Text(stringResource(R.string.download_network)) },
+                        supportingContent = { Text(downloadNetworkLabel) },
+                        leadingContent = { Icon(Icons.Rounded.Wifi, contentDescription = null) },
+                        modifier = Modifier.clickable { showDownloadNetworkChooser = true },
+                    )
+                }
             }
             item {
                 PodcastActionListItem(
@@ -253,47 +257,6 @@ internal fun PodcastAppSettingsScreen(
                 )
             }
             item {
-                SettingsGroupLabel(text = stringResource(R.string.auto_refresh))
-            }
-            item {
-                PodcastActionListItem(
-                    headlineContent = { Text(stringResource(R.string.refresh_podcasts_automatically)) },
-                    supportingContent = {
-                        val autoRefreshCountLabel = if (
-                            podcastManagementCounts.total > 0 &&
-                            podcastManagementCounts.autoRefresh == podcastManagementCounts.total
-                        ) {
-                            stringResource(R.string.all_podcasts)
-                        } else {
-                            pluralStringResource(
-                                R.plurals.podcast_count,
-                                podcastManagementCounts.autoRefresh,
-                                podcastManagementCounts.autoRefresh,
-                            )
-                        }
-                        Text(autoRefreshCountLabel)
-                    },
-                    leadingContent = { Icon(Icons.Rounded.Sync, contentDescription = null) },
-                    modifier = Modifier.clickable { onManagePodcasts(PodcastManagementCategory.AUTO_REFRESH) },
-                )
-            }
-            item {
-                PodcastActionListItem(
-                    headlineContent = { Text(stringResource(R.string.refresh_interval)) },
-                    supportingContent = { Text(refreshIntervalLabel) },
-                    leadingContent = { Icon(Icons.Rounded.Sync, contentDescription = null) },
-                    modifier = Modifier.clickable { showRefreshIntervalChooser = true },
-                )
-            }
-            item {
-                PodcastActionListItem(
-                    headlineContent = { Text(stringResource(R.string.refresh_network)) },
-                    supportingContent = { Text(refreshNetworkLabel) },
-                    leadingContent = { Icon(Icons.Rounded.Wifi, contentDescription = null) },
-                    modifier = Modifier.clickable { showRefreshNetworkChooser = true },
-                )
-            }
-            item {
                 SettingsGroupLabel(text = stringResource(R.string.notifications))
             }
             item {
@@ -312,25 +275,20 @@ internal fun PodcastAppSettingsScreen(
                     modifier = Modifier.clickable { onNotificationsEnabledChange(!notificationsEnabled) },
                 )
             }
-            item {
-                PodcastActionListItem(
-                    headlineContent = { Text(stringResource(R.string.podcast_notifications)) },
-                    supportingContent = {
-                        Text(
-                            if (notificationsEnabled) {
-                                notificationCountLabel
-                            } else {
-                                stringResource(
-                                    R.string.disabled_globally,
-                                )
-                            },
-                        )
-                    },
-                    leadingContent = { Icon(Icons.Rounded.Settings, contentDescription = null) },
-                    modifier = Modifier.clickable(enabled = notificationsEnabled) {
-                        onManagePodcasts(PodcastManagementCategory.NOTIFICATIONS)
-                    },
-                )
+            // Which podcasts notify cannot take effect while notifications are off, so the row is
+            // hidden rather than shown disabled. Same treatment as the Up Next and Download network
+            // rows, for the same reason: a control wired to nothing is worse than no control.
+            if (notificationsEnabled) {
+                item {
+                    PodcastActionListItem(
+                        headlineContent = { Text(stringResource(R.string.podcast_notifications)) },
+                        supportingContent = { Text(notificationCountLabel) },
+                        leadingContent = { Icon(Icons.Rounded.Settings, contentDescription = null) },
+                        modifier = Modifier.clickable {
+                            onManagePodcasts(PodcastManagementCategory.NOTIFICATIONS)
+                        },
+                    )
+                }
             }
             item {
                 SettingsGroupLabel(text = stringResource(R.string.discovery_settings_group))
@@ -405,14 +363,6 @@ internal fun PodcastAppSettingsScreen(
                     modifier = Modifier.clickable(onClick = onExportBackup),
                 )
             }
-            item {
-                PodcastActionListItem(
-                    headlineContent = { Text(stringResource(R.string.export_backup_zip)) },
-                    supportingContent = { Text(stringResource(R.string.export_backup_zip_summary)) },
-                    leadingContent = { Icon(Icons.Rounded.FileDownload, contentDescription = null) },
-                    modifier = Modifier.clickable(onClick = onExportBackupZip),
-                )
-            }
             if (statusMessage != null) {
                 item {
                     Text(
@@ -481,88 +431,21 @@ internal fun PodcastAppSettingsScreen(
             },
         )
     }
-    if (showRefreshIntervalChooser) {
-        AlertDialog(
-            onDismissRequest = { showRefreshIntervalChooser = false },
-            title = { Text(stringResource(R.string.refresh_interval)) },
-            text = {
-                Column {
-                    PodcastRefreshInterval.entries.forEach { option ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    onRefreshIntervalChange(option)
-                                    showRefreshIntervalChooser = false
-                                }
-                                .padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RadioButton(
-                                selected = refreshInterval == option,
-                                onClick = {
-                                    onRefreshIntervalChange(option)
-                                    showRefreshIntervalChooser = false
-                                },
-                            )
-                            Text(
-                                when (option) {
-                                    PodcastRefreshInterval.HOURLY -> stringResource(R.string.refresh_every_hour)
-                                    PodcastRefreshInterval.SIX_HOURS -> stringResource(R.string.refresh_every_six_hours)
-                                    PodcastRefreshInterval.DAILY -> stringResource(R.string.refresh_daily)
-                                },
-                                modifier = Modifier.padding(start = 8.dp),
-                            )
-                        }
-                    }
-                }
+    if (showGlobalSpeedEditor) {
+        // The same sheet the per-podcast screen uses, minus the "use global" escape: this *is* the
+        // global, so offering to go back to it would be a no-op.
+        PlaybackSpeedSheet(
+            speed = globalPlaybackSpeed,
+            skipSilence = globalSkipSilence,
+            onSpeedChange = {
+                onGlobalPlaybackSpeedChange(it)
+                showGlobalSpeedEditor = false
             },
-            confirmButton = {
-                TextButton(onClick = { showRefreshIntervalChooser = false }) { Text(stringResource(R.string.cancel)) }
-            },
-        )
-    }
-    if (showRefreshNetworkChooser) {
-        AlertDialog(
-            onDismissRequest = { showRefreshNetworkChooser = false },
-            title = { Text(stringResource(R.string.refresh_network)) },
-            text = {
-                Column {
-                    PodcastRefreshNetwork.entries.forEach { option ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    onRefreshNetworkChange(option)
-                                    showRefreshNetworkChooser = false
-                                }
-                                .padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RadioButton(
-                                selected = refreshNetwork == option,
-                                onClick = {
-                                    onRefreshNetworkChange(option)
-                                    showRefreshNetworkChooser = false
-                                },
-                            )
-                            Text(
-                                when (option) {
-                                    PodcastRefreshNetwork.ANY_CONNECTION -> stringResource(
-                                        R.string.download_wifi_or_mobile,
-                                    )
-
-                                    PodcastRefreshNetwork.WIFI_ONLY -> stringResource(R.string.download_wifi_only)
-                                },
-                                modifier = Modifier.padding(start = 8.dp),
-                            )
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showRefreshNetworkChooser = false }) { Text(stringResource(R.string.cancel)) }
-            },
+            // Skip silence is a global setting in the same fallback shape as the speed, and the
+            // sheet shows it unconditionally. Wiring only the speed would have left a checkbox here
+            // that looked live and did nothing.
+            onSkipSilenceChange = onGlobalSkipSilenceChange,
+            onDismiss = { showGlobalSpeedEditor = false },
         )
     }
     if (showSearchProviderChooser) {
@@ -690,7 +573,7 @@ internal fun PodcastSettingsScreen(
     globalAutoQueueEnabled: Boolean,
     globalNotificationsEnabled: Boolean,
     availableTags: List<String>,
-    onSaveSettings: (String, Int, Int, Boolean, Boolean, Boolean, Boolean) -> Unit,
+    onSaveSettings: (String, Int, Int, Boolean, Boolean, Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var tags by rememberSaveable(podcast.id) {
@@ -702,7 +585,6 @@ internal fun PodcastSettingsScreen(
     var tagInput by rememberSaveable(podcast.id) { mutableStateOf("") }
     var skipStartInput by rememberSaveable(podcast.id) { mutableStateOf(podcast.skipStartSeconds.toString()) }
     var skipEndInput by rememberSaveable(podcast.id) { mutableStateOf(podcast.skipEndSeconds.toString()) }
-    var includeInAutoRefresh by rememberSaveable(podcast.id) { mutableStateOf(podcast.includeInAutoRefresh) }
     var includeInAutoQueue by rememberSaveable(podcast.id) { mutableStateOf(podcast.includeInAutoQueue) }
     var includeInNotifications by rememberSaveable(podcast.id) { mutableStateOf(podcast.includeInNotifications) }
     var showTagsEditor by rememberSaveable(podcast.id) { mutableStateOf(false) }
@@ -737,7 +619,6 @@ internal fun PodcastSettingsScreen(
         nextTags: List<String> = tags,
         nextSkipStart: String = skipStartInput,
         nextSkipEnd: String = skipEndInput,
-        nextAutoRefresh: Boolean = includeInAutoRefresh,
         nextAutoQueue: Boolean = includeInAutoQueue,
         nextNotifications: Boolean = includeInNotifications,
     ) {
@@ -745,7 +626,6 @@ internal fun PodcastSettingsScreen(
             nextTags.joinToString(","),
             nextSkipStart.toIntOrNull()?.coerceAtLeast(0) ?: 0,
             nextSkipEnd.toIntOrNull()?.coerceAtLeast(0) ?: 0,
-            nextAutoRefresh,
             podcast.includeInAutoDownload,
             nextAutoQueue,
             nextNotifications,
@@ -791,32 +671,6 @@ internal fun PodcastSettingsScreen(
                     supportingContent = { Text(skipSummary) },
                     leadingContent = { Icon(Icons.Rounded.FastForward, contentDescription = null) },
                     modifier = Modifier.clickable { showSkipEditor = true },
-                )
-            }
-            item {
-                SettingsGroupLabel(text = stringResource(R.string.auto_refresh))
-            }
-            item {
-                PodcastActionListItem(
-                    headlineContent = { Text(stringResource(R.string.refresh_podcasts_automatically)) },
-                    supportingContent = {
-                        Text(stringResource(if (includeInAutoRefresh) R.string.on else R.string.off))
-                    },
-                    leadingContent = { Icon(Icons.Rounded.Sync, contentDescription = null) },
-                    trailingContent = {
-                        Switch(
-                            checked = includeInAutoRefresh,
-                            onCheckedChange = {
-                                includeInAutoRefresh = it
-                                persistSettings(nextAutoRefresh = it)
-                            },
-                        )
-                    },
-                    modifier = Modifier.clickable {
-                        val next = !includeInAutoRefresh
-                        includeInAutoRefresh = next
-                        persistSettings(nextAutoRefresh = next)
-                    },
                 )
             }
             item {

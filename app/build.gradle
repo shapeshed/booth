@@ -60,6 +60,17 @@ android {
     namespace = 'com.shapeshed.booth'
     compileSdk 37
 
+    // MigrationTestHelper reads the exported schemas from the test APK's assets, not from the
+    // project directory, so without this every migration test fails with "Cannot find the schema
+    // file in the assets folder" before it reaches any assertion. Found by running the v1 to v2
+    // migration test on a device, which is the only place this shows up: it compiles and is absent
+    // from the unit test source set entirely.
+    sourceSets {
+        androidTest {
+            assets.srcDirs += files("$projectDir/schemas")
+        }
+    }
+
     def releaseKeystoreFile = System.getenv("BOOTH_KEYSTORE_FILE")
     def releaseKeystorePassword = System.getenv("BOOTH_KEYSTORE_PASSWORD")
     def releaseKeyAlias = System.getenv("BOOTH_KEY_ALIAS")
@@ -179,6 +190,9 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.11.0'
     implementation 'androidx.hilt:hilt-navigation-compose:1.4.0'
     implementation 'androidx.work:work-runtime-ktx:2.12.0'
+    // Lets a test drive WorkManager synchronously and inspect the requests the scheduler enqueues,
+    // which is the only way to assert that each feed is scheduled separately.
+    androidTestImplementation 'androidx.work:work-testing:2.12.0'
 
     def media3Version = '1.11.1'
     implementation "androidx.media3:media3-exoplayer:$media3Version"
@@ -309,27 +323,143 @@ tasks.register("jacocoDeviceTestUnitTestCoverageVerification", JacocoCoverageVer
 
 // The standard connected test task may uninstall the target package as part of its
 // device cleanup. Use this task for a personal device when its app data must remain.
+//
+// Driving `am instrument` by hand means doing the reporting Gradle's connected-test task would
+// otherwise do, and three things were wrong when this just shelled out and inherited IO:
+//
+//   * `inheritIO()` inherits the Gradle *daemon's* stdout, not the invoking terminal, so the run
+//     printed nothing at all and still reported BUILD SUCCESSFUL.
+//   * `am instrument` exits 0 whether the tests passed or failed, so a red suite was green here.
+//   * Nothing wrote a report, so a later check could not tell "passed" from "never ran" - an
+//     empty results directory looked the same either way.
+//
+// It also preflights the screen lock. A locked device makes every Compose UI test fail with "No
+// compose hierarchies found in the app", which is indistinguishable from a real regression and is
+// not something a clean build fixes.
 tasks.register("preservingDebugAndroidTest") {
+    group = "verification"
+    description = "Runs the instrumented tests on a connected device without touching the installed app's data."
+
+    // A test task that reports UP-TO-DATE has not run anything, which is the exact confusion this
+    // task exists to remove. Always execute, and always rewrite the reports.
+    outputs.upToDateWhen { false }
+
     dependsOn("assembleDeviceTest", "assembleDeviceTestAndroidTest")
     def appApkPath = layout.buildDirectory.file("outputs/apk/deviceTest/app-deviceTest.apk").get().asFile.absolutePath
     def testApkPath = layout.buildDirectory.file("outputs/apk/androidTest/deviceTest/app-deviceTest-androidTest.apk").get().asFile.absolutePath
+    def reportDir = layout.buildDirectory.dir("reports/androidTests/preserving").get().asFile
+    def resultDir = layout.buildDirectory.dir("test-results/preservingDebugAndroidTest").get().asFile
 
     doLast {
         def adb = System.getenv("ADB") ?: "adb"
+        // Groovy treats an empty string as truthy, so a plain `?:` on an unset-but-empty
+        // ANDROID_SERIAL would build `adb -s "" ...` and fail with "device '' not found".
+        // Normalise blank to null once and use that for both the adb flags and the check below.
+        def envSerial = System.getenv("ANDROID_SERIAL")
+        def requestedSerial = (envSerial == null || envSerial.trim().isEmpty()) ? null : envSerial.trim()
+        def deviceArgs = requestedSerial ? ["-s", requestedSerial] : []
+
         def runAdb = { List<String> arguments ->
-            def process = new ProcessBuilder(([adb] + arguments).collect { it.toString() })
-                .inheritIO()
+            def process = new ProcessBuilder(([adb] + deviceArgs + arguments).collect { it.toString() })
+                .redirectErrorStream(true)
                 .start()
-            if (process.waitFor() != 0) {
-                throw new GradleException("ADB command failed: ${arguments.join(' ')}")
+            def output = process.inputStream.getText("UTF-8")
+            def exit = process.waitFor()
+            return [output: output, exit: exit]
+        }
+
+        // `adb devices` ignores -s and always lists everything, so a bogus ANDROID_SERIAL still
+        // shows the real device here and would sail past a check for "any device attached". Match
+        // the serial that will actually be used, and treat offline or unauthorised as absent
+        // because `install` and `am instrument` would both fail on it anyway.
+        def deviceRows = runAdb(["devices"]).output.readLines()
+                .collect { it.trim().split(/\s+/) }
+                .findAll { it.size() >= 2 && it[1] == "device" }
+                .collect { it[0] }
+        def wanted = requestedSerial ? [requestedSerial] : deviceRows
+        def missing = wanted.findAll { !deviceRows.contains(it) }
+        if (!missing.isEmpty()) {
+            throw new GradleException(
+                "The device ${missing.join(', ')} is not attached and ready, so the instrumented " +
+                "tests did not run." +
+                (requestedSerial ? "" : " Connect a device, or set ANDROID_SERIAL to select one of several.") +
+                " 'unauthorized' and 'offline' both count as not ready, because adb install and " +
+                "am instrument cannot use them. Attached and ready: " +
+                (deviceRows.isEmpty() ? "none" : deviceRows.join(", ")) + ".")
+        }
+
+        def window = runAdb(["shell", "dumpsys", "window"]).output
+        if (window.contains("mDreamingLockscreen=true")) {
+            throw new GradleException(
+                "The device is locked, so the tests were not run. Unlock it and try again: a locked " +
+                "screen makes every Compose UI test fail with \"No compose hierarchies found in the " +
+                "app\", which is indistinguishable from a real regression and which no clean build " +
+                "fixes. Run `adb shell svc power stayon usb` to keep it awake.")
+        }
+
+        reportDir.deleteDir()
+        reportDir.mkdirs()
+        resultDir.mkdirs()
+
+        [["install", "-r", appApkPath], ["install", "-r", testApkPath]].each { arguments ->
+            def result = runAdb(arguments)
+            if (result.exit != 0) {
+                throw new GradleException("adb ${arguments.join(' ')} failed:\n${result.output}")
             }
         }
 
-        runAdb(["install", "-r", appApkPath])
-        runAdb(["install", "-r", testApkPath])
-        runAdb(["shell", "am", "instrument", "-w",
+        def instrumentation = runAdb(["shell", "am", "instrument", "-w",
                 "-e", "clearPackageData", "false",
                 "-e", "disableAnalytics", "true",
                 "com.shapeshed.booth.deviceTest.test/com.shapeshed.booth.testing.BoothTestRunner"])
+
+        new File(reportDir, "instrumentation.log").text = instrumentation.output
+        logger.lifecycle(instrumentation.output)
+
+        // AndroidJUnitRunner's `-w` output ends in one of "OK (N tests)" or
+        // "FAILURES!!!\nTests run: N,  Failures: M". A process that dies mid-run reports
+        // INSTRUMENTATION_CODE: -1 and no count at all, so treat "no count" as a failure rather
+        // than as a pass with nothing to do.
+        def passed = (instrumentation.output =~ /OK \((\d+) tests?\)/)
+        def failedLine = (instrumentation.output =~ /Tests run: (\d+),\s*Failures: (\d+)/)
+        def crashed = instrumentation.output.contains("INSTRUMENTATION_CODE: -1")
+
+        int ran
+        int failures
+        if (failedLine) {
+            ran = failedLine[0][1] as int
+            failures = failedLine[0][2] as int
+        } else if (passed) {
+            ran = passed[0][1] as int
+            failures = 0
+        } else {
+            ran = 0
+            failures = 0
+        }
+        if (crashed) {
+            failures = Math.max(failures, 1)
+        }
+
+        def escaped = instrumentation.output
+            .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        new File(resultDir, "TEST-preservingDebugAndroidTest.xml").text =
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+            "<testsuite name=\"preservingDebugAndroidTest\" tests=\"${ran}\" " +
+            "failures=\"${failures}\" errors=\"0\" skipped=\"0\">\n" +
+            "  <testcase name=\"instrumentation\" classname=\"com.shapeshed.booth.deviceTest\">\n" +
+            "    <system-out>${escaped}</system-out>\n" +
+            "  </testcase>\n" +
+            "</testsuite>\n"
+
+        logger.lifecycle("preservingDebugAndroidTest: ${ran} tests, ${failures} failures" +
+            (crashed ? " (instrumentation process crashed)" : ""))
+        logger.lifecycle("Full output: ${new File(reportDir, 'instrumentation.log')}")
+
+        if (ran == 0 || failures > 0) {
+            throw new GradleException(
+                "Instrumented tests did not pass (${ran} tests, ${failures} failures" +
+                (crashed ? ", process crashed" : "") + "). See " +
+                "${new File(reportDir, 'instrumentation.log')} for the full output.")
+        }
     }
 }

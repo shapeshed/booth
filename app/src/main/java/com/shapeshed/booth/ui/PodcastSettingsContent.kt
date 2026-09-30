@@ -14,7 +14,7 @@ internal fun PodcastSettingsContent(
     globalAutoQueueEnabled: Boolean,
     globalNotificationsEnabled: Boolean,
     availableTags: List<String>,
-    onSaveSettings: (String, Int, Int, Boolean, Boolean, Boolean, Boolean) -> Unit,
+    onSaveSettings: (String, Int, Int, Boolean, Boolean, Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     PodcastSettingsScreen(

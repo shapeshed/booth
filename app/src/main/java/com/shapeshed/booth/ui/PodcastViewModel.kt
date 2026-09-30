@@ -36,6 +36,7 @@ import com.shapeshed.booth.data.PodcastEntity
 import com.shapeshed.booth.data.PodcastFeed
 import com.shapeshed.booth.data.PodcastIndexCredentials
 import com.shapeshed.booth.data.PodcastIndexCredentialsStore
+import com.shapeshed.booth.data.PodcastRefreshScheduler
 import com.shapeshed.booth.data.PodcastRepository
 import com.shapeshed.booth.data.PodcastSearchCatalog
 import com.shapeshed.booth.data.PodcastSearchProvider
@@ -64,6 +65,8 @@ import com.shapeshed.booth.data.podcastId
 import com.shapeshed.booth.data.searchableCategories
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
@@ -227,14 +230,10 @@ class PodcastViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), buildPodcastCatalogIndex(emptyList()))
     val podcastSettings: StateFlow<PodcastSettingsState> = combine(
         settings.podcastDownloadVideos,
-        settings.podcastRefreshInterval,
-        settings.podcastRefreshNetwork,
         settings.podcastNotificationsEnabled,
-    ) { downloadVideos, refreshInterval, refreshNetwork, notificationsEnabled ->
+    ) { downloadVideos, notificationsEnabled ->
         PodcastSettingsState(
             downloadVideos = downloadVideos,
-            refreshInterval = refreshInterval,
-            refreshNetwork = refreshNetwork,
             notificationsEnabled = notificationsEnabled,
         )
     }
@@ -246,6 +245,12 @@ class PodcastViewModel @Inject constructor(
         }
         .combine(settings.podcastDownloadNetwork) { state, downloadNetwork ->
             state.copy(downloadNetwork = downloadNetwork)
+        }
+        .combine(settings.podcastPlaybackSpeed) { state, globalPlaybackSpeed ->
+            state.copy(globalPlaybackSpeed = globalPlaybackSpeed)
+        }
+        .combine(settings.podcastSkipSilence) { state, globalSkipSilence ->
+            state.copy(globalSkipSilence = globalSkipSilence)
         }
         .combine(settings.podcastRemovePlayedDownloads) { state, removePlayedDownloads ->
             state.copy(removePlayedDownloads = removePlayedDownloads)
@@ -439,14 +444,6 @@ class PodcastViewModel @Inject constructor(
 
     fun setPodcastRemovePlayedDownloads(enabled: Boolean) {
         viewModelScope.launch { settings.setPodcastRemovePlayedDownloads(enabled) }
-    }
-
-    fun setPodcastRefreshInterval(interval: com.shapeshed.booth.data.PodcastRefreshInterval) {
-        viewModelScope.launch { settings.setPodcastRefreshInterval(interval) }
-    }
-
-    fun setPodcastRefreshNetwork(network: com.shapeshed.booth.data.PodcastRefreshNetwork) {
-        viewModelScope.launch { settings.setPodcastRefreshNetwork(network) }
     }
 
     fun setPodcastAutoQueueEnabled(enabled: Boolean) {
@@ -950,23 +947,8 @@ class PodcastViewModel @Inject constructor(
         }
     }
 
+    /** Writes a ZIP backup. The document inside is the same JSON the import path reads. */
     fun exportBackup(context: Context, uri: Uri) {
-        viewModelScope.launch {
-            runCancellableCatching {
-                val body = backupManager.export()
-                withContext(Dispatchers.IO) {
-                    context.contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { writer ->
-                        writer.write(body)
-                    } ?: error("Could not open backup destination")
-                }
-                _uiEvents.send(PodcastUiEvent.Exported)
-            }.onFailure {
-                _state.value = state.value.copy(error = PodcastUiError.ExportFailed)
-            }
-        }
-    }
-
-    fun exportBackupZip(context: Context, uri: Uri) {
         viewModelScope.launch {
             runCancellableCatching {
                 val body = backupManager.exportZip()
@@ -975,7 +957,9 @@ class PodcastViewModel @Inject constructor(
                         ?: error("Could not open backup destination")
                 }
                 _uiEvents.send(PodcastUiEvent.Exported)
-            }.onFailure { _state.value = state.value.copy(error = PodcastUiError.ExportFailed) }
+            }.onFailure {
+                _state.value = state.value.copy(error = PodcastUiError.ExportFailed)
+            }
         }
     }
 
@@ -992,11 +976,7 @@ class PodcastViewModel @Inject constructor(
                 return@launch
             }
             runCancellableCatching {
-                if (body.size >= 2 && body[0] == 'P'.code.toByte() && body[1] == 'K'.code.toByte()) {
-                    backupManager.importZip(body)
-                } else {
-                    backupManager.import(body.toString(Charsets.UTF_8))
-                }
+                backupManager.importZip(body)
             }.onSuccess { imported ->
                 _uiEvents.send(PodcastUiEvent.Imported(imported))
                 com.shapeshed.booth.data.PodcastRefreshWorker.enqueueNow(context)
@@ -1140,7 +1120,6 @@ class PodcastViewModel @Inject constructor(
         tags: String,
         skipStartSeconds: Int,
         skipEndSeconds: Int,
-        includeInAutoRefresh: Boolean,
         includeInAutoDownload: Boolean,
         includeInAutoQueue: Boolean,
         includeInNotifications: Boolean,
@@ -1151,7 +1130,6 @@ class PodcastViewModel @Inject constructor(
                 tags,
                 skipStartSeconds,
                 skipEndSeconds,
-                includeInAutoRefresh,
                 includeInAutoDownload,
                 includeInAutoQueue,
                 includeInNotifications,
@@ -1165,12 +1143,33 @@ class PodcastViewModel @Inject constructor(
         }
     }
 
-    fun setPodcastVideoDownload(podcastId: Long, enabled: Boolean) {
-        viewModelScope.launch { repository.setPodcastVideoDownload(podcastId, enabled) }
+    /**
+     * Sets the app-wide speed, which is the fallback for podcasts that have not set their own.
+     *
+     * Deliberately does not touch any podcast's own value. Changing the default should not silently
+     * discard a deliberate per-podcast override; that is what "Use global playback speed" on a
+     * podcast is for.
+     */
+    // Makes sure every subscription has a scheduled refresh, and that the periodic sweep is armed.
+    // Called once when the home screen opens. It goes through the ViewModel rather than the worker
+    // entry point on purpose: AGENTS.md scopes that entry point to workers, receivers and services,
+    // and a composable that needs the graph should ask the ViewModel for it.
+    suspend fun ensureRefreshSchedule(context: Context) {
+        PodcastRefreshScheduler.ensureSweep(context)
+        PodcastRefreshScheduler.scheduleAll(context, repository)
     }
 
-    fun setAllPodcastAutoRefresh(enabled: Boolean) {
-        viewModelScope.launch { repository.setAllPodcastAutoRefresh(enabled) }
+    fun setGlobalPlaybackSpeed(speed: Float) {
+        viewModelScope.launch { settings.setPodcastPlaybackSpeed(speed) }
+    }
+
+    /** The app-wide skip-silence default, and the fallback for podcasts with no override. */
+    fun setGlobalSkipSilence(enabled: Boolean) {
+        viewModelScope.launch { settings.setPodcastSkipSilence(enabled) }
+    }
+
+    fun setPodcastVideoDownload(podcastId: Long, enabled: Boolean) {
+        viewModelScope.launch { repository.setPodcastVideoDownload(podcastId, enabled) }
     }
 
     fun setAllPodcastAutoDownload(enabled: Boolean) {
@@ -1306,3 +1305,17 @@ class PodcastViewModel @Inject constructor(
         }
     }
 }
+
+// Fixed pattern, deliberately not locale-sensitive: a backup name is written to a filesystem and
+// read back by a person sorting through them, so the digits must not change shape with the locale.
+// Seconds are included because two exports in the same minute is the exact collision this avoids.
+private val BACKUP_FILE_STAMP: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd-HH-mm-ss")
+
+/**
+ * The name offered when exporting a backup.
+ *
+ * Timestamped so repeated exports are separate files rather than the same name twice, which the
+ * picker would otherwise resolve by appending a counter or overwriting. Local time, because the
+ * person finding the backup later is the one reading the filename.
+ */
+internal fun backupFileName(now: LocalDateTime): String = "booth-backup-${BACKUP_FILE_STAMP.format(now)}.zip"

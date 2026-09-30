@@ -257,6 +257,7 @@ internal fun PodcastEpisodeActionsSheet(
     downloadSizeBytes: Long? = action.downloadSizeBytes,
     loadingDownloadSize: Boolean = false,
     onReorder: (() -> Unit)? = null,
+    onDismissFromInbox: (() -> Unit)? = null,
 ) {
     val episodeTitle = when (action) {
         is PodcastEpisodeAction.Subscribed -> action.episode.title
@@ -350,6 +351,26 @@ internal fun PodcastEpisodeActionsSheet(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onRemoveDownload?.invoke() },
+                    )
+                }
+                // The non-gesture route to the inbox swipe. A destructive swipe is not reachable
+                // with a screen reader or without a fine pointer, so the same action is offered
+                // here and routed through the same undoable call.
+                if (action.inInbox) {
+                    PodcastActionListItem(
+                        headlineContent = {
+                            Text(
+                                stringResource(R.string.dismiss_from_inbox),
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
+                        },
+                        leadingContent = {
+                            Icon(Icons.Rounded.Delete, contentDescription = null, modifier = Modifier.size(24.dp))
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onDismissFromInbox?.invoke() },
                     )
                 }
                 onReorder?.let { reorder ->

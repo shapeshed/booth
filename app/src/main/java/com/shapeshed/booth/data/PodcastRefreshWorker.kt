@@ -53,7 +53,27 @@ class PodcastRefreshWorker(context: Context, workerParams: WorkerParameters) : C
         val downloadNetwork = settings.podcastDownloadNetwork.first()
         val newEpisodes = mutableListOf<NewPodcastEpisodeNotification>()
         val queuedDownloadCandidates = mutableListOf<EpisodeEntity>()
-        val podcasts = repository.podcasts.first().filter { it.includeInAutoRefresh }
+        // Each feed is scheduled separately, so a normal run has exactly one podcast in it. A run with
+        // no podcast id is the periodic sweep, which refreshes every subscription regardless of when
+        // each was due.
+        //
+        // The sweep is the backstop, not the mechanism. Per-feed scheduling is right when the pattern
+        // is right, but the pattern is inferred from history and history goes stale: a feed that moves
+        // from weekly to daily keeps its weekly schedule until a daily run happens to catch the new
+        // episode. The sweep bounds that, so nothing is ever more than SWEEP_INTERVAL_MILLIS old.
+        //
+        // It is cheap because Booth stores each feed's ETag and Last-Modified, so a feed that has not
+        // changed answers 304 with no body.
+        val requestedPodcastId = inputData.getLong(PODCAST_ID_INPUT, NO_PODCAST_ID)
+        val isSweep = requestedPodcastId == NO_PODCAST_ID
+
+        val podcasts = if (isSweep) {
+            repository.podcasts.first().filter { it.isSubscribed }
+        } else {
+            listOfNotNull(repository.podcast(requestedPodcastId)).filter { it.isSubscribed }
+        }
+        if (podcasts.isEmpty()) return Result.success()
+        PodcastRefreshScheduler.ensureSweep(applicationContext)
         val existingEpisodeIdentities = podcasts.associate { podcast ->
             podcast.id to repository.episodes(podcast.id).first()
                 .map { it.guid to it.audioUrl }
@@ -128,51 +148,60 @@ class PodcastRefreshWorker(context: Context, workerParams: WorkerParameters) : C
         if (newEpisodes.isNotEmpty()) {
             applicationContext.postPodcastNotifications(newEpisodes, entryPoint.okHttpClient)
         }
+
+        // Re-arm from the pattern as it now stands, so a feed that turns out to be weekly is not
+        // looked for again on a daily rhythm. Skipped on a retry: WorkManager already holds the
+        // request, and re-arming would restart its backoff.
+        if (!retryableFailure) {
+            // Re-arm from the pattern as it now stands, so a feed that turns out to be weekly is not
+            // looked for again daily. On a sweep that is every feed, which is also how a feed whose
+            // schedule changed has its next time corrected.
+            PodcastRefreshScheduler.scheduleAll(applicationContext, repository)
+        }
         return if (retryableFailure) Result.retry() else Result.success()
     }
 
     companion object {
-        private const val WORK_NAME = "podcast-auto-refresh"
+        /** Which feed this run is for. Absent means the reconciliation pass. */
+        const val PODCAST_ID_INPUT = "podcast_id"
 
-        fun schedule(context: Context, interval: PodcastRefreshInterval, network: PodcastRefreshNetwork) {
-            val workManager = WorkManager.getInstance(context.applicationContext)
-            val request = PeriodicWorkRequestBuilder<PodcastRefreshWorker>(
-                interval.minutes,
-                TimeUnit.MINUTES,
-            )
-                .setConstraints(
-                    Constraints.Builder()
-                        .setRequiredNetworkType(
-                            if (network == PodcastRefreshNetwork.WIFI_ONLY) {
-                                NetworkType.UNMETERED
-                            } else {
-                                NetworkType.CONNECTED
-                            },
-                        )
-                        .build(),
-                )
-                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
-                .build()
-            workManager.enqueueUniquePeriodicWork(
-                WORK_NAME,
-                ExistingPeriodicWorkPolicy.UPDATE,
-                request,
-            )
-        }
+        private const val NO_PODCAST_ID = -1L
 
+        /** Shared with the scheduler so all refresh work can be found or cancelled at once. */
+        const val REFRESH_WORK_TAG = "podcast-refresh"
+
+        /**
+         * Refresh every subscription now, ignoring when each was due.
+         *
+         * For a pull-to-refresh or an import, where the listener has just asked and honouring the
+         * schedule instead would be ignoring them. Every feed gets its own request so the per-feed
+         * isolation still holds, rather than one request that fans out to all of them.
+         */
         fun enqueueNow(context: Context) {
-            val request = OneTimeWorkRequestBuilder<PodcastRefreshWorker>()
-                .setConstraints(
-                    Constraints.Builder()
-                        .setRequiredNetworkType(NetworkType.CONNECTED)
-                        .build(),
-                )
-                .build()
-            WorkManager.getInstance(context.applicationContext).enqueueUniqueWork(
-                "podcast-auto-refresh-after-import",
-                androidx.work.ExistingWorkPolicy.KEEP,
-                request,
-            )
+            val workManager = WorkManager.getInstance(context.applicationContext)
+            // Blocking is unavoidable: a delayed request needs the next due time, which needs a
+            // query, and this entry point is not itself suspend.
+            kotlinx.coroutines.runBlocking {
+                val repository = boothWorkerEntryPoint(context).podcastRepository
+                repository.podcasts.first().forEach { podcast ->
+                    val request = OneTimeWorkRequestBuilder<PodcastRefreshWorker>()
+                        .setInputData(workDataOf(PODCAST_ID_INPUT to podcast.id))
+                        .setConstraints(
+                            Constraints.Builder()
+                                .setRequiredNetworkType(NetworkType.CONNECTED)
+                                .build(),
+                        )
+                        .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
+                        .addTag(REFRESH_WORK_TAG)
+                        .build()
+                    workManager.enqueueUniqueWork(
+                        "podcast-refresh-now-${podcast.id}",
+                        androidx.work.ExistingWorkPolicy.REPLACE,
+                        request,
+                    )
+                }
+            }
+            PodcastRefreshScheduler.ensureSweep(context)
         }
     }
 }

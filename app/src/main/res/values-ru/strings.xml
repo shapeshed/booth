@@ -23,7 +23,6 @@
     <string name="export_opml">Экспортировать OPML</string>
     <string name="clear">Очистить</string>
     <string name="no_filter_matches">No matches</string>
-    <string name="auto_refresh">Автообновление</string>
     <string name="notifications">Уведомления</string>
     <string name="on">Вкл.</string>
     <string name="off">Выкл.</string>

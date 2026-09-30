@@ -29,6 +29,14 @@ start with a regression test that fails before the fix and passes afterward.
 ANDROID_SERIAL=<test-device-serial> ./gradlew preservingDebugAndroidTest
 ```
 
+`preservingDebugAndroidTest` drives `am instrument` directly, so it does its own reporting rather
+than leaving it to Gradle's connected-test task. It prints the runner's full output, writes
+`app/build/reports/androidTests/preserving/instrumentation.log` and a JUnit XML summary under
+`app/build/test-results/preservingDebugAndroidTest/`, and **fails the build when any test fails** —
+`am instrument` exits 0 on a red suite, so exit status alone is not a pass signal. It is never
+`UP-TO-DATE`; a test task that reports up to date has not run anything. It also refuses to start if
+no device is attached or the device is locked, rather than producing a confusing result.
+
 Instrumentation uses the `deviceTest` build type and the isolated application ID
 `com.shapeshed.booth.deviceTest`. `BoothTestRunner` fails fast if instrumentation targets the
 normal application ID. Keep `installDebug` for normal development. Never run connected tests
@@ -48,7 +56,17 @@ with no `FATAL EXCEPTION` in logcat, no crash, and the host `androidx.activity.C
 visibly launching once per test method. The activity comes up and the semantics tree never
 registers, so any `onNodeWith...` call throws before reaching the code under test.
 
-Do not investigate the application when you see this. Clear the build and run again:
+Two causes produce this signature, and they need different fixes. **Check the device before you
+clear the build** — a locked device gives the identical error and a clean build does nothing about
+it, so reaching for the clean first is what makes a lock look like a build problem. The device
+check is one command and takes a second:
+
+```sh
+adb shell dumpsys window | grep -E 'mDreamingLockscreen|mCurrentFocus'
+```
+
+See [the same signature, from a locked device](#the-same-signature-from-a-locked-device) below. If
+the device is unlocked, the stale build is the remaining explanation, and it does need a clean:
 
 ```sh
 ./gradlew clean
@@ -65,6 +83,27 @@ Two traps, both of which cost real time here:
 
 Note that `./gradlew quality` does not clear this, and neither does `--rerun-tasks` on the Kotlin
 compile alone. The generated Compose and Hilt code has to be regenerated too.
+
+### The same signature, from a locked device
+
+**A locked test device produces this identical error, and a clean build does not fix it.** The test
+`ComponentActivity` launches behind the keyguard, so the window never becomes visible and the
+semantics tree never registers. It is indistinguishable from the stale-build case by looking at the
+test results alone, and it is intermittent, which makes it worse: it passes and fails on the same
+commit minutes apart.
+
+The discriminator is the device, not the build:
+
+```sh
+adb shell dumpsys window | grep -E 'mDreamingLockscreen|mCurrentFocus'
+```
+
+`mDreamingLockscreen=true`, or a `mCurrentFocus` naming the notification shade or a keyguard view,
+means every Compose test will fail this way. Unlock the device and re-run; no build step is
+involved. To keep it unlocked across a session, `adb shell svc power stayon usb`.
+
+Order matters: check this **before** the clean. A clean costs a couple of minutes and fixes nothing
+here, and reaching for it first is what makes this look like a build problem.
 
 ## Hilt test bindings
 

@@ -72,7 +72,6 @@ internal sealed interface PodcastNavigationKey : NavKey {
 
 @Serializable
 internal enum class PodcastManagementCategory {
-    AUTO_REFRESH,
     AUTO_QUEUE,
     NOTIFICATIONS,
 }

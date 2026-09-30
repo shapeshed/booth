@@ -53,7 +53,15 @@ class PodcastBackupManager(
         }
     },
 ) {
-    suspend fun export(): String {
+    /**
+     * The backup document itself, as JSON.
+     *
+     * Not a user-facing format: [exportZip] wraps these exact bytes in `backup.json`, and that ZIP is
+     * what the export UI writes. This is internal so the round-trip test can assert on the document
+     * without unpacking the container, and it stays public-with-internal-name because the format is
+     * the thing the version check below describes.
+     */
+    internal suspend fun export(): String {
         val subscriptions = repository.podcasts.first()
         val podcastsById = subscriptions.associateBy(PodcastEntity::id)
         val episodes = repository.allEpisodesSnapshot()
@@ -142,7 +150,6 @@ class PodcastBackupManager(
                     .put("skipEndSeconds", podcast.skipEndSeconds)
                     .put("playbackSpeed", podcast.playbackSpeed ?: JSONObject.NULL)
                     .put("skipSilence", podcast.skipSilence ?: JSONObject.NULL)
-                    .put("includeInAutoRefresh", podcast.includeInAutoRefresh)
                     .put("includeInAutoDownload", podcast.includeInAutoDownload)
                     .put("includeInVideoDownload", podcast.includeInVideoDownload)
                     .put("includeInNotifications", podcast.includeInNotifications)
@@ -169,8 +176,6 @@ class PodcastBackupManager(
                 JSONObject()
                     .put("subscriptionsViewMode", settings.podcastSubscriptionsViewMode.first().name)
                     .put("selectedTab", settings.podcastSelectedTab.first() ?: JSONObject.NULL)
-                    .put("refreshInterval", settings.podcastRefreshInterval.first().name)
-                    .put("refreshNetwork", settings.podcastRefreshNetwork.first().name)
                     .put("notificationsEnabled", settings.podcastNotificationsEnabled.first())
                     .put("autoQueueEnabled", settings.podcastAutoQueueEnabled.first())
                     .put("downloadEpisodesAddedToUpNext", settings.podcastDownloadEpisodesAddedToUpNext.first())
@@ -204,8 +209,15 @@ class PodcastBackupManager(
         return import(json)
     }
 
-    /** Merges a portable backup without deleting current subscriptions, episodes, or downloads. */
-    suspend fun import(json: String): Int {
+    /**
+     * The backup document itself, as JSON.
+     *
+     * Not a user-facing format and not an entry point: [exportZip] writes these bytes as
+     * `backup.json`, [importZip] reads them back out, and nothing else touches them. The ZIP is the
+     * only format Booth exports or accepts, so a `.json` file is not something a user can produce
+     * or restore with.
+     */
+    internal suspend fun import(json: String): Int {
         val document = JSONObject(json)
         require(isSupported(document)) { "Unsupported Booth backup format" }
         val subscriptions = document.optJSONArray("subscriptions") ?: JSONArray()
@@ -235,10 +247,6 @@ class PodcastBackupManager(
                     skipEndSeconds = item.optInt("skipEndSeconds", existing?.skipEndSeconds ?: 0),
                     playbackSpeed = item.optionalDouble("playbackSpeed")?.toFloat() ?: existing?.playbackSpeed,
                     skipSilence = item.optionalBoolean("skipSilence") ?: existing?.skipSilence,
-                    includeInAutoRefresh = item.optBoolean(
-                        "includeInAutoRefresh",
-                        existing?.includeInAutoRefresh ?: true,
-                    ),
                     // Backups created before the episode index was added cannot tell which feed
                     // items were already known. Keep those subscriptions safe from downloading
                     // the entire historical feed until the user explicitly enables this again.
@@ -389,12 +397,6 @@ class PodcastBackupManager(
                 settings.setPodcastSubscriptionsViewMode(it)
             }
             global.optionalString("selectedTab")?.let { settings.setPodcastSelectedTab(it) }
-            global.optionalString("refreshInterval")?.toEnum<PodcastRefreshInterval>()?.let {
-                settings.setPodcastRefreshInterval(it)
-            }
-            global.optionalString("refreshNetwork")?.toEnum<PodcastRefreshNetwork>()?.let {
-                settings.setPodcastRefreshNetwork(it)
-            }
             global.optionalBoolean("notificationsEnabled")?.let { settings.setPodcastNotificationsEnabled(it) }
             global.optionalBoolean("autoQueueEnabled")?.let { settings.setPodcastAutoQueueEnabled(it) }
             global.optionalBoolean("downloadEpisodesAddedToUpNext")?.let {

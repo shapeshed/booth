@@ -12,7 +12,7 @@ import com.shapeshed.booth.data.podcastTags
  * The screen is a set of toggles over a list of podcasts, and every one of them writes through the
  * ViewModel. Taking the ViewModel here made the screen impossible to render without Hilt.
  *
- * [updateFlags] takes the podcast and the three booleans rather than the eight arguments the
+ * [updateFlags] takes the podcast and the two booleans rather than the seven arguments the
  * ViewModel method takes, because the remaining five are derived from the podcast and deriving them
  * here would mean the screen has to know how tags and skip markers are built.
  *
@@ -23,12 +23,10 @@ import com.shapeshed.booth.data.podcastTags
 internal class PodcastManagementActions(
     val updateFlags: (
         podcast: PodcastEntity,
-        refresh: Boolean,
         download: Boolean,
         notifications: Boolean,
     ) -> Unit,
     val setAutoQueue: (podcastId: Long, enabled: Boolean) -> Unit,
-    val setAllAutoRefresh: (enabled: Boolean) -> Unit,
     val setAllAutoQueue: (enabled: Boolean) -> Unit,
     val setAllNotifications: (enabled: Boolean) -> Unit,
 )
@@ -42,20 +40,18 @@ internal class PodcastManagementActions(
 @Composable
 internal fun rememberManagementActions(viewModel: PodcastViewModel): PodcastManagementActions = remember(viewModel) {
     PodcastManagementActions(
-        updateFlags = { podcast, refresh, download, notifications ->
+        updateFlags = { podcast, download, notifications ->
             viewModel.updatePodcastSettings(
                 podcast.id,
                 podcastTags(listOf(podcast)).joinToString(", "),
                 podcast.skipStartSeconds,
                 podcast.skipEndSeconds,
-                refresh,
                 download,
                 podcast.includeInAutoQueue,
                 notifications,
             )
         },
         setAutoQueue = { podcastId, enabled -> viewModel.setPodcastAutoQueue(podcastId, enabled) },
-        setAllAutoRefresh = { enabled -> viewModel.setAllPodcastAutoRefresh(enabled) },
         setAllAutoQueue = { enabled -> viewModel.setAllPodcastAutoQueue(enabled) },
         setAllNotifications = { enabled -> viewModel.setAllPodcastNotifications(enabled) },
     )
@@ -71,15 +67,14 @@ internal fun PodcastHomeManagementDestination(
     PodcastManagementScreen(
         category = destination.category,
         podcasts = podcasts,
-        onPodcastFlagsChange = { podcast, refresh, download, notifications ->
-            actions.updateFlags(podcast, refresh, download, notifications)
+        onPodcastFlagsChange = { podcast, download, notifications ->
+            actions.updateFlags(podcast, download, notifications)
         },
         onPodcastAutoQueueChange = { podcast, enabled ->
             actions.setAutoQueue(podcast.id, enabled)
         },
         onAllEnabledChange = { enabled ->
             when (destination.category) {
-                PodcastManagementCategory.AUTO_REFRESH -> actions.setAllAutoRefresh(enabled)
                 PodcastManagementCategory.AUTO_QUEUE -> actions.setAllAutoQueue(enabled)
                 PodcastManagementCategory.NOTIFICATIONS -> actions.setAllNotifications(enabled)
             }

@@ -23,6 +23,7 @@ import com.shapeshed.booth.data.ACTION_SLEEP_TIMER_CANCEL
 import com.shapeshed.booth.data.ACTION_SLEEP_TIMER_SET
 import com.shapeshed.booth.data.DownloadAssetStatus
 import com.shapeshed.booth.data.EpisodeEntity
+import com.shapeshed.booth.data.PlaybackSettings
 import com.shapeshed.booth.data.PodcastRepository
 import com.shapeshed.booth.data.SKIP_SILENCE_ENABLED
 import com.shapeshed.booth.data.SLEEP_TIMER_DURATION_MS
@@ -77,6 +78,7 @@ class PodcastPlaybackViewModel @Inject constructor(
     private var controller: MediaController? = null
     private var controllerListener: Player.Listener? = null
     private var preferredSpeed = 1f
+    private var globalSkipSilence = false
     private var playlistEpisodes: Map<Long, EpisodeEntity> = emptyMap()
     private var playlistPodcastTitles: Map<Long, String> = emptyMap()
     private var videoMode = false
@@ -118,8 +120,11 @@ class PodcastPlaybackViewModel @Inject constructor(
             _isPlaying.value = controller?.isPlaying == true
             _state.value = _state.value.copy(isPlaying = controller?.isPlaying == true)
             viewModelScope.launch {
-                preferredSpeed = settings.podcastPlaybackSpeed?.first() ?: preferredSpeed
-                val skipSilence = settings.podcastSkipSilence?.first() ?: false
+                preferredSpeed = settings.podcastPlaybackSpeed.first()
+                // Hoisted out of the resolution helpers below, which need the global as a plain
+                // value. Read once per item rather than per field.
+                globalSkipSilence = settings.podcastSkipSilence.first()
+                val skipSilence = globalSkipSilence
                 controller?.setPlaybackSpeed(preferredSpeed)
                 sendSkipSilenceCommand(skipSilence)
                 _state.value = _state.value.copy(speed = preferredSpeed, skipSilence = skipSilence)
@@ -181,7 +186,10 @@ class PodcastPlaybackViewModel @Inject constructor(
                         val episode = playlistEpisodes[episodeId] ?: repository.episode(episodeId)
                             ?: return@launch
                         playlistEpisodes = playlistEpisodes + (episode.id to episode)
-                        val effectiveSpeed = repository.podcast(episode.podcastId)?.playbackSpeed ?: preferredSpeed
+                        val effectiveSpeed = PlaybackSettings.effectiveSpeed(
+                            repository.podcast(episode.podcastId)?.playbackSpeed,
+                            preferredSpeed,
+                        )
                         controller?.setPlaybackSpeed(effectiveSpeed)
                         _progress.value = PlaybackProgress(
                             positionMs = displayedPositionMs,
@@ -268,10 +276,8 @@ class PodcastPlaybackViewModel @Inject constructor(
                 ?.let(::playbackStartPositionMs)
                 ?: playbackStartPositionMs(selectedEpisode)
             val podcast = repository.podcast(selectedEpisode.podcastId)
-            val effectiveSpeed = podcast?.playbackSpeed ?: preferredSpeed
-            val effectiveSkipSilence = podcast?.skipSilence
-                ?: settings.podcastSkipSilence?.first()
-                ?: false
+            val effectiveSpeed = PlaybackSettings.effectiveSpeed(podcast?.playbackSpeed, preferredSpeed)
+            val effectiveSkipSilence = PlaybackSettings.effectiveSkipSilence(podcast?.skipSilence, globalSkipSilence)
             displayedPositionMs = persistedPosition
             _progress.value = _progress.value.copy(positionMs = persistedPosition)
             _state.value = _state.value.copy(
@@ -314,10 +320,8 @@ class PodcastPlaybackViewModel @Inject constructor(
         viewModelScope.launch {
             val item = buildMediaItem(episode, useVideo = false, playlistPodcastTitles)
             val podcast = repository.podcast(episode.podcastId)
-            val effectiveSpeed = podcast?.playbackSpeed ?: preferredSpeed
-            val effectiveSkipSilence = podcast?.skipSilence
-                ?: settings.podcastSkipSilence?.first()
-                ?: false
+            val effectiveSpeed = PlaybackSettings.effectiveSpeed(podcast?.playbackSpeed, preferredSpeed)
+            val effectiveSkipSilence = PlaybackSettings.effectiveSkipSilence(podcast?.skipSilence, globalSkipSilence)
             _state.value = _state.value.copy(skipSilence = effectiveSkipSilence)
             controller?.apply {
                 setMediaItem(item, episode.positionMs)
@@ -333,10 +337,8 @@ class PodcastPlaybackViewModel @Inject constructor(
         val episodeId = mediaController.currentMediaItem?.mediaId?.toLongOrNull() ?: return
         val episode = repository.episode(episodeId) ?: return
         val podcast = repository.podcast(episode.podcastId)
-        val effectiveSpeed = podcast?.playbackSpeed ?: preferredSpeed
-        val effectiveSkipSilence = podcast?.skipSilence
-            ?: settings.podcastSkipSilence?.first()
-            ?: false
+        val effectiveSpeed = PlaybackSettings.effectiveSpeed(podcast?.playbackSpeed, preferredSpeed)
+        val effectiveSkipSilence = PlaybackSettings.effectiveSkipSilence(podcast?.skipSilence, globalSkipSilence)
         playlistEpisodes = playlistEpisodes + (episode.id to episode)
         displayedPositionMs = mediaController.currentPosition.coerceAtLeast(0L)
         displayedDurationMs = mediaController.duration.takeIf { it > 0L } ?: episode.durationMs ?: 0L
@@ -514,13 +516,19 @@ class PodcastPlaybackViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Sets a podcast's own speed, or clears it to follow the global.
+     *
+     * Null is the "use global" action, not "no change": it is written as null so the podcast stops
+     * pinning a number and picks up whatever the app-wide default is at the time.
+     */
     fun setPodcastPlaybackSpeed(podcastId: Long, speed: Float?) {
-        val normalizedSpeed = speed?.coerceIn(0.5f, 3f)
+        val normalizedSpeed = speed?.let(PlaybackSettings::clampSpeed)
         viewModelScope.launch {
             repository.setPodcastPlaybackSpeed(podcastId, normalizedSpeed)
         }
         if (_state.value.episode?.podcastId == podcastId) {
-            val effectiveSpeed = normalizedSpeed ?: preferredSpeed
+            val effectiveSpeed = PlaybackSettings.effectiveSpeed(normalizedSpeed, preferredSpeed)
             controller?.setPlaybackSpeed(effectiveSpeed)
             _state.value = _state.value.copy(speed = effectiveSpeed)
         }

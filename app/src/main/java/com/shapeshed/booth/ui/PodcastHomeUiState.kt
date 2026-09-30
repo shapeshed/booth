@@ -22,7 +22,6 @@ internal data class PodcastHomeUiState(
     val refreshProgress: PodcastRefreshProgress,
     val subscriptionsViewMode: PodcastSubscriptionsViewMode,
     val playback: PlaybackUiState,
-    val sleepTimer: com.shapeshed.booth.data.SleepTimerState?,
     val settings: com.shapeshed.booth.data.PodcastSettingsState,
     val downloadProgress: Map<Long, com.shapeshed.booth.data.DownloadProgress>,
 )
@@ -46,7 +45,6 @@ internal fun rememberPodcastHomeUiState(
     val refreshProgress by viewModel.refreshProgress.collectAsStateWithLifecycle()
     val subscriptionsViewMode by viewModel.subscriptionsViewMode.collectAsStateWithLifecycle()
     val playback by playbackViewModel.state.collectAsStateWithLifecycle()
-    val sleepTimer by playbackViewModel.sleepTimer.collectAsStateWithLifecycle()
     val settings by viewModel.podcastSettings.collectAsStateWithLifecycle()
     val downloadProgress by viewModel.downloadProgress.collectAsStateWithLifecycle()
 
@@ -65,7 +63,6 @@ internal fun rememberPodcastHomeUiState(
         refreshProgress = refreshProgress,
         subscriptionsViewMode = subscriptionsViewMode,
         playback = playback,
-        sleepTimer = sleepTimer,
         settings = settings,
         downloadProgress = downloadProgress,
     )

@@ -10,8 +10,6 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import com.shapeshed.booth.BuildConfig
 import com.shapeshed.booth.data.PodcastDownloadNetwork
-import com.shapeshed.booth.data.PodcastRefreshInterval
-import com.shapeshed.booth.data.PodcastRefreshNetwork
 import com.shapeshed.booth.data.PodcastSearchProvider
 import com.shapeshed.booth.data.PodcastSearchResult
 import com.shapeshed.booth.ui.theme.BoothAppTheme
@@ -38,22 +36,16 @@ class PodcastAppSettingsScreenTest {
         composeRule.onNodeWithText("Download episodes added to Up Next").assertIsDisplayed()
         composeRule.onNodeWithText("Download videos when available").assertDoesNotExist()
         composeRule.onNodeWithText("Podcast video downloads").assertDoesNotExist()
-        scrollTo("Download network")
-        composeRule.onNodeWithText("Download network").assertIsDisplayed()
-        // The Download network and Refresh network rows can both show "Wi-Fi only", and
-        // ListItem merges each row's headline and supporting text into one node, so assert
-        // the value against the Download network row rather than matching the label alone.
-        composeRule.onNodeWithText("Download network").assertTextContains("Wi-Fi only")
-        scrollTo("Auto refresh")
-        composeRule.onNodeWithText("Auto refresh").assertIsDisplayed()
-        scrollTo("Refresh podcasts automatically")
-        composeRule.onNodeWithText("Refresh podcasts automatically").assertIsDisplayed()
-        composeRule.onNodeWithText("0 podcasts").assertIsDisplayed()
-        scrollTo("Refresh interval")
-        composeRule.onNodeWithText("Refresh interval").assertIsDisplayed()
-        composeRule.onNodeWithText("Every 6 hours").assertIsDisplayed()
-        scrollTo("Refresh network")
-        composeRule.onNodeWithText("Refresh network").assertIsDisplayed()
+        // The Up Next automatic download toggle is off in this test's defaults, and Download network
+        // only gates that path, so the row must be absent rather than offering a choice that cannot
+        // change anything.
+        composeRule.onNodeWithText("Download network").assertDoesNotExist()
+        // Refresh is scheduled per feed from its own publishing pattern, so the interval and network
+        // rows are gone. Their absence is the behaviour, and the other rows are asserted around them
+        // so a row that moved cannot quietly satisfy this by shifting position.
+        composeRule.onNodeWithText("Refresh interval").assertDoesNotExist()
+        composeRule.onNodeWithText("Refresh network").assertDoesNotExist()
+        composeRule.onNodeWithText("Every 6 hours").assertDoesNotExist()
         scrollTo("Podcast notifications")
         composeRule.onNodeWithText("Podcast notifications").assertIsDisplayed()
         composeRule.onNodeWithText("All podcasts").assertIsDisplayed()
@@ -120,16 +112,11 @@ class PodcastAppSettingsScreenTest {
             assertEquals(null, managedCategory)
         }
 
+        managedCategory = null
         scrollTo("Podcasts added to Up Next")
         composeRule.onNodeWithText("Podcasts added to Up Next").performClick()
         composeRule.runOnIdle {
             assertEquals(PodcastManagementCategory.AUTO_QUEUE, managedCategory)
-        }
-
-        scrollTo("Refresh podcasts automatically")
-        composeRule.onNodeWithText("Refresh podcasts automatically").performClick()
-        composeRule.runOnIdle {
-            assertEquals(PodcastManagementCategory.AUTO_REFRESH, managedCategory)
         }
 
         managedCategory = null
@@ -150,63 +137,101 @@ class PodcastAppSettingsScreenTest {
     }
 
     @Test
-    fun refreshRowsChangeTheirSelectedValues() {
-        var interval: PodcastRefreshInterval? = null
-        var network: PodcastRefreshNetwork? = null
+    fun theDefaultPlaybackSpeedRowOpensTheSheetAndReportsTheChosenSpeed() {
+        // The row and its sheet are new and this is their only coverage. It shows the app-wide
+        // speed, and choosing a preset has to reach the callback, or the setting silently does
+        // nothing while looking entirely functional.
+        var chosen: Float? = null
         setSettingsContent(
-            onRefreshIntervalChange = { interval = it },
-            onRefreshNetworkChange = { network = it },
+            globalPlaybackSpeed = 1.25f,
+            onGlobalPlaybackSpeedChange = { chosen = it },
         )
 
-        scrollTo("Refresh interval")
-        composeRule.onNodeWithText("Refresh interval").performClick()
-        composeRule.onNodeWithText("Daily").performClick()
-        composeRule.runOnIdle { assertEquals(PodcastRefreshInterval.DAILY, interval) }
+        scrollTo("Default playback speed")
+        composeRule.onNodeWithText("Default playback speed").assertIsDisplayed()
+        // The supporting text is the current value, so the row states what it is set to.
+        composeRule.onNodeWithText("Default playback speed").assertTextContains("1.25×")
 
-        scrollTo("Refresh network")
-        composeRule.onNodeWithText("Refresh network").performClick()
-        composeRule.onNodeWithText("Wi-Fi or mobile data").performClick()
-        composeRule.runOnIdle { assertEquals(PodcastRefreshNetwork.ANY_CONNECTION, network) }
+        composeRule.onNodeWithText("Default playback speed").performClick()
+        composeRule.runOnIdle { assertEquals(null, chosen) }
+        composeRule.onNodeWithText("1.5×").performClick()
+        composeRule.runOnIdle { assertEquals(1.5f, chosen) }
     }
 
     @Test
-    fun backupRowsInvokeImportAndJsonAndZipExportCallbacks() {
+    fun podcastNotificationsIsHiddenWhileNotificationsAreOff() {
+        // Which podcasts notify cannot take effect while notifications are off. The walk-through
+        // covers the on case, so together they pin both directions.
+        setSettingsContent(notificationsEnabled = false)
+
+        // Anchored on the group label below the notifications group rather than on "Notifications"
+        // itself, which matches both the group label and the global toggle's headline and so is
+        // ambiguous. The anchor matters: an absence assertion against a blank screen proves nothing.
+        scrollTo("Podcast discovery")
+        composeRule.onNodeWithText("Podcast discovery").assertIsDisplayed()
+        composeRule.onNodeWithText("Podcast notifications").assertDoesNotExist()
+        composeRule.onNodeWithText("All podcasts").assertDoesNotExist()
+    }
+
+    @Test
+    fun podcastsAddedToUpNextIsHiddenWhileTheFeatureIsOff() {
+        // With the global toggle off, which podcasts are opted in cannot take effect, so the row is
+        // hidden rather than shown with a "disabled globally" summary. The walk-through covers the
+        // on case, so the two together pin both directions.
+        setSettingsContent(autoQueueEnabled = false)
+
+        scrollTo("Add new episodes to Up Next")
+        composeRule.onNodeWithText("Add new episodes to Up Next").assertIsDisplayed()
+        composeRule.onNodeWithText("Podcasts added to Up Next").assertDoesNotExist()
+        composeRule.onNodeWithText("3 podcasts").assertDoesNotExist()
+    }
+
+    @Test
+    fun downloadNetworkAppearsOnlyWhenUpNextDownloadsAreOn() {
+        // The paired half of the absence asserted elsewhere: with automatic Up Next downloads on,
+        // the network row is there, because it is the only control over that path's network.
+        setSettingsContent(downloadEpisodesAddedToUpNext = true)
+
+        scrollTo("Download network")
+        composeRule.onNodeWithText("Download network").assertIsDisplayed()
+        // ListItem merges a row's headline and supporting text into one node, so the value is
+        // asserted against the row rather than by matching the label alone.
+        composeRule.onNodeWithText("Download network").assertTextContains("Wi-Fi only")
+    }
+
+    @Test
+    fun backupRowsInvokeImportAndExportCallbacks() {
         var importCalls = 0
-        var jsonExportCalls = 0
-        var zipExportCalls = 0
+        var exportCalls = 0
         setSettingsContent(
             onImportBackup = { importCalls++ },
-            onExportBackup = { jsonExportCalls++ },
-            onExportBackupZip = { zipExportCalls++ },
+            onExportBackup = { exportCalls++ },
         )
 
         scrollTo("Import Booth backup")
         composeRule.onNodeWithText("Import Booth backup").performClick()
         scrollTo("Export Booth backup")
         composeRule.onNodeWithText("Export Booth backup").performClick()
-        scrollTo("Export Booth backup ZIP")
-        composeRule.onNodeWithText("Export Booth backup ZIP").performClick()
 
         composeRule.runOnIdle {
             assertEquals(1, importCalls)
-            assertEquals(1, jsonExportCalls)
-            assertEquals(1, zipExportCalls)
+            assertEquals(1, exportCalls)
         }
     }
 
     private fun setSettingsContent(
         onManagePodcasts: (PodcastManagementCategory) -> Unit = {},
         autoQueueEnabled: Boolean = true,
+        notificationsEnabled: Boolean = true,
+        globalPlaybackSpeed: Float = 1f,
+        onGlobalPlaybackSpeedChange: (Float) -> Unit = {},
         onAutoQueueEnabledChange: (Boolean) -> Unit = {},
         downloadEpisodesAddedToUpNext: Boolean = false,
         onDownloadEpisodesAddedToUpNextChange: (Boolean) -> Unit = {},
-        onRefreshIntervalChange: (PodcastRefreshInterval) -> Unit = {},
-        onRefreshNetworkChange: (PodcastRefreshNetwork) -> Unit = {},
         onImportOpml: () -> Unit = {},
         onExportOpml: () -> Unit = {},
         onImportBackup: () -> Unit = {},
         onExportBackup: () -> Unit = {},
-        onExportBackupZip: () -> Unit = {},
         onCopyVersion: (String) -> Unit = {},
     ) {
         composeRule.setContent {
@@ -214,7 +239,6 @@ class PodcastAppSettingsScreenTest {
                 PodcastAppSettingsScreen(
                     podcastManagementCounts = PodcastManagementCounts(
                         total = 4,
-                        autoRefresh = 0,
                         autoQueue = 3,
                         notifications = 4,
                     ),
@@ -222,13 +246,11 @@ class PodcastAppSettingsScreenTest {
                     onAutoQueueEnabledChange = onAutoQueueEnabledChange,
                     downloadEpisodesAddedToUpNext = downloadEpisodesAddedToUpNext,
                     onDownloadEpisodesAddedToUpNextChange = onDownloadEpisodesAddedToUpNextChange,
-                    refreshInterval = PodcastRefreshInterval.SIX_HOURS,
-                    onRefreshIntervalChange = onRefreshIntervalChange,
-                    refreshNetwork = PodcastRefreshNetwork.WIFI_ONLY,
-                    onRefreshNetworkChange = onRefreshNetworkChange,
                     downloadNetwork = PodcastDownloadNetwork.WIFI_ONLY,
                     onDownloadNetworkChange = {},
-                    notificationsEnabled = true,
+                    notificationsEnabled = notificationsEnabled,
+                    globalPlaybackSpeed = globalPlaybackSpeed,
+                    onGlobalPlaybackSpeedChange = onGlobalPlaybackSpeedChange,
                     onNotificationsEnabledChange = {},
                     searchProviders = listOf(testSearchProvider),
                     selectedSearchProviderId = testSearchProvider.id,
@@ -242,7 +264,6 @@ class PodcastAppSettingsScreenTest {
                     onExportOpml = onExportOpml,
                     onImportBackup = onImportBackup,
                     onExportBackup = onExportBackup,
-                    onExportBackupZip = onExportBackupZip,
                     onManagePodcasts = onManagePodcasts,
                     onCopyVersion = onCopyVersion,
                 )

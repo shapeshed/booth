@@ -23,7 +23,6 @@
     <string name="export_opml">Ekspordi OPML</string>
     <string name="clear">Tühjenda</string>
     <string name="no_filter_matches">No matches</string>
-    <string name="auto_refresh">Automaatne värskendamine</string>
     <string name="notifications">Märguanded</string>
     <string name="on">Sees</string>
     <string name="off">Väljas</string>

@@ -126,6 +126,9 @@ internal enum class PodcastTab { HOME, UP_NEXT, SUBSCRIPTIONS }
 internal enum class EpisodeOrigin { INBOX, UP_NEXT, DOWNLOADS, ALL_EPISODES, PODCAST, SEARCH }
 
 internal sealed interface PodcastEpisodeAction {
+    /** True when the episode is in the inbox, so it can be dismissed from there. */
+    val inInbox: Boolean
+
     data class Subscribed(
         val episode: EpisodeEntity,
         val podcastTitle: String,
@@ -136,6 +139,7 @@ internal sealed interface PodcastEpisodeAction {
         val isCompleted: Boolean,
         val isInQueue: Boolean,
         val hasPlaybackPosition: Boolean,
+        override val inInbox: Boolean = false,
     ) : PodcastEpisodeAction
     data class Preview(
         val episode: com.shapeshed.booth.data.Episode,
@@ -148,6 +152,7 @@ internal sealed interface PodcastEpisodeAction {
         val isCompleted: Boolean,
         val isInQueue: Boolean,
         val hasPlaybackPosition: Boolean,
+        override val inInbox: Boolean = false,
     ) : PodcastEpisodeAction
 }
 
@@ -607,8 +612,12 @@ fun PodcastHomeScreen(
 
             is PodcastNavigationKey.PodcastDetail -> {
                 selectedEpisodeId = null
-                selectedPodcastId = destination.podcastId
-                podcastDetailPageId = destination.podcastId
+                // The pager is authoritative for which podcast is on screen: it can be showing a
+                // different one from the stack entry, because it swipes. Re-seeding from the stack
+                // here is what made back appear to do nothing, jumping the pager back to whichever
+                // podcast the list was opened from rather than the one being read. Keep the
+                // selected id, and only fall back to the stack when the pager has nothing set.
+                selectedPodcastId = podcastDetailPageId ?: destination.podcastId
             }
 
             else -> {
@@ -1902,7 +1911,6 @@ fun PodcastHomeScreen(
                                                             tags,
                                                             start,
                                                             end,
-                                                            refresh,
                                                             download,
                                                             queue,
                                                             notify,
@@ -1912,7 +1920,6 @@ fun PodcastHomeScreen(
                                                             tags,
                                                             start,
                                                             end,
-                                                            refresh,
                                                             download,
                                                             queue,
                                                             notify,
@@ -1982,7 +1989,7 @@ fun PodcastHomeScreen(
         PodcastHomeNowPlayingOverlay(
             visible = showNowPlaying,
             playback = playback,
-            sleepTimer = homeUiState.sleepTimer,
+            sleepTimerFlow = playbackViewModel.sleepTimer,
             podcastTitle = playingPodcastTitle,
             onOpenPodcast = { podcastId ->
                 showNowPlaying = false

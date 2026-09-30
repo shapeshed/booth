@@ -69,6 +69,39 @@ class PodcastBackupRoundTripTest {
         }
     }
 
+    @Test
+    fun exportedZipRestoresThroughTheImportEntryPoint() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val sourceDatabase = database(context)
+        val targetDatabase = database(context)
+        try {
+            val source = repository(sourceDatabase)
+            val target = repository(targetDatabase)
+            val podcast = podcast()
+            source.upsertBackupPodcast(podcast)
+            source.upsertBackupEpisode(episode(podcast.id))
+
+            // Exactly what the export UI writes, put through exactly what the import UI reads: the
+            // container and the dispatch, not the document inside it.
+            val bytes = PodcastBackupManager(source, SettingsStore(context)).exportZip()
+            assertEquals('P'.code.toByte(), bytes[0])
+            assertEquals('K'.code.toByte(), bytes[1])
+
+            val restored = PodcastBackupManager(
+                repository = target,
+                settings = SettingsStore(context),
+                restoreDownload = {},
+            ).importZip(bytes)
+
+            assertTrue(restored > 0)
+            assertEquals(1, target.podcasts.first().size)
+            assertEquals(1, target.episodes(podcast.id).first().size)
+        } finally {
+            sourceDatabase.close()
+            targetDatabase.close()
+        }
+    }
+
     private fun database(context: Context) = Room.inMemoryDatabaseBuilder(
         context,
         PodcastDatabase::class.java,

@@ -58,6 +58,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -74,6 +75,7 @@ import androidx.compose.ui.unit.dp
 import com.shapeshed.booth.R
 import com.shapeshed.booth.data.PodcastEntity
 import com.shapeshed.booth.data.PodcastSubscriptionsViewMode
+import kotlinx.coroutines.launch
 
 @Composable
 internal fun PodcastLibrary(
@@ -427,21 +429,28 @@ internal fun PodcastSwipeRow(
     val dismissState = rememberSwipeToDismissBoxState(
         positionalThreshold = { distance -> distance * SWIPE_TO_DISMISS_THRESHOLD_FRACTION },
     )
-    LaunchedEffect(dismissState.currentValue) {
-        if (dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
-            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-            dismissState.snapTo(SwipeToDismissBoxValue.Settled)
-            showRemovalConfirmation = true
-        }
-    }
+    // One-shot onDismiss rather than an effect on currentValue. An effect keyed on observed state
+    // re-raises the confirmation when the state is still dismissed after a rotation or a scroll,
+    // which is a dialog nobody swiped for. A one-shot callback cannot re-fire.
+    val dismissScope = rememberCoroutineScope()
     SwipeToDismissBox(
         state = dismissState,
+        onDismiss = { value ->
+            if (value != SwipeToDismissBoxValue.Settled) {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                showRemovalConfirmation = true
+                dismissScope.launch { dismissState.reset() }
+            }
+        },
         enableDismissFromStartToEnd = true,
         enableDismissFromEndToStart = true,
+        // No contentDescription here on purpose. The one this used to set was a hardcoded developer
+        // string, so a screen reader announced "Podcast swipe row" instead of the podcast, and a
+        // contentDescription on a container replaces the text of everything inside it. Letting the
+        // card speak for itself is both correct and localised.
         modifier = modifier
             .fillMaxWidth()
-            .clip(MaterialTheme.shapes.medium)
-            .semantics { contentDescription = "Podcast swipe row ${podcast.title}" },
+            .clip(MaterialTheme.shapes.medium),
         backgroundContent = {
             Box(
                 modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.errorContainer),

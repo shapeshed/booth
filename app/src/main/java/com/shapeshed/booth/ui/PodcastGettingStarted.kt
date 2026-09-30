@@ -181,7 +181,12 @@ internal fun PodcastGettingStarted(
                         LazyVerticalGrid(
                             columns = GridCells.Adaptive(minSize = if (isTablet) 160.dp else 96.dp),
                             modifier = Modifier.fillMaxWidth(),
-                            contentPadding = PaddingValues(bottom = 16.dp),
+                            // Clears the mini player, like every other scrolling surface.
+                            // Only reachable with an empty library, but the mini player can
+                            // be up regardless of what the library holds.
+                            contentPadding = PaddingValues(
+                                bottom = 16.dp + LocalPodcastMiniPlayerInset.current,
+                            ),
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {

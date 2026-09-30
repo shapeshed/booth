@@ -23,7 +23,6 @@
     <string name="export_opml">OPML exportieren</string>
     <string name="clear">Löschen</string>
     <string name="no_filter_matches">No matches</string>
-    <string name="auto_refresh">Automatische Aktualisierung</string>
     <string name="notifications">Benachrichtigungen</string>
     <string name="on">Ein</string>
     <string name="off">Aus</string>

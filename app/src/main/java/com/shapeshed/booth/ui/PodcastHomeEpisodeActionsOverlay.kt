@@ -3,6 +3,7 @@ package com.shapeshed.booth.ui
 import android.content.Context
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -28,6 +29,8 @@ internal class PodcastEpisodeActionActions(
     val download: (action: PodcastEpisodeAction) -> Unit,
     val removeDownload: (action: PodcastEpisodeAction) -> Unit,
     val removeFromQueue: (action: PodcastEpisodeAction) -> Unit,
+    val dismissFromInbox: (action: PodcastEpisodeAction) -> Unit,
+    val restoreToInbox: (episodeId: Long) -> Unit,
     val addToQueue: (action: PodcastEpisodeAction, onError: () -> Unit) -> Unit,
     val setPlayed: (action: PodcastEpisodeAction, played: Boolean) -> Unit,
     val resetPosition: (action: PodcastEpisodeAction) -> Unit,
@@ -72,6 +75,15 @@ internal fun rememberEpisodeActionActions(
                 ) { savedEpisode -> viewModel.removeDownload(context, savedEpisode.id) }
             }
         },
+        dismissFromInbox = { action ->
+            // Only reachable for a saved episode: the row is gated on inInbox, which previews never
+            // have, so there is no preview case to handle here.
+            when (action) {
+                is PodcastEpisodeAction.Subscribed -> viewModel.dismissFromInbox(action.episode.id)
+                is PodcastEpisodeAction.Preview -> Unit
+            }
+        },
+        restoreToInbox = { episodeId -> viewModel.restoreToInbox(episodeId) },
         removeFromQueue = { action ->
             // Both branches do the same thing, because by this point a preview has a saved row too.
             // The when is only here because the episode lives on the two subtypes.
@@ -177,6 +189,29 @@ internal fun PodcastHomeEpisodeActionsOverlay(
             onDownload = {
                 actions.download(action)
                 routeState.pendingEpisodeAction.value = null
+            },
+            onDismissFromInbox = {
+                // Same shape as the swipe: dismiss, then offer to undo. The gesture and this menu
+                // entry are meant to be indistinguishable, including the recovery.
+                actions.dismissFromInbox(action)
+                routeState.pendingEpisodeAction.value = null
+                val episodeId = when (action) {
+                    is PodcastEpisodeAction.Subscribed -> action.episode.id
+
+                    // Previews are never in the inbox, so the row is not shown for them. No-op
+                    // rather than a labelled return, which is not permitted in a lambda argument.
+                    is PodcastEpisodeAction.Preview -> null
+                }
+                episodeId?.let { id ->
+                    scope.launch {
+                        val result = snackbarHostState.showSnackbar(
+                            message = context.getString(com.shapeshed.booth.R.string.removed_from_inbox),
+                            actionLabel = context.getString(com.shapeshed.booth.R.string.undo),
+                            duration = SnackbarDuration.Short,
+                        )
+                        if (result == SnackbarResult.ActionPerformed) actions.restoreToInbox(id)
+                    }
+                }
             },
             onRemoveDownload = {
                 actions.removeDownload(action)

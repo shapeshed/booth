@@ -73,6 +73,7 @@ import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.material3.rememberSliderState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
@@ -273,7 +274,9 @@ internal fun PodcastNowPlayingOverlay(
     var fullScreenVideo by rememberSaveable { mutableStateOf(false) }
     val queueScaffoldState = rememberBottomSheetScaffoldState()
 
-    LaunchedEffect(sleepTimer) {
+    // Keyed on whether a timer exists, not on the state object: the remaining time changes four
+    // times a second and each change was cancelling and relaunching this coroutine.
+    LaunchedEffect(sleepTimer != null) {
         if (sleepTimer != null) {
             hadActiveSleepTimer = true
         } else if (hadActiveSleepTimer) {
@@ -490,7 +493,11 @@ internal fun PodcastNowPlayingOverlay(
                         )
                         // The state-based Slider owns its value, so external progress updates
                         // have to be mirrored into it while the user is not dragging.
-                        LaunchedEffect(positionMs, durationMs, isScrubbing) {
+                        // A SideEffect rather than a LaunchedEffect keyed on the position: this
+                        // runs on every change either way, but the keyed effect cancelled and
+                        // relaunched a coroutine twice a second while audio played. There is
+                        // nothing to suspend here.
+                        SideEffect {
                             if (!isScrubbing) {
                                 scrubPosition = playerProgress
                                 sliderState.value = playerProgress
@@ -657,7 +664,17 @@ internal fun PodcastNowPlayingOverlay(
         if (isWideWindow) {
             NavDisplay(
                 backStack = nowPlayingBackStack,
-                onBack = { nowPlayingBackStack.removeLastOrNull() },
+                // Must not be able to empty the stack: NavDisplay requires a non-empty back stack
+                // and throws if it ever sees one, so a bare removeLastOrNull would turn a back press
+                // into a crash on the next recomposition. With only the main pane there is nothing
+                // to pop, so dismiss instead, which is what the listener asked for anyway.
+                onBack = {
+                    if (nowPlayingBackStack.size > 1) {
+                        nowPlayingBackStack.removeLastOrNull()
+                    } else {
+                        onDismiss()
+                    }
+                },
                 sceneStrategies = listOf(supportingPaneStrategy),
                 entryProvider = entryProvider {
                     entry(

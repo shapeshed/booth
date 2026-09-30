@@ -23,7 +23,6 @@
     <string name="export_opml">OPML 내보내기</string>
     <string name="clear">지우기</string>
     <string name="no_filter_matches">No matches</string>
-    <string name="auto_refresh">자동 새로고침</string>
     <string name="notifications">알림</string>
     <string name="on">사용</string>
     <string name="off">사용 안 함</string>

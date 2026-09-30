@@ -9,13 +9,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import java.time.LocalDateTime
 
 internal class PodcastHomePlatformActions internal constructor(
     val importOpml: () -> Unit,
     val importBackup: () -> Unit,
     val exportOpml: () -> Unit,
     val exportBackup: () -> Unit,
-    val exportBackupZip: () -> Unit,
     val setNotificationsEnabled: (Boolean) -> Unit,
     val notificationsPermissionGranted: Boolean,
 
@@ -52,18 +52,13 @@ internal fun rememberPodcastHomePlatformActions(
     ) { uri ->
         uri?.let { viewModel.exportOpml(context, it) }
     }
-    val backupExportLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/json"),
-    ) { uri ->
-        uri?.let { viewModel.exportBackup(context, it) }
-    }
+    val backupExportLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+            uri?.let { viewModel.exportBackup(context, it) }
+        }
     val backupImportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let { viewModel.importBackup(context, it) }
     }
-    val backupZipExportLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
-            uri?.let { viewModel.exportBackupZip(context, it) }
-        }
     val notificationLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted ->
@@ -82,7 +77,6 @@ internal fun rememberPodcastHomePlatformActions(
         exportLauncher,
         backupExportLauncher,
         backupImportLauncher,
-        backupZipExportLauncher,
         notificationLauncher,
         mediaNotificationLauncher,
         notificationPermissionGranted,
@@ -90,10 +84,11 @@ internal fun rememberPodcastHomePlatformActions(
     ) {
         PodcastHomePlatformActions(
             importOpml = { importLauncher.launch(arrayOf("text/xml", "text/x-opml", "application/xml", "*/*")) },
-            importBackup = { backupImportLauncher.launch(arrayOf("application/json", "text/json", "*/*")) },
+            importBackup = {
+                backupImportLauncher.launch(arrayOf("application/zip", "*/*"))
+            },
             exportOpml = { exportLauncher.launch("booth-subscriptions.opml") },
-            exportBackup = { backupExportLauncher.launch("booth-backup.json") },
-            exportBackupZip = { backupZipExportLauncher.launch("booth-backup.zip") },
+            exportBackup = { backupExportLauncher.launch(backupFileName(LocalDateTime.now())) },
             setNotificationsEnabled = { enabled ->
                 when {
                     !enabled -> viewModel.setPodcastNotificationsEnabled(false)

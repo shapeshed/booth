@@ -8,8 +8,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.shapeshed.booth.data.PodcastDownloadNetwork
 import com.shapeshed.booth.data.PodcastIndexCredentials
-import com.shapeshed.booth.data.PodcastRefreshInterval
-import com.shapeshed.booth.data.PodcastRefreshNetwork
 import com.shapeshed.booth.data.PodcastSearchProvider
 import kotlinx.coroutines.flow.StateFlow
 
@@ -26,10 +24,10 @@ import kotlinx.coroutines.flow.StateFlow
 internal class PodcastSettingsActions(
     val setAutoQueueEnabled: (Boolean) -> Unit,
     val setDownloadEpisodesAddedToUpNext: (Boolean) -> Unit,
-    val setRefreshInterval: (PodcastRefreshInterval) -> Unit,
-    val setRefreshNetwork: (PodcastRefreshNetwork) -> Unit,
     val setDownloadNetwork: (PodcastDownloadNetwork) -> Unit,
     val setRemovePlayedDownloads: (Boolean) -> Unit,
+    val setGlobalPlaybackSpeed: (Float) -> Unit,
+    val setGlobalSkipSilence: (Boolean) -> Unit,
     val setSearchProvider: (String) -> Unit,
     val setPodcastIndexCredentials: (apiKey: String, apiSecret: String) -> Unit,
     val clearPodcastIndexCredentials: () -> Unit,
@@ -41,10 +39,10 @@ internal fun rememberSettingsActions(viewModel: PodcastViewModel): PodcastSettin
     PodcastSettingsActions(
         setAutoQueueEnabled = viewModel::setPodcastAutoQueueEnabled,
         setDownloadEpisodesAddedToUpNext = viewModel::setPodcastDownloadEpisodesAddedToUpNext,
-        setRefreshInterval = viewModel::setPodcastRefreshInterval,
-        setRefreshNetwork = viewModel::setPodcastRefreshNetwork,
         setDownloadNetwork = viewModel::setPodcastDownloadNetwork,
         setRemovePlayedDownloads = viewModel::setPodcastRemovePlayedDownloads,
+        setGlobalPlaybackSpeed = viewModel::setGlobalPlaybackSpeed,
+        setGlobalSkipSilence = viewModel::setGlobalSkipSilence,
         setSearchProvider = viewModel::setPodcastSearchProvider,
         setPodcastIndexCredentials = { apiKey, apiSecret ->
             viewModel.setPodcastIndexCredentials(apiKey, apiSecret)
@@ -66,7 +64,6 @@ internal fun PodcastHomeSettingsDestination(
 ) {
     val podcastManagementCounts = PodcastManagementCounts(
         total = homeUiState.allPodcasts.size,
-        autoRefresh = homeUiState.allPodcasts.count { it.includeInAutoRefresh },
         autoQueue = homeUiState.allPodcasts.count { it.includeInAutoQueue },
         notifications = homeUiState.allPodcasts.count { it.includeInNotifications },
     )
@@ -83,14 +80,14 @@ internal fun PodcastHomeSettingsDestination(
         onAutoQueueEnabledChange = actions.setAutoQueueEnabled,
         downloadEpisodesAddedToUpNext = homeUiState.settings.downloadEpisodesAddedToUpNext,
         onDownloadEpisodesAddedToUpNextChange = actions.setDownloadEpisodesAddedToUpNext,
-        refreshInterval = homeUiState.settings.refreshInterval,
-        onRefreshIntervalChange = actions.setRefreshInterval,
-        refreshNetwork = homeUiState.settings.refreshNetwork,
-        onRefreshNetworkChange = actions.setRefreshNetwork,
         downloadNetwork = homeUiState.settings.downloadNetwork,
         onDownloadNetworkChange = actions.setDownloadNetwork,
         removePlayedDownloads = homeUiState.settings.removePlayedDownloads,
         onRemovePlayedDownloadsChange = actions.setRemovePlayedDownloads,
+        globalPlaybackSpeed = homeUiState.settings.globalPlaybackSpeed,
+        onGlobalPlaybackSpeedChange = actions.setGlobalPlaybackSpeed,
+        globalSkipSilence = homeUiState.settings.globalSkipSilence,
+        onGlobalSkipSilenceChange = actions.setGlobalSkipSilence,
         notificationsEnabled = homeUiState.settings.notificationsEnabled &&
             platformActions.notificationsPermissionGranted,
         onNotificationsEnabledChange = platformActions.setNotificationsEnabled,
@@ -105,7 +102,6 @@ internal fun PodcastHomeSettingsDestination(
         onImportOpml = platformActions.importOpml,
         onExportOpml = platformActions.exportOpml,
         onExportBackup = platformActions.exportBackup,
-        onExportBackupZip = platformActions.exportBackupZip,
         onImportBackup = platformActions.importBackup,
         onManagePodcasts = onManagePodcasts,
         onCopyVersion = { label -> copyTextToClipboard(context, label, clipLabel = "version") },

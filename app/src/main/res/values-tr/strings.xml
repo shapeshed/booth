@@ -23,7 +23,6 @@
     <string name="export_opml">OPML dışa aktar</string>
     <string name="clear">Temizle</string>
     <string name="no_filter_matches">No matches</string>
-    <string name="auto_refresh">Otomatik yenileme</string>
     <string name="notifications">Bildirimler</string>
     <string name="on">Açık</string>
     <string name="off">Kapalı</string>
