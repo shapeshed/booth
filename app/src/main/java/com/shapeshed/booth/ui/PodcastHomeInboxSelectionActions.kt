@@ -13,7 +13,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
@@ -22,8 +21,6 @@ import com.shapeshed.booth.R
 import com.shapeshed.booth.data.DownloadProgress
 import com.shapeshed.booth.data.EpisodeEntity
 import com.shapeshed.booth.data.PodcastEntity
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 
 @Composable
 internal fun PodcastHomeInboxSelectionActions(
@@ -40,11 +37,10 @@ internal fun PodcastHomeInboxSelectionActions(
     markEpisodePlayed: (episodeId: Long) -> Unit,
     markEpisodeUnplayed: (episodeId: Long) -> Unit,
     undoActions: PodcastHomeUndoActions,
+    undoSnackbars: UndoSnackbars,
     podcastsById: Map<Long, PodcastEntity>,
     downloadProgress: Map<Long, DownloadProgress>,
     queueEpisodeIds: List<Long>,
-    scope: CoroutineScope,
-    snackbarHostState: SnackbarHostState,
     onMenuExpandedChange: (Boolean) -> Unit,
     onClearSelection: () -> Unit,
     onPendingAction: (PodcastEpisodeAction) -> Unit,
@@ -55,9 +51,7 @@ internal fun PodcastHomeInboxSelectionActions(
         val selected = inbox.filter { it.id in selectedIds }
         selected.forEach {
             addToQueueFromInbox(it.id) {
-                scope.launch {
-                    snackbarHostState.showSnackbar(addToUpNextError)
-                }
+                undoSnackbars.showMessage(addToUpNextError)
             }
         }
         onClearSelection()

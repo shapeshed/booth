@@ -607,6 +607,10 @@ class PodcastRepository(
         dao.addToQueueFromInbox(episodeId)
     }
 
+    suspend fun undoAddToQueueFromInbox(episodeId: Long) = withContext(Dispatchers.IO) {
+        dao.undoAddToQueueFromInbox(episodeId)
+    }
+
     suspend fun dismissFromInbox(episodeId: Long) = dao.setInbox(episodeId, false)
 
     suspend fun clearInbox() = dao.clearInbox()
@@ -614,6 +618,11 @@ class PodcastRepository(
     suspend fun restoreToInbox(episodeId: Long) = dao.setInbox(episodeId, true)
 
     suspend fun removeFromQueue(episodeId: Long) = dao.removeFromQueue(episodeId)
+
+    /** Undoes [removeFromQueue], putting the episode back where it was rather than at the end. */
+    suspend fun restoreToQueue(episodeId: Long, position: Int) = withContext(Dispatchers.IO) {
+        dao.insertIntoQueue(episodeId, position)
+    }
 
     suspend fun clearQueue() = dao.clearQueue()
 
@@ -623,6 +632,19 @@ class PodcastRepository(
 
     suspend fun remove(podcast: PodcastEntity) = withContext(Dispatchers.IO) {
         dao.removePodcastIfCurrent(podcast)
+    }
+
+    /**
+     * Undoes [remove] by resubscribing without refetching the feed.
+     *
+     * Returns whether the podcast is subscribed afterwards. False means the row is gone entirely,
+     * not that it was already subscribed: [remove] is a soft delete, so the podcast surviving it with
+     * `isSubscribed = 0` is the normal case and restoring it succeeds. The only way to get false is a
+     * hard delete in between, which an undo has no way to recover from.
+     */
+    suspend fun restoreSubscription(podcast: PodcastEntity) = withContext(Dispatchers.IO) {
+        dao.markPodcastSubscribed(podcast.id)
+        dao.podcast(podcast.id)?.isSubscribed ?: false
     }
 
     private suspend fun save(

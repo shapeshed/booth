@@ -72,6 +72,7 @@
     <string name="unfollow_podcast_title">%1$s aboneliğini iptal et</string>
     <string name="unfollow_podcast_message">Yeni bölümler artık Gelen Kutusu’nda görünmeyecek. İndirilen bölümler saklanacak.</string>
     <string name="unfollow">Takibi bırak</string>
+    <string name="unfollowed">Takipten çıkarıldı</string>
     <string name="no_episodes_available_yet">Henüz kullanılabilir bölüm yok</string>
     <string name="remove_download">İndirmeyi kaldır</string>
     <string name="reorder">Yeniden sırala</string>
@@ -106,6 +107,7 @@
     <string name="remove_all_from_inbox">Tümünü gelen kutusundan kaldır</string>
     <string name="stop_playback">Oynatmayı durdur</string>
     <string name="removed_from_up_next">Sıradaki\'nden kaldırıldı</string>
+    <string name="added_to_up_next">Sıradaki\'ne eklendi</string>
     <string name="available_offline">Çevrimdışı kullanılabilir</string>
     <string name="explicit_content">Açık içerik</string>
     <string name="download_episode">Bölümü indir</string>
@@ -146,8 +148,6 @@
     <string name="your_listening_home_coming_soon">Dinleme ana sayfanız yakında geliyor.</string>
     <string name="follow">Takip et</string>
     <string name="episodes_from_subscriptions">Abone olduğunuz podcastlerin bölümleri burada görünür.</string>
-    <string name="episode_singular">Bölüm</string>
-    <string name="episode_plural">Bölümler</string>
     <string name="up_next_all">Tümü</string>
     <string name="up_next_unplayed">Oynatılmamış</string>
     <string name="up_next_in_progress">Devam ediyor</string>
@@ -160,7 +160,7 @@
     <string name="dismiss_episode">Bölümü kapat</string>
     <string name="dismiss">Kapat</string>
     <string name="select_an_episode">Bir bölüm seçin</string>
-    <string name="selected_episodes_removed_from_inbox">%1$d %2$s gelen kutusundan kaldırıldı</string>
+    <plurals name="episodes_removed_from_inbox"><item quantity="one">%d bölüm podcast gelen kutusundan kaldırıldı</item><item quantity="other">%d bölüm podcast gelen kutusundan kaldırıldı</item></plurals>
     <string name="podcast_settings_title">Podcast ayarları</string>
     <string name="discover">Keşfet</string>
     <string name="podcast_inbox">Podcast gelen kutusu</string>
@@ -180,6 +180,7 @@
     <string name="new_episodes_from_subscriptions">Aboneliklerinizden yeni bölümler</string>
     <string name="failed">Başarısız</string>
     <string name="downloaded">İndirildi</string>
+    <string name="download_waiting_for_wifi">Wi-Fi bekleniyor</string>
     <string name="downloaded_size">%1$s indirildi</string>
     <string name="downloaded_episodes_offline">İndirilen bölümler çevrimdışı dinleme için burada görünür.</string>
     <string name="smallest">En küçük</string>
@@ -230,6 +231,8 @@
         <item quantity="other">%d new podcast episodes</item>
     </plurals>
     <string name="error_remove_up_next">Bölüm sıradakilerden kaldırılamadı</string>
+    <string name="download_removed">İndirme kaldırıldı</string>
+    <string name="error_remove_download">İndirme kaldırılamadı</string>
     <string name="error_add_up_next">Bölüm sıradakilere eklenemedi</string>
     <string name="get_started_title">Dinlemeye başlayın</string>
     <string name="get_started_summary">Sevdiğiniz podcastleri bulun, RSS akışı ekleyin veya aboneliklerinizi içe aktarın.</string>

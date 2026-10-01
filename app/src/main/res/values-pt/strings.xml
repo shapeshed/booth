@@ -72,6 +72,7 @@
     <string name="unfollow_podcast_title">Cancelar subscrição de %1$s</string>
     <string name="unfollow_podcast_message">Os episódios novos deixarão de aparecer na caixa de entrada. Os episódios transferidos serão mantidos.</string>
     <string name="unfollow">Deixar de seguir</string>
+    <string name="unfollowed">Subscrição cancelada</string>
     <string name="no_episodes_available_yet">Ainda não existem episódios disponíveis</string>
     <string name="remove_download">Remover transferência</string>
     <string name="reorder">Reordenar</string>
@@ -106,6 +107,7 @@
     <string name="remove_all_from_inbox">Remover tudo da caixa de entrada</string>
     <string name="stop_playback">Parar reprodução</string>
     <string name="removed_from_up_next">Removido de A seguir</string>
+    <string name="added_to_up_next">Adicionado a A seguir</string>
     <string name="available_offline">Disponível offline</string>
     <string name="explicit_content">Conteúdo explícito</string>
     <string name="download_episode">Transferir episódio</string>
@@ -146,8 +148,6 @@
     <string name="your_listening_home_coming_soon">A sua página inicial de áudio estará disponível em breve.</string>
     <string name="follow">Seguir</string>
     <string name="episodes_from_subscriptions">Os episódios dos podcasts subscritos aparecem aqui.</string>
-    <string name="episode_singular">Episódio</string>
-    <string name="episode_plural">Episódios</string>
     <string name="up_next_all">Todos</string>
     <string name="up_next_unplayed">Não reproduzidos</string>
     <string name="up_next_in_progress">Em curso</string>
@@ -160,7 +160,7 @@
     <string name="dismiss_episode">Fechar episódio</string>
     <string name="dismiss">Fechar</string>
     <string name="select_an_episode">Selecionar um episódio</string>
-    <string name="selected_episodes_removed_from_inbox">%1$d %2$s removidos da caixa de entrada</string>
+    <plurals name="episodes_removed_from_inbox"><item quantity="one">%d episódio removido da caixa de entrada do podcast</item><item quantity="other">%d episódios removidos da caixa de entrada do podcast</item><item quantity="many">%d episódios removidos da caixa de entrada do podcast</item></plurals>
     <string name="podcast_settings_title">Definições do podcast</string>
     <string name="discover">Descobrir</string>
     <string name="podcast_inbox">Caixa de entrada do podcast</string>
@@ -180,6 +180,7 @@
     <string name="new_episodes_from_subscriptions">Novos episódios das suas subscrições</string>
     <string name="failed">Falhou</string>
     <string name="downloaded">Transferido</string>
+    <string name="download_waiting_for_wifi">A aguardar Wi-Fi</string>
     <string name="downloaded_size">%1$s transferido</string>
     <string name="downloaded_episodes_offline">Os episódios transferidos aparecem aqui para ouvir offline.</string>
     <string name="smallest">Menor</string>
@@ -231,6 +232,8 @@
         <item quantity="many">%d novos episódios de podcast</item>
     </plurals>
     <string name="error_remove_up_next">Não foi possível remover o episódio de A seguir</string>
+    <string name="download_removed">Transferência removida</string>
+    <string name="error_remove_download">Não foi possível remover a transferência</string>
     <string name="error_add_up_next">Não foi possível adicionar o episódio a A seguir</string>
     <string name="get_started_title">Comece a ouvir</string>
     <string name="get_started_summary">Encontre podcasts de que gosta, adicione um feed RSS ou importe as suas subscrições.</string>

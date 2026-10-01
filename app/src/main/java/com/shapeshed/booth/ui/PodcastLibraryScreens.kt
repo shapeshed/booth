@@ -29,7 +29,6 @@ import androidx.compose.material.icons.rounded.OpenInBrowser
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Share
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonGroup
 import androidx.compose.material3.ButtonGroupDefaults
@@ -48,15 +47,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -67,6 +63,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -422,24 +419,37 @@ internal fun PodcastSwipeRow(
     onClick: () -> Unit,
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
-    initiallyShowRemovalConfirmation: Boolean = false,
 ) {
     val haptic = LocalHapticFeedback.current
-    var showRemovalConfirmation by remember { mutableStateOf(initiallyShowRemovalConfirmation) }
-    val dismissState = rememberSwipeToDismissBoxState(
-        positionalThreshold = { distance -> distance * SWIPE_TO_DISMISS_THRESHOLD_FRACTION },
-    )
+    val dismissState = rememberRowSwipeDismissState()
     // One-shot onDismiss rather than an effect on currentValue. An effect keyed on observed state
-    // re-raises the confirmation when the state is still dismissed after a rotation or a scroll,
-    // which is a dialog nobody swiped for. A one-shot callback cannot re-fire.
+    // re-removes the subscription when the state is still dismissed after a rotation or a scroll,
+    // which is an unfollow nobody swiped for. A one-shot callback cannot re-fire.
+    //
+    // reset() rather than snapTo(Settled) so the row animates back and is immediately usable again;
+    // a row left settled-off-screen cannot be swiped a second time.
     val dismissScope = rememberCoroutineScope()
+    val actedOn = rememberSwipeDismissGuard()
     SwipeToDismissBox(
         state = dismissState,
         onDismiss = { value ->
-            if (value != SwipeToDismissBoxValue.Settled) {
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                showRemovalConfirmation = true
-                dismissScope.launch { dismissState.reset() }
+            when (decideSwipeDismissAction(value, actedOn.intValue)) {
+                SwipeDismissAction.Act -> {
+                    actedOn.intValue = value.ordinal
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onRemove()
+                    dismissScope.launch {
+                        dismissState.reset()
+                        actedOn.intValue = NO_DIRECTION_ACTED_ON
+                    }
+                }
+
+                SwipeDismissAction.SettleAndRearm -> dismissScope.launch {
+                    dismissState.reset()
+                    actedOn.intValue = NO_DIRECTION_ACTED_ON
+                }
+
+                SwipeDismissAction.Ignore -> Unit
             }
         },
         enableDismissFromStartToEnd = true,
@@ -450,7 +460,8 @@ internal fun PodcastSwipeRow(
         // card speak for itself is both correct and localised.
         modifier = modifier
             .fillMaxWidth()
-            .clip(MaterialTheme.shapes.medium),
+            .clip(MaterialTheme.shapes.medium)
+            .testTag(SWIPE_ROW_TEST_TAG),
         backgroundContent = {
             Box(
                 modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.errorContainer),
@@ -475,25 +486,6 @@ internal fun PodcastSwipeRow(
         },
     ) {
         PodcastCard(podcast = podcast, onClick = onClick)
-    }
-    if (showRemovalConfirmation) {
-        AlertDialog(
-            onDismissRequest = { showRemovalConfirmation = false },
-            title = { Text(stringResource(R.string.remove_podcast, podcast.title)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showRemovalConfirmation = false
-                        onRemove()
-                    },
-                ) { Text(stringResource(R.string.remove)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showRemovalConfirmation = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            },
-        )
     }
 }
 

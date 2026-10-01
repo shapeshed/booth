@@ -10,7 +10,7 @@
         <error line="15" column="14" source="compose:param-order-check" />
     </file>
     <file name="src/main/java/com/shapeshed/booth/ui/PodcastHomeInboxSelectionActions.kt">
-        <error line="29" column="14" source="compose:multiple-emitters-check" />
+        <error line="26" column="14" source="compose:multiple-emitters-check" />
     </file>
     <file name="src/main/java/com/shapeshed/booth/ui/PodcastHomeNavigationChrome.kt">
         <error line="93" column="5" source="compose:content-slot-reused" />

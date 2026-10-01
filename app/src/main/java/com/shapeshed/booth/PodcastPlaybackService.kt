@@ -4,7 +4,9 @@ import android.app.PendingIntent
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.view.KeyEvent
 import androidx.concurrent.futures.CallbackToFutureAdapter
+import androidx.core.content.IntentCompat
 import androidx.core.net.toUri
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -425,6 +427,27 @@ class PodcastPlaybackService : MediaLibraryService() {
         private val sleepTimerSet = SessionCommand(ACTION_SLEEP_TIMER_SET, Bundle.EMPTY)
         private val sleepTimerCancel = SessionCommand(ACTION_SLEEP_TIMER_CANCEL, Bundle.EMPTY)
         private val skipSilenceSet = SessionCommand(ACTION_SKIP_SILENCE_SET, Bundle.EMPTY)
+
+        /**
+         * Many Bluetooth headsets expose a next-track key rather than a dedicated fast-forward
+         * key. For spoken-word playback, treat that key as the same 30-second seek instead of
+         * depending on a next media item being available in the player playlist.
+         */
+        override fun onMediaButtonEvent(
+            session: MediaSession,
+            controller: MediaSession.ControllerInfo,
+            intent: Intent,
+        ): Boolean {
+            val event = IntentCompat.getParcelableExtra(intent, Intent.EXTRA_KEY_EVENT, KeyEvent::class.java)
+                ?: return false
+            if (event.action != KeyEvent.ACTION_DOWN || event.repeatCount != 0 ||
+                event.keyCode != KeyEvent.KEYCODE_MEDIA_NEXT
+            ) {
+                return false
+            }
+            session.player.seekForward()
+            return true
+        }
 
         override fun onConnect(
             session: MediaSession,

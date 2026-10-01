@@ -2,9 +2,7 @@ package com.shapeshed.booth.data
 
 import android.content.Context
 import androidx.work.BackoffPolicy
-import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
-import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
@@ -29,20 +27,8 @@ class PodcastBackupManager(
     private val downloadManager: PodcastDownloadManager? = null,
     private val restoreDownload: suspend (EpisodeEntity) -> Unit = { episode ->
         context?.let { restoreContext ->
-            val network = settings.podcastDownloadNetwork.first()
             val request = OneTimeWorkRequestBuilder<EpisodeDownloadWorker>()
                 .setInputData(workDataOf(EPISODE_ID_INPUT to episode.id))
-                .setConstraints(
-                    Constraints.Builder()
-                        .setRequiredNetworkType(
-                            if (network == PodcastDownloadNetwork.WIFI_ONLY) {
-                                NetworkType.UNMETERED
-                            } else {
-                                NetworkType.CONNECTED
-                            },
-                        )
-                        .build(),
-                )
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.SECONDS)
                 .build()
             WorkManager.getInstance(restoreContext.applicationContext).enqueueUniqueWork(
@@ -71,6 +57,7 @@ class PodcastBackupManager(
                     it.status in
                     setOf(
                         DownloadAssetStatus.QUEUED,
+                        DownloadAssetStatus.WAITING_FOR_WIFI,
                         DownloadAssetStatus.DOWNLOADING,
                         DownloadAssetStatus.RETRYING,
                         DownloadAssetStatus.COMPLETED,

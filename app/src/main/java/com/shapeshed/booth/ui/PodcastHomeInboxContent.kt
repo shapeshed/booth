@@ -26,6 +26,8 @@ internal fun PodcastHomeInboxContent(
     refreshing: Boolean,
     downloadProgress: Map<Long, DownloadProgress>,
     playbackProgress: PlaybackProgress,
+    restoredEpisodeId: Long? = null,
+    onRestore: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
@@ -62,6 +64,8 @@ internal fun PodcastHomeInboxContent(
             onRefresh = onRefresh,
             refreshing = refreshing,
             downloadProgress = downloadProgress,
+            restoredEpisodeId = restoredEpisodeId,
+            onRestore = onRestore,
             modifier = Modifier.weight(1f),
         )
     }

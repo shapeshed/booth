@@ -1183,10 +1183,7 @@ internal fun PodcastNowPlayingQueueSheet(
                         onPlay = { onPlay(episode) },
                         onDownload = {},
                         onLongPress = {},
-                        onRemove = {
-                            onRemove(episode.id)
-                            Result.success(Unit)
-                        },
+                        onRemove = { onRemove(episode.id) },
                         showDragHandle = true,
                         compact = true,
                         modifier = Modifier

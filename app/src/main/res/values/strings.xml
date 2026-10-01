@@ -80,6 +80,7 @@
     <string name="unfollow_podcast_title">Unfollow %1$s?</string>
     <string name="unfollow_podcast_message">New episodes will no longer appear in your Inbox. Downloaded episodes will be kept.</string>
     <string name="unfollow">Unfollow</string>
+    <string name="unfollowed">Unfollowed</string>
     <string name="no_episodes_available_yet">No episodes available yet.</string>
     <string name="remove_download">Remove download</string>
     <string name="reorder">Reorder</string>
@@ -137,6 +138,7 @@
     <string name="clear_up_next_message" translatable="false">Remove all episodes from Up next? This won’t delete downloaded episodes.</string>
     <string name="stop_playback">Stop playback</string>
     <string name="removed_from_up_next">Removed from Up next</string>
+    <string name="added_to_up_next">Added to Up next</string>
     <string name="error_add_up_next">Could not add episode to Up Next</string>
     <string name="available_offline">Available offline</string>
     <string name="explicit_content">Explicit content</string>
@@ -188,8 +190,6 @@
     <string name="your_listening_home_coming_soon">Your listening home is coming soon.</string>
     <string name="follow">Follow</string>
     <string name="episodes_from_subscriptions">Episodes from your subscriptions will appear here.</string>
-    <string name="episode_singular">episode</string>
-    <string name="episode_plural">episodes</string>
     <string name="up_next_all">All</string>
     <string name="up_next_unplayed">Unplayed</string>
     <string name="up_next_in_progress">In progress</string>
@@ -202,7 +202,13 @@
     <string name="dismiss_episode">Dismiss episode</string>
     <string name="dismiss">Dismiss</string>
     <string name="select_an_episode">Select an episode</string>
-    <string name="selected_episodes_removed_from_inbox">%1$d %2$s removed from Inbox</string>
+    <!-- Was "%1$d %2$s removed from Inbox" with the noun spliced in from a singular/plural pair.
+         That reads correctly in English only because both nouns happen to be lowercase there; a
+         translator gets a sentence fragment and a grammar argument. -->
+    <plurals name="episodes_removed_from_inbox">
+        <item quantity="one">%d episode removed from Inbox</item>
+        <item quantity="other">%d episodes removed from Inbox</item>
+    </plurals>
     <string name="podcast_settings_title">Podcast settings</string>
     <string name="discover">Discover</string>
     <string name="podcast_inbox">Inbox</string>
@@ -223,6 +229,7 @@
     <string name="failed">Failed</string>
     <string name="downloaded">Downloaded</string>
     <string name="downloaded_size">%1$s downloaded</string>
+    <string name="download_waiting_for_wifi">Waiting for Wi-Fi</string>
     <string name="downloaded_episodes_offline">Downloaded episodes will appear here for offline listening.</string>
     <string name="smallest">Smallest</string>
     <string name="largest">Largest</string>
@@ -278,6 +285,8 @@
     <string name="error_partial_refresh_failed">Some podcasts could not be refreshed</string>
     <string name="error_remove_podcast_failed">Could not remove podcast</string>
     <string name="error_remove_up_next">Could not remove episode from Up Next</string>
+    <string name="error_remove_download">Could not remove download</string>
+    <string name="download_removed">Download removed</string>
     <string name="error_playback_connection">Couldn’t connect to this episode. Check your connection and try again.</string>
     <string name="error_playback_server">This episode could not be loaded by the server.</string>
     <string name="error_playback_failed">Playback couldn’t continue. Try again.</string>

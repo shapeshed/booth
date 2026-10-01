@@ -50,7 +50,6 @@ class PodcastRefreshWorker(context: Context, workerParams: WorkerParameters) : C
         val notificationsEnabled = settings.podcastNotificationsEnabled.first()
         val autoQueueEnabled = settings.podcastAutoQueueEnabled.first()
         val downloadEpisodesAddedToUpNext = settings.podcastDownloadEpisodesAddedToUpNext.first()
-        val downloadNetwork = settings.podcastDownloadNetwork.first()
         val newEpisodes = mutableListOf<NewPodcastEpisodeNotification>()
         val queuedDownloadCandidates = mutableListOf<EpisodeEntity>()
         // Each feed is scheduled separately, so a normal run has exactly one podcast in it. A run with
@@ -126,17 +125,6 @@ class PodcastRefreshWorker(context: Context, workerParams: WorkerParameters) : C
         downloadsToEnqueue.forEach { episode ->
             val request = OneTimeWorkRequestBuilder<EpisodeDownloadWorker>()
                 .setInputData(workDataOf(EPISODE_ID_INPUT to episode.id))
-                .setConstraints(
-                    Constraints.Builder()
-                        .setRequiredNetworkType(
-                            if (downloadNetwork == PodcastDownloadNetwork.WIFI_ONLY) {
-                                NetworkType.UNMETERED
-                            } else {
-                                NetworkType.CONNECTED
-                            },
-                        )
-                        .build(),
-                )
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.SECONDS)
                 .build()
             WorkManager.getInstance(applicationContext).enqueueUniqueWork(

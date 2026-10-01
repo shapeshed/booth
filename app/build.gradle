@@ -235,6 +235,10 @@ dependencies {
 
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0'
+    // For runTest and its virtual clock. The undo snackbar queue only serialises correctly if its
+    // offers are observed in order, and that is asserted with a presenter that suspends on demand,
+    // which needs a test scheduler rather than real time.
+    testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0'
     // android.jar's org.json is a stub: with returnDefaultValues = true, JSONObject parses
     // nothing and every opt* accessor returns null, so JSON-parsing code under test silently
     // returns empty. The real implementation is required for unit tests to be able to fail.

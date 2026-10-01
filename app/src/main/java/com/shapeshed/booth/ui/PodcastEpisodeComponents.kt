@@ -45,6 +45,7 @@ import androidx.compose.material.icons.rounded.OfflinePin
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Replay
 import androidx.compose.material.icons.rounded.VideoLibrary
+import androidx.compose.material.icons.rounded.WifiOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -201,7 +202,8 @@ internal fun EpisodeTitleBlock(
     explicit: Boolean? = episode.explicit,
     trailingContent: (@Composable (() -> Unit))? = null,
 ) {
-    val showDownloadStatus = downloaded || downloadProgress?.isActive == true || downloadProgress?.completed == true
+    val showDownloadStatus = downloaded || downloadProgress?.isActive == true ||
+        downloadProgress?.waitingForWifi == true || downloadProgress?.completed == true
 
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         if (episode.publishedAtMillis != null || showDownloadStatus || trailingContent != null) {
@@ -235,7 +237,14 @@ internal fun EpisodeTitleBlock(
                 }
                 Spacer(Modifier.weight(1f))
                 if (showDownloadStatus) {
-                    if (downloadProgress?.isActive == true && !downloaded) {
+                    if (downloadProgress?.waitingForWifi == true && !downloaded) {
+                        Icon(
+                            imageVector = Icons.Rounded.WifiOff,
+                            contentDescription = stringResource(R.string.download_waiting_for_wifi),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(16.dp),
+                        )
+                    } else if (downloadProgress?.isActive == true && !downloaded) {
                         if (downloadProgress.fraction != null) {
                             CircularProgressIndicator(
                                 progress = { downloadProgress.fraction ?: 0f },
@@ -659,7 +668,10 @@ internal fun DownloadEpisodeMetadataLine(
             downloadSizeLabel(asset, episode, progress)?.let { sizeLabel ->
                 Text(sizeLabel, style = MaterialTheme.typography.bodySmall, color = metadataColor)
             }
-            if (asset.status == DownloadAssetStatus.FAILED || asset.status == DownloadAssetStatus.CANCELLED) {
+            if (asset.status == DownloadAssetStatus.FAILED ||
+                asset.status == DownloadAssetStatus.CANCELLED ||
+                asset.status == DownloadAssetStatus.WAITING_FOR_WIFI
+            ) {
                 DownloadStatusIcon(
                     asset = asset,
                     isDownloaded = downloaded,
@@ -779,6 +791,12 @@ private fun EpisodeActionButtons(
             ),
         ) {
             when {
+                downloadProgress?.waitingForWifi == true && !isDownloaded -> Icon(
+                    imageVector = Icons.Rounded.WifiOff,
+                    contentDescription = stringResource(R.string.download_waiting_for_wifi),
+                    modifier = Modifier.size(22.dp),
+                )
+
                 (downloadProgress?.isActive == true || downloadRequested) && !isDownloaded -> {
                     val fraction = downloadProgress?.fraction
                     CircularProgressIndicator(
@@ -1221,7 +1239,7 @@ internal val DownloadProgress.isActive: Boolean
     // active and must render an indeterminate spinner until DownloadManager reports it.
     get() {
         val currentFraction = fraction
-        return !completed && (currentFraction == null || currentFraction < 1f)
+        return !completed && !waitingForWifi && (currentFraction == null || currentFraction < 1f)
     }
 
 internal fun formatPlaybackTime(milliseconds: Long): String {

@@ -124,7 +124,7 @@ internal fun PodcastHomeSecondaryOverlays(
                         routeState.showUnsubscribeConfirmation.value = false
                         routeState.showPodcastDescription.value = false
                         onConfirmUnsubscribe(selectedPodcast)
-                        undoActions.requestPodcastRemoval(selectedPodcast)
+                        onConfirmUnsubscribe(selectedPodcast)
                     },
                 ) { Text(stringResource(R.string.unfollow)) }
             },

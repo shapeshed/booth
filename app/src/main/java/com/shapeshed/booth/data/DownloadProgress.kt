@@ -12,6 +12,7 @@ data class DownloadProgress(
     val totalBytes: Long,
     val startedAtElapsedMs: Long,
     val completed: Boolean = false,
+    val waitingForWifi: Boolean = false,
 ) {
     val fraction: Float?
         get() = totalBytes.takeIf { it > 0L }?.let { bytesDownloaded.toFloat() / it }
@@ -79,6 +80,7 @@ internal fun mergeDownloadProgress(
     val durable = assets
         .filter {
             it.status == DownloadAssetStatus.QUEUED ||
+                it.status == DownloadAssetStatus.WAITING_FOR_WIFI ||
                 it.status == DownloadAssetStatus.DOWNLOADING ||
                 it.status == DownloadAssetStatus.RETRYING ||
                 it.status == DownloadAssetStatus.COMPLETED
@@ -94,6 +96,7 @@ internal fun mergeDownloadProgress(
                 startedAtElapsedMs = live?.startedAtElapsedMs ?: nowElapsedMs,
                 completed = asset.assetType == DownloadAssetType.AUDIO &&
                     (asset.status == DownloadAssetStatus.COMPLETED || live?.completed == true),
+                waitingForWifi = asset.status == DownloadAssetStatus.WAITING_FOR_WIFI,
             )
         }
     return durable.mapValues { (episodeId, stored) ->
@@ -103,6 +106,7 @@ internal fun mergeDownloadProgress(
             totalBytes = maxOf(stored.totalBytes, live?.totalBytes ?: 0L),
             startedAtElapsedMs = live?.startedAtElapsedMs ?: stored.startedAtElapsedMs,
             completed = stored.completed || live?.completed == true,
+            waitingForWifi = stored.waitingForWifi,
         )
     } + liveProgress.filterKeys { it !in durable && it !in terminalEpisodeIds }
 }

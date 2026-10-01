@@ -7,9 +7,7 @@ import android.content.Intent
 import android.util.Log
 import androidx.core.net.toUri
 import androidx.work.BackoffPolicy
-import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
-import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
@@ -127,11 +125,6 @@ class PodcastDownloadReceiver : BroadcastReceiver() {
                     )
                     val retryRequest = OneTimeWorkRequestBuilder<EpisodeDownloadWorker>()
                         .setInputData(workDataOf(EPISODE_ID_INPUT to asset.episodeId))
-                        .setConstraints(
-                            Constraints.Builder()
-                                .setRequiredNetworkType(NetworkType.CONNECTED)
-                                .build(),
-                        )
                         .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, java.util.concurrent.TimeUnit.SECONDS)
                         .build()
                     WorkManager.getInstance(appContext).enqueueUniqueWork(

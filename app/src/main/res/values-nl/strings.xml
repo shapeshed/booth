@@ -72,6 +72,7 @@
     <string name="unfollow_podcast_title">Abonnement op %1$s opzeggen</string>
     <string name="unfollow_podcast_message">Nieuwe afleveringen verschijnen niet meer in je Inbox. Gedownloade afleveringen blijven behouden.</string>
     <string name="unfollow">Ontvolgen</string>
+    <string name="unfollowed">Niet meer gevolgd</string>
     <string name="no_episodes_available_yet">Nog geen afleveringen beschikbaar</string>
     <string name="remove_download">Download verwijderen</string>
     <string name="reorder">Herschikken</string>
@@ -106,6 +107,7 @@
     <string name="remove_all_from_inbox">Alles uit inbox verwijderen</string>
     <string name="stop_playback">Afspelen stoppen</string>
     <string name="removed_from_up_next">Uit Hierna verwijderd</string>
+    <string name="added_to_up_next">Toegevoegd aan Hierna</string>
     <string name="available_offline">Offline beschikbaar</string>
     <string name="explicit_content">Expliciete content</string>
     <string name="download_episode">Aflevering downloaden</string>
@@ -146,8 +148,6 @@
     <string name="your_listening_home_coming_soon">Je luisteroverzicht komt binnenkort.</string>
     <string name="follow">Volgen</string>
     <string name="episodes_from_subscriptions">Afleveringen van je abonnementen verschijnen hier.</string>
-    <string name="episode_singular">Aflevering</string>
-    <string name="episode_plural">Afleveringen</string>
     <string name="up_next_all">Alles</string>
     <string name="up_next_unplayed">Niet afgespeeld</string>
     <string name="up_next_in_progress">Bezig</string>
@@ -160,7 +160,7 @@
     <string name="dismiss_episode">Aflevering sluiten</string>
     <string name="dismiss">Sluiten</string>
     <string name="select_an_episode">Selecteer een aflevering</string>
-    <string name="selected_episodes_removed_from_inbox">%1$d %2$s uit inbox verwijderd</string>
+    <plurals name="episodes_removed_from_inbox"><item quantity="one">%d aflevering verwijderd uit de Podcast-inbox</item><item quantity="other">%d afleveringen verwijderd uit de Podcast-inbox</item></plurals>
     <string name="podcast_settings_title">Podcastinstellingen</string>
     <string name="discover">Ontdekken</string>
     <string name="podcast_inbox">Podcast-inbox</string>
@@ -180,6 +180,7 @@
     <string name="new_episodes_from_subscriptions">Nieuwe afleveringen van je abonnementen</string>
     <string name="failed">Mislukt</string>
     <string name="downloaded">Gedownload</string>
+    <string name="download_waiting_for_wifi">Wachten op wifi</string>
     <string name="downloaded_size">%1$s gedownload</string>
     <string name="downloaded_episodes_offline">Gedownloade afleveringen verschijnen hier voor offline luisteren.</string>
     <string name="smallest">Kleinste</string>
@@ -230,6 +231,8 @@
         <item quantity="other">%d new podcast episodes</item>
     </plurals>
     <string name="error_remove_up_next">Aflevering kan niet uit Hierna worden verwijderd</string>
+    <string name="download_removed">Download verwijderd</string>
+    <string name="error_remove_download">Download kan niet worden verwijderd</string>
     <string name="error_add_up_next">Aflevering kan niet aan Hierna worden toegevoegd</string>
     <string name="get_started_title">Begin met luisteren</string>
     <string name="get_started_summary">Vind podcasts die je leuk vindt, voeg een RSS-feed toe of importeer je abonnementen.</string>

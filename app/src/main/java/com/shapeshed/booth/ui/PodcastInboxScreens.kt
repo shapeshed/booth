@@ -23,6 +23,7 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.FileDownload
+import androidx.compose.material.icons.rounded.WifiOff
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
@@ -34,7 +35,6 @@ import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -46,6 +46,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,6 +55,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.dp
@@ -67,6 +69,7 @@ import com.shapeshed.booth.data.EpisodeEntity
 import com.shapeshed.booth.data.PodcastDownloadManager
 import com.shapeshed.booth.data.PodcastEntity
 import com.shapeshed.booth.data.isDownloaded
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 @Composable
@@ -88,11 +91,24 @@ internal fun PodcastInbox(
     selectedEpisodeIds: Set<Long>,
     onToggleSelection: (Long) -> Unit,
     downloadProgress: Map<Long, DownloadProgress>,
+    /**
+     * An episode an undo has just put back, whose row is revealed when Paging presents it.
+     *
+     * The restore is a flag flip, so the episode reappears at its sorted position. Do not scroll
+     * the list for Undo; let the restored row animate into that position. [onRestore] is called
+     * once Paging presents the episode, so the caller can clear the request and allow a second undo
+     * of the same episode to animate again.
+     */
+    restoredEpisodeId: Long? = null,
+    onRestore: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val visibleEpisodes = episodes
     val listState = rememberLazyListState()
     var refreshWasActive by remember { mutableStateOf(false) }
+    var restoreAnimationReady by remember(restoredEpisodeId) { mutableStateOf(false) }
+    // Read through updated state so the effect only restarts when the id or presented list changes.
+    val currentOnRestore by rememberUpdatedState(onRestore)
     LaunchedEffect(refreshing, visibleEpisodes.itemCount) {
         if (refreshing) {
             refreshWasActive = true
@@ -103,15 +119,35 @@ internal fun PodcastInbox(
             listState.animateScrollToItem(0)
         }
     }
+    // The restored item may arrive in a refreshed PagingData with the same item count, so wait for
+    // the item itself rather than using itemCount as a proxy. Keep it collapsed until then so the
+    // top-edge reveal begins only after it has its final sorted position in the list.
+    LaunchedEffect(restoredEpisodeId, visibleEpisodes) {
+        val id = restoredEpisodeId ?: return@LaunchedEffect
+        val restoredIndex = snapshotFlow {
+            val snapshot = visibleEpisodes.itemSnapshotList
+            snapshot.items.indexOfFirst { it.id == id }
+                .takeIf { it >= 0 }
+                ?.let { snapshot.placeholdersBefore + it }
+                ?: -1
+        }.first { it >= 0 }
+        // LazyColumn can retain a stale first-visible index while the entering row is collapsed.
+        // Explicitly align the first row before revealing it; other sorted positions stay put.
+        if (restoredIndex == 0) {
+            listState.animateScrollToItem(index = 0, scrollOffset = 0)
+        }
+        restoreAnimationReady = true
+        currentOnRestore()
+    }
     PullToRefreshBox(
         isRefreshing = refreshing,
         onRefresh = onRefresh,
         modifier = modifier,
     ) {
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize(),
-            state = listState,
             contentPadding = PaddingValues(
                 start = 16.dp,
                 end = 16.dp,
@@ -144,31 +180,37 @@ internal fun PodcastInbox(
                 key = { index -> visibleEpisodes.peek(index)?.let { "inbox-${it.id}" } ?: "inbox-placeholder-$index" },
             ) { index ->
                 val episode = visibleEpisodes[index] ?: return@items
-                InboxEpisodeSwipeRow(
-                    episode = episode,
-                    podcastTitle = podcastsById[episode.podcastId]?.title.orEmpty(),
-                    active = episode.id == activeEpisodeId,
-                    selected = episode.id in selectedEpisodeIds,
-                    selectionMode = selectedEpisodeIds.isNotEmpty(),
-                    onOpen = { onOpen(episode) },
-                    onAddToQueue = { onAddToQueue(episode) },
-                    onDismiss = { onDismiss(episode) },
-                    onLongPress = { onToggleSelection(episode.id) },
-                    onActions = { onActions(episode) },
-                    onToggleSelection = { onToggleSelection(episode.id) },
-                    onPlay = { onPlay(episode) },
-                    onDownload = { onDownload(episode) },
-                    isPlaying = isPlaying,
-                    isBuffering = isBuffering,
-                    positionOverride = activeEpisodePositionOverride(
-                        episodeId = episode.id,
-                        activeEpisodeId = activeEpisodeId,
-                        playedFraction = activeProgress,
-                        episodeDurationMs = episode.durationMs,
-                    ),
-                    downloadProgress = downloadProgress[episode.id],
-                    swipeEnabled = true,
-                )
+                PodcastRestoreAnimation(
+                    restored = episode.id == restoredEpisodeId,
+                    startWhenReady = restoreAnimationReady,
+                    modifier = Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null),
+                ) {
+                    InboxEpisodeSwipeRow(
+                        episode = episode,
+                        podcastTitle = podcastsById[episode.podcastId]?.title.orEmpty(),
+                        active = episode.id == activeEpisodeId,
+                        selected = episode.id in selectedEpisodeIds,
+                        selectionMode = selectedEpisodeIds.isNotEmpty(),
+                        onOpen = { onOpen(episode) },
+                        onAddToQueue = { onAddToQueue(episode) },
+                        onDismiss = { onDismiss(episode) },
+                        onLongPress = { onToggleSelection(episode.id) },
+                        onActions = { onActions(episode) },
+                        onToggleSelection = { onToggleSelection(episode.id) },
+                        onPlay = { onPlay(episode) },
+                        onDownload = { onDownload(episode) },
+                        isPlaying = isPlaying,
+                        isBuffering = isBuffering,
+                        positionOverride = activeEpisodePositionOverride(
+                            episodeId = episode.id,
+                            activeEpisodeId = activeEpisodeId,
+                            playedFraction = activeProgress,
+                            episodeDurationMs = episode.durationMs,
+                        ),
+                        downloadProgress = downloadProgress[episode.id],
+                        swipeEnabled = true,
+                    )
+                }
             }
         }
     }
@@ -186,15 +228,31 @@ internal fun PodcastDownloadsScreen(
     onOpen: (EpisodeEntity) -> Unit,
     onPlay: (EpisodeEntity) -> Unit,
     onDownload: (EpisodeEntity) -> Unit,
-    onRemove: (EpisodeEntity) -> Unit,
+    onRemove: suspend (EpisodeEntity) -> Result<Unit>,
     onLongPress: (EpisodeEntity) -> Unit,
+    undoActions: PodcastHomeUndoActions,
+    pendingRemovalEpisodeIds: Set<Long>,
+    onPendingRemovalEpisodeChange: (episodeId: Long, pending: Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var sortOrder by rememberSaveable { mutableStateOf(DownloadsSortOrder.DATE_NEWEST) }
     var dateMenuExpanded by rememberSaveable { mutableStateOf(false) }
     var sizeMenuExpanded by rememberSaveable { mutableStateOf(false) }
     var stateMenuExpanded by rememberSaveable { mutableStateOf(false) }
-    val episodeIds = remember(assets) { assets.map { it.episodeId }.distinct() }
+    var restoredDownloadEpisodeId by remember { mutableStateOf<Long?>(null) }
+    val currentOnPendingRemovalChange by rememberUpdatedState(onPendingRemovalEpisodeChange)
+    // Keep the bytes and database rows until Undo expires, but hide the pending row immediately.
+    // This state is deliberately not saveable: if the process dies before the snackbar resolves,
+    // the untouched download should simply be visible again on the next launch.
+    LaunchedEffect(assets) {
+        val existingIds = assets.mapTo(mutableSetOf()) { it.episodeId }
+        pendingRemovalEpisodeIds.filterNot { it in existingIds }
+            .forEach { currentOnPendingRemovalChange(it, false) }
+    }
+    val episodeIds = remember(assets, pendingRemovalEpisodeIds) {
+        assets.map { it.episodeId }.distinct().filterNot { it in pendingRemovalEpisodeIds }
+    }
+    val currentOnRemove by rememberUpdatedState(onRemove)
     val visibleAssets = remember(assets, episodeIds, sortOrder) {
         val representatives = episodeIds.mapNotNull { episodeId ->
             val episodeAssets = assets.filter { it.episodeId == episodeId }
@@ -432,102 +490,131 @@ internal fun PodcastDownloadsScreen(
                     (8.dp.toPx() - (itemHeightPx - PodcastEpisodeArtworkSize.toPx()) / 2f).toDp()
                 }
             }
-            val dismissState = rememberSwipeToDismissBoxState(
-                positionalThreshold = { distance -> distance * SWIPE_TO_DISMISS_THRESHOLD_FRACTION },
-            )
-            // Read through updated state so the one-shot callback always calls the current lambda.
-            val currentOnRemove by rememberUpdatedState(onRemove)
-            // onDismiss rather than an effect on currentValue: observing currentValue re-runs the
-            // removal when the effect restarts with the state still dismissed, which is what
-            // rotation and scrolling the row back into composition do. A one-shot callback cannot
-            // re-fire, so the episode is only ever removed by an actual swipe.
+            val dismissState = rememberRowSwipeDismissState()
+            // Read through updated state so the one-shot callback always uses the current row's
+            // id, since a lazy item's captured lambda goes stale as the list is recycled.
+            val currentEpisodeId by rememberUpdatedState(episode.id)
+            // This row is removed from the LazyColumn immediately while Undo is offered. Do not
+            // animate its dismiss state after removal: that would keep measuring a detached node.
             val rowScope = rememberCoroutineScope()
-            SwipeToDismissBox(
-                state = dismissState,
-                onDismiss = { value ->
-                    if (value == SwipeToDismissBoxValue.EndToStart) {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        currentOnRemove(episode)
-                        rowScope.launch { dismissState.reset() }
-                    }
-                },
-                enableDismissFromStartToEnd = false,
-                enableDismissFromEndToStart = true,
-                modifier = Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium),
-                backgroundContent = {
-                    Box(
-                        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.errorContainer),
-                        contentAlignment = Alignment.CenterEnd,
-                    ) {
-                        Icon(
-                            Icons.Rounded.Delete,
-                            contentDescription = stringResource(R.string.remove_episode, episode.title),
-                            tint = MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier.padding(16.dp),
-                        )
-                    }
-                },
+            val actedOn = rememberSwipeDismissGuard()
+            PodcastRestoreAnimation(
+                restored = asset.episodeId == restoredDownloadEpisodeId,
+                modifier = Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null),
             ) {
-                Surface(
-                    shape = MaterialTheme.shapes.medium,
-                    color = if (isActive) {
-                        MaterialTheme.colorScheme.surfaceContainerHigh
-                    } else if (isCompleted) {
-                        MaterialTheme.colorScheme.surfaceContainerLow
-                    } else {
-                        MaterialTheme.colorScheme.surface
+                SwipeToDismissBox(
+                    state = dismissState,
+                    onDismiss = { value ->
+                        when (decideSwipeDismissAction(value, actedOn.intValue)) {
+                            SwipeDismissAction.Act -> {
+                                actedOn.intValue = value.ordinal
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                val episodeId = currentEpisodeId
+                                currentOnPendingRemovalChange(episodeId, true)
+                                undoActions.removeDownloadWithUndo(
+                                    undo = {
+                                        currentOnPendingRemovalChange(episodeId, false)
+                                        restoredDownloadEpisodeId = episodeId
+                                    },
+                                    commit = {
+                                        currentOnRemove(episode).also { result ->
+                                            if (result.isFailure) {
+                                                currentOnPendingRemovalChange(episodeId, false)
+                                            }
+                                        }
+                                    },
+                                )
+                            }
+
+                            SwipeDismissAction.SettleAndRearm -> rowScope.launch {
+                                dismissState.reset()
+                                actedOn.intValue = NO_DIRECTION_ACTED_ON
+                            }
+
+                            SwipeDismissAction.Ignore -> Unit
+                        }
                     },
-                    tonalElevation = 1.dp,
+                    enableDismissFromStartToEnd = false,
+                    enableDismissFromEndToStart = true,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .onSizeChanged { itemHeightPx = it.height }
-                        .combinedClickable(
-                            onClick = { onOpen(episode) },
-                            onLongClick = { onLongPress(episode) },
-                        ),
+                        .clip(MaterialTheme.shapes.medium)
+                        .testTag(SWIPE_ROW_TEST_TAG),
+                    backgroundContent = {
+                        Box(
+                            modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.errorContainer),
+                            contentAlignment = Alignment.CenterEnd,
+                        ) {
+                            Icon(
+                                Icons.Rounded.Delete,
+                                contentDescription = stringResource(R.string.remove_episode, episode.title),
+                                tint = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.padding(16.dp),
+                            )
+                        }
+                    },
                 ) {
-                    Column {
-                        PodcastActionListItem(
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                            leadingContent = {
-                                PodcastArtwork(
-                                    imageUrl = episode.artworkUrl ?: podcastsById[episode.podcastId]?.artworkUrl,
-                                    title = episode.title,
-                                    modifier = Modifier
-                                        .size(PodcastEpisodeArtworkSize)
-                                        .offset(y = 0.dp),
-                                )
-                            },
-                            headlineContent = {
-                                EpisodeTitleBlock(
-                                    episode,
-                                    isActive,
-                                    downloaded = isDownloaded,
-                                    downloadProgress = episodeProgress,
-                                )
-                            },
-                            supportingContent = {
-                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                    DownloadEpisodeMetadataLine(
-                                        episode = episode,
-                                        podcastTitle = podcastTitle,
-                                        asset = asset,
-                                        progress = episodeProgress,
-                                        active = isActive,
+                    Surface(
+                        shape = MaterialTheme.shapes.medium,
+                        color = if (isActive) {
+                            MaterialTheme.colorScheme.surfaceContainerHigh
+                        } else if (isCompleted) {
+                            MaterialTheme.colorScheme.surfaceContainerLow
+                        } else {
+                            MaterialTheme.colorScheme.surface
+                        },
+                        tonalElevation = 1.dp,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onSizeChanged { itemHeightPx = it.height }
+                            .combinedClickable(
+                                onClick = { onOpen(episode) },
+                                onLongClick = { onLongPress(episode) },
+                            ),
+                    ) {
+                        Column {
+                            PodcastActionListItem(
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                leadingContent = {
+                                    PodcastArtwork(
+                                        imageUrl = episode.artworkUrl ?: podcastsById[episode.podcastId]?.artworkUrl,
+                                        title = episode.title,
+                                        modifier = Modifier
+                                            .size(PodcastEpisodeArtworkSize)
+                                            .offset(y = 0.dp),
+                                    )
+                                },
+                                headlineContent = {
+                                    EpisodeTitleBlock(
+                                        episode,
+                                        isActive,
                                         downloaded = isDownloaded,
-                                        completed = isCompleted,
+                                        downloadProgress = episodeProgress,
                                     )
-                                    EpisodeActionRow(
-                                        episode = episode,
-                                        isPlaying = isActive && isPlaying,
-                                        isBuffering = isActive && isBuffering,
-                                        showPlayback = isDownloaded,
-                                        onPlay = { onPlay(episode) },
-                                        onActions = { onLongPress(episode) },
-                                    )
-                                }
-                            },
-                        )
+                                },
+                                supportingContent = {
+                                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                        DownloadEpisodeMetadataLine(
+                                            episode = episode,
+                                            podcastTitle = podcastTitle,
+                                            asset = asset,
+                                            progress = episodeProgress,
+                                            active = isActive,
+                                            downloaded = isDownloaded,
+                                            completed = isCompleted,
+                                        )
+                                        EpisodeActionRow(
+                                            episode = episode,
+                                            isPlaying = isActive && isPlaying,
+                                            isBuffering = isActive && isBuffering,
+                                            showPlayback = isDownloaded,
+                                            onPlay = { onPlay(episode) },
+                                            onActions = { onLongPress(episode) },
+                                        )
+                                    }
+                                },
+                            )
+                        }
                     }
                 }
             }
@@ -547,6 +634,8 @@ internal fun downloadStatusLabel(
 
     asset.status == DownloadAssetStatus.RETRYING -> stringResource(R.string.retrying)
 
+    asset.status == DownloadAssetStatus.WAITING_FOR_WIFI -> stringResource(R.string.download_waiting_for_wifi)
+
     asset.status == DownloadAssetStatus.CANCELLED -> stringResource(R.string.cancelled)
 
     progress?.fraction == null && (progress?.bytesDownloaded ?: 0L) > 0L ->
@@ -563,6 +652,7 @@ internal fun DownloadStatusIcon(
     isActive: Boolean = asset?.status in PodcastDownloadManager.ACTIVE_STATUSES,
 ) {
     if (!isDownloaded && asset?.status != DownloadAssetStatus.FAILED &&
+        asset?.status != DownloadAssetStatus.WAITING_FOR_WIFI &&
         asset?.status != DownloadAssetStatus.CANCELLED
     ) {
         return
@@ -570,6 +660,7 @@ internal fun DownloadStatusIcon(
     val imageVector = when {
         isDownloaded -> Icons.Rounded.Check
         asset?.status == DownloadAssetStatus.FAILED -> Icons.Rounded.ErrorOutline
+        asset?.status == DownloadAssetStatus.WAITING_FOR_WIFI -> Icons.Rounded.WifiOff
         asset?.status == DownloadAssetStatus.CANCELLED -> Icons.Rounded.Block
         else -> Icons.Rounded.FileDownload
     }
@@ -609,6 +700,7 @@ internal fun downloadStateRank(asset: DownloadAssetEntity, preferred: DownloadsS
         DownloadAssetStatus.COMPLETED -> 0
 
         DownloadAssetStatus.QUEUED,
+        DownloadAssetStatus.WAITING_FOR_WIFI,
         DownloadAssetStatus.DOWNLOADING,
         DownloadAssetStatus.RETRYING,
         -> 1

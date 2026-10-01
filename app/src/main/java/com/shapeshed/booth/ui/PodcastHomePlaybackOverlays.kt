@@ -18,21 +18,23 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,7 +67,7 @@ internal fun PodcastHomeMiniPlayerOverlay(
         ) {
             episode?.let {
                 val haptic = LocalHapticFeedback.current
-                val dismissState = rememberSwipeToDismissBoxState()
+                val dismissState = rememberRowSwipeDismissState()
                 // The dismiss effect is keyed only on the swipe state, so it does not restart when
                 // these change. Without remembering them it would run with whichever instances were
                 // captured the last time the key changed, which is a stale callback rather than the
@@ -73,17 +75,35 @@ internal fun PodcastHomeMiniPlayerOverlay(
                 val currentOnDismiss by rememberUpdatedState(onDismiss)
                 val currentOnClearRememberedEpisode by rememberUpdatedState(onClearRememberedEpisode)
                 val currentOnStopAndClear by rememberUpdatedState(onStopAndClear)
-                // One-shot onDismiss, for the same reason as the other rows: an effect on
-                // currentValue re-runs when the state is still dismissed after a rotation or a
-                // scroll, which would dismiss the player and clear the episode with no gesture.
+                val dismissScope = rememberCoroutineScope()
+                val actedOn = rememberSwipeDismissGuard()
+                // Guarded and settled like every other swipe row, for the same reason: a dismissed
+                // state survives the row leaving the list, so a dismissed player that comes back would
+                // announce itself again and stop playback with no gesture. Resetting also leaves the
+                // player swipeable again, which nothing here did before.
                 SwipeToDismissBox(
                     state = dismissState,
+                    modifier = Modifier.testTag(SWIPE_ROW_TEST_TAG),
                     onDismiss = { value ->
-                        if (value != SwipeToDismissBoxValue.Settled) {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            currentOnDismiss()
-                            currentOnClearRememberedEpisode()
-                            currentOnStopAndClear()
+                        when (decideSwipeDismissAction(value, actedOn.intValue)) {
+                            SwipeDismissAction.Act -> {
+                                actedOn.intValue = value.ordinal
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                currentOnDismiss()
+                                currentOnClearRememberedEpisode()
+                                currentOnStopAndClear()
+                                dismissScope.launch {
+                                    dismissState.reset()
+                                    actedOn.intValue = NO_DIRECTION_ACTED_ON
+                                }
+                            }
+
+                            SwipeDismissAction.SettleAndRearm -> dismissScope.launch {
+                                dismissState.reset()
+                                actedOn.intValue = NO_DIRECTION_ACTED_ON
+                            }
+
+                            SwipeDismissAction.Ignore -> Unit
                         }
                     },
                     backgroundContent = {

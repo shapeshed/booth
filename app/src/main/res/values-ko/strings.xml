@@ -72,6 +72,7 @@
     <string name="unfollow_podcast_title">%1$s 구독 취소</string>
     <string name="unfollow_podcast_message">새 에피소드가 더 이상 받은편지함에 표시되지 않습니다. 다운로드한 에피소드는 유지됩니다.</string>
     <string name="unfollow">팔로우 취소</string>
+    <string name="unfollowed">팔로우를 취소했습니다</string>
     <string name="no_episodes_available_yet">아직 사용할 수 있는 에피소드가 없습니다</string>
     <string name="remove_download">다운로드 삭제</string>
     <string name="reorder">순서 변경</string>
@@ -106,6 +107,7 @@
     <string name="remove_all_from_inbox">받은편지함에서 모두 삭제</string>
     <string name="stop_playback">재생 중지</string>
     <string name="removed_from_up_next">다음 재생에서 삭제됨</string>
+    <string name="added_to_up_next">다음 재생에 추가됨</string>
     <string name="available_offline">오프라인에서 사용 가능</string>
     <string name="explicit_content">선정적인 콘텐츠</string>
     <string name="download_episode">에피소드 다운로드</string>
@@ -146,8 +148,6 @@
     <string name="your_listening_home_coming_soon">청취 홈은 곧 제공됩니다.</string>
     <string name="follow">팔로우</string>
     <string name="episodes_from_subscriptions">구독한 팟캐스트의 에피소드가 여기에 표시됩니다.</string>
-    <string name="episode_singular">에피소드</string>
-    <string name="episode_plural">에피소드</string>
     <string name="up_next_all">모두</string>
     <string name="up_next_unplayed">재생하지 않음</string>
     <string name="up_next_in_progress">진행 중</string>
@@ -160,7 +160,7 @@
     <string name="dismiss_episode">에피소드 닫기</string>
     <string name="dismiss">닫기</string>
     <string name="select_an_episode">에피소드 선택</string>
-    <string name="selected_episodes_removed_from_inbox">%1$d %2$s를 받은편지함에서 삭제했습니다</string>
+    <plurals name="episodes_removed_from_inbox"><item quantity="other">에피소드 %d개를 팟캐스트 받은편지함에서 삭제했습니다</item></plurals>
     <string name="podcast_settings_title">팟캐스트 설정</string>
     <string name="discover">탐색</string>
     <string name="podcast_inbox">팟캐스트 받은편지함</string>
@@ -180,6 +180,7 @@
     <string name="new_episodes_from_subscriptions">구독한 팟캐스트의 새 에피소드</string>
     <string name="failed">실패</string>
     <string name="downloaded">다운로드됨</string>
+    <string name="download_waiting_for_wifi">Wi-Fi 대기 중</string>
     <string name="downloaded_size">%1$s 다운로드됨</string>
     <string name="downloaded_episodes_offline">다운로드한 에피소드가 오프라인 청취를 위해 여기에 표시됩니다.</string>
     <string name="smallest">가장 작음</string>
@@ -229,6 +230,8 @@
         <item quantity="other">%d new podcast episodes</item>
     </plurals>
     <string name="error_remove_up_next">다음 재생 목록에서 에피소드를 삭제할 수 없습니다</string>
+    <string name="download_removed">다운로드 삭제됨</string>
+    <string name="error_remove_download">다운로드를 삭제할 수 없습니다</string>
     <string name="error_add_up_next">다음 재생 목록에 에피소드를 추가할 수 없습니다</string>
     <string name="get_started_title">듣기 시작하기</string>
     <string name="get_started_summary">좋아하는 팟캐스트를 찾고 RSS 피드를 추가하거나 구독 목록을 가져오세요.</string>

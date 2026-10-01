@@ -2,6 +2,7 @@ package com.shapeshed.booth.ui
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
@@ -97,7 +98,10 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.yield
 
 data class PodcastHomeState(
     val query: String = "",
@@ -184,6 +188,10 @@ class PodcastViewModel @Inject constructor(
     @ApplicationContext private val applicationContext: Context,
 ) : ViewModel() {
     private val mediaSizeChecks = ConcurrentHashMap.newKeySet<Long>()
+
+    // Serialises the subscribe/unsubscribe writes that undo can race against. See
+    // [restoreSubscription] for why losing that race is a silent no-op rather than a visible bug.
+    private val subscriptionMutations = Mutex()
     private var downloadSyncJob: Job? = null
     private var globalSearchJob: Job? = null
     private var discoveryJob: Job? = null
@@ -1095,9 +1103,33 @@ class PodcastViewModel @Inject constructor(
             ),
         )
         viewModelScope.launch {
-            runCancellableCatching { repository.remove(podcast) }
+            runCancellableCatching { subscriptionMutations.withLock { repository.remove(podcast) } }
                 .onFailure { _state.value = state.value.copy(error = PodcastUiError.RemovePodcastFailed) }
                 .also { subscriptionProgressStore.clear(podcast.feedUrl) }
+        }
+    }
+
+    /**
+     * Undoes [remove] for the swipe-to-unsubscribe undo.
+     *
+     * Shares [subscriptionMutations] with [remove] and not because both are slow. The two are
+     * inverse writes to the same `isSubscribed` column, and the undo can be pressed while the
+     * removal is still in flight: unsubscribing while the undo is queued behind it means the
+     * podcast stays unsubscribed and the undo silently does nothing. The lock is per instance and
+     * FIFO, so whichever arrives second wins, which is what the listener just asked for.
+     */
+    fun restoreSubscription(podcast: PodcastEntity) {
+        viewModelScope.launch {
+            runCancellableCatching {
+                subscriptionMutations.withLock { repository.restoreSubscription(podcast) }
+            }.onSuccess {
+                // The unsubscribe left no scheduled refresh behind, and the periodic sweep would
+                // take up to a full interval to notice, so arm it now rather than leaving the
+                // podcast silently unrefreshed until the next sweep.
+                runCancellableCatching {
+                    PodcastRefreshScheduler.schedule(applicationContext, podcast.id, repository)
+                }
+            }
         }
     }
 
@@ -1198,10 +1230,25 @@ class PodcastViewModel @Inject constructor(
 
     fun addToQueueFromInbox(episodeId: Long, onAdded: () -> Unit = {}, onError: () -> Unit = {}) {
         viewModelScope.launch {
-            runCancellableCatching { addToQueueAndMaybeDownload(episodeId) }
-                .onSuccess { onAdded() }
+            runCancellableCatching { repository.addToQueueFromInbox(episodeId) }
+                .onSuccess {
+                    onAdded()
+                    // The queue action is complete. Let its snackbar reach the UI before doing
+                    // optional auto-download lookups and WorkManager scheduling.
+                    viewModelScope.launch {
+                        yield()
+                        runCancellableCatching { enqueueConfiguredDownloadsForQueuedEpisode(episodeId) }
+                            .onFailure { error ->
+                                Log.w("PodcastViewModel", "Could not enqueue the Up Next episode download", error)
+                            }
+                    }
+                }
                 .onFailure { onError() }
         }
+    }
+
+    suspend fun undoAddToQueueFromInbox(episodeId: Long): Result<Unit> = withContext(NonCancellable) {
+        runCancellableCatching { repository.undoAddToQueueFromInbox(episodeId) }
     }
 
     fun dismissFromInbox(episodeId: Long) {
@@ -1246,6 +1293,16 @@ class PodcastViewModel @Inject constructor(
         runCancellableCatching { repository.removeFromQueue(episodeId) }
     }
 
+    /**
+     * Undoes [removeFromQueueAwait], restoring [position] as well as the episode.
+     *
+     * Suspend for the same reason as [removeFromQueueAwait]: it is awaited before the undo snackbar
+     * is offered, so the undo can never be offered for a removal that failed.
+     */
+    suspend fun restoreToQueueAwait(episodeId: Long, position: Int): Result<Unit> = withContext(NonCancellable) {
+        runCancellableCatching { repository.restoreToQueue(episodeId, position) }
+    }
+
     fun reorderQueue(episodeIds: List<Long>) {
         viewModelScope.launch { repository.reorderQueue(episodeIds) }
     }
@@ -1254,11 +1311,15 @@ class PodcastViewModel @Inject constructor(
         // WorkManager and DownloadManager are intentionally asynchronous. Publish the
         // pending state now so every list view gives immediate feedback on the tap.
         progressStore.request(episodeId)
-        enqueueDownload(context, episodeId, PodcastDownloadNetwork.ANY_CONNECTION)
+        enqueueDownload(context, episodeId)
     }
 
     private suspend fun addToQueueAndMaybeDownload(episodeId: Long) {
         repository.addToQueueFromInbox(episodeId)
+        enqueueConfiguredDownloadsForQueuedEpisode(episodeId)
+    }
+
+    private suspend fun enqueueConfiguredDownloadsForQueuedEpisode(episodeId: Long) {
         if (settings.podcastDownloadEpisodesAddedToUpNext.first()) {
             repository.episode(episodeId)?.let { enqueueConfiguredDownloads(applicationContext, listOf(it)) }
         }
@@ -1266,7 +1327,6 @@ class PodcastViewModel @Inject constructor(
 
     private suspend fun enqueueConfiguredDownloads(context: Context, episodes: List<EpisodeEntity>) {
         if (episodes.isEmpty()) return
-        val network = settings.podcastDownloadNetwork.first()
         val allEpisodes = repository.podcasts.first()
             .flatMap { subscribed -> repository.episodes(subscribed.id).first() }
         val downloadsToEnqueue = downloadManager.episodesToDownload(
@@ -1274,18 +1334,13 @@ class PodcastViewModel @Inject constructor(
             downloadedEpisodes = allEpisodes,
             downloadAssets = repository.downloadAssets.first(),
         )
-        downloadsToEnqueue.forEach { episode -> enqueueDownload(context, episode.id, network) }
+        downloadsToEnqueue.forEach { episode -> enqueueDownload(context, episode.id) }
     }
 
-    private fun enqueueDownload(context: Context, episodeId: Long, network: PodcastDownloadNetwork) {
+    private fun enqueueDownload(context: Context, episodeId: Long) {
         progressStore.request(episodeId)
         val request = OneTimeWorkRequestBuilder<EpisodeDownloadWorker>()
             .setInputData(workDataOf(EPISODE_ID_INPUT to episodeId))
-            .setConstraints(
-                Constraints.Builder().setRequiredNetworkType(
-                    if (network == PodcastDownloadNetwork.WIFI_ONLY) NetworkType.UNMETERED else NetworkType.CONNECTED,
-                ).build(),
-            )
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.SECONDS)
             .build()
         WorkManager.getInstance(context.applicationContext).enqueueUniqueWork(
@@ -1296,13 +1351,18 @@ class PodcastViewModel @Inject constructor(
     }
 
     suspend fun syncDownloads(context: android.content.Context) = withContext(Dispatchers.IO) {
-        downloadManager.syncActiveDownloads()
+        val wifiOnly = settings.podcastDownloadNetwork.first() == PodcastDownloadNetwork.WIFI_ONLY
+        downloadManager.syncActiveDownloads(wifiOnly)
     }
 
     fun removeDownload(context: android.content.Context, episodeId: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             downloadManager.removeEpisodeDownloads(episodeId)
         }
+    }
+
+    suspend fun removeDownloadAwait(episodeId: Long): Result<Unit> = withContext(NonCancellable) {
+        runCancellableCatching { downloadManager.removeEpisodeDownloads(episodeId) }
     }
 }
 

@@ -80,6 +80,22 @@
             </intent-filter>
         </receiver>
 
+        <!--
+            Without this there is no path from a headset's buttons to the playback service at all.
+            The system sends hardware media buttons as ACTION_MEDIA_BUTTON broadcasts, and Media3
+            receives them through this receiver, which forwards them to PodcastPlaybackService.
+            The service's own intent filters match the session and browser actions, not the button
+            press. Issue #38: fast-forward and rewind did nothing on a Bluetooth headset because the
+            broadcast had nowhere to go.
+        -->
+        <receiver
+            android:name="androidx.media3.session.MediaButtonReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MEDIA_BUTTON" />
+            </intent-filter>
+        </receiver>
+
     </application>
 
 </manifest>

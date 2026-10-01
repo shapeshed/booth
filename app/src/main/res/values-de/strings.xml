@@ -72,6 +72,7 @@
     <string name="unfollow_podcast_title">%1$s nicht mehr folgen?</string>
     <string name="unfollow_podcast_message">Neue Episoden erscheinen nicht mehr im Posteingang. Heruntergeladene Episoden bleiben erhalten.</string>
     <string name="unfollow">Nicht mehr folgen</string>
+    <string name="unfollowed">Nicht mehr gefolgt</string>
     <string name="no_episodes_available_yet">Noch keine Episoden verfügbar.</string>
     <string name="remove_download">Download entfernen</string>
     <string name="reorder">Neu anordnen</string>
@@ -106,6 +107,7 @@
     <string name="remove_all_from_inbox">Alles aus dem Posteingang entfernen</string>
     <string name="stop_playback">Wiedergabe stoppen</string>
     <string name="removed_from_up_next">Aus „Als Nächstes“ entfernt</string>
+    <string name="added_to_up_next">Zu „Als Nächstes“ hinzugefügt</string>
     <string name="available_offline">Offline verfügbar</string>
     <string name="explicit_content">Expliziter Inhalt</string>
     <string name="download_episode">Episode herunterladen</string>
@@ -146,8 +148,6 @@
     <string name="your_listening_home_coming_soon">Deine Hör-Startseite kommt bald.</string>
     <string name="follow">Folgen</string>
     <string name="episodes_from_subscriptions">Episoden deiner Abonnements erscheinen hier.</string>
-    <string name="episode_singular">Episode</string>
-    <string name="episode_plural">Episoden</string>
     <string name="up_next_all">Alle</string>
     <string name="up_next_unplayed">Nicht abgespielt</string>
     <string name="up_next_in_progress">Laufend</string>
@@ -160,7 +160,7 @@
     <string name="dismiss_episode">Episode verwerfen</string>
     <string name="dismiss">Verwerfen</string>
     <string name="select_an_episode">Episode auswählen</string>
-    <string name="selected_episodes_removed_from_inbox">%1$d %2$s aus dem Posteingang entfernt</string>
+    <plurals name="episodes_removed_from_inbox"><item quantity="one">%d Episode aus dem Posteingang entfernt</item><item quantity="other">%d Episoden aus dem Posteingang entfernt</item></plurals>
     <string name="podcast_settings_title">Podcast-Einstellungen</string>
     <string name="discover">Entdecken</string>
     <string name="podcast_inbox">Posteingang</string>
@@ -180,6 +180,7 @@
     <string name="new_episodes_from_subscriptions">Neue Episoden deiner Abonnements erscheinen hier.</string>
     <string name="failed">Fehlgeschlagen</string>
     <string name="downloaded">Heruntergeladen</string>
+    <string name="download_waiting_for_wifi">Wartet auf WLAN</string>
     <string name="downloaded_size">%1$s heruntergeladen</string>
     <string name="downloaded_episodes_offline">Heruntergeladene Episoden erscheinen hier zur Offline-Wiedergabe.</string>
     <string name="smallest">Kleinste</string>
@@ -230,6 +231,8 @@
         <item quantity="other">%d new podcast episodes</item>
     </plurals>
     <string name="error_remove_up_next">Episode konnte nicht aus der Wiedergabeliste entfernt werden</string>
+    <string name="download_removed">Download entfernt</string>
+    <string name="error_remove_download">Download konnte nicht entfernt werden</string>
     <string name="error_add_up_next">Episode konnte nicht zur Wiedergabeliste hinzugefügt werden</string>
     <string name="get_started_title">Loshören</string>
     <string name="get_started_summary">Finde Podcasts, die dir gefallen, füge einen RSS-Feed hinzu oder importiere deine Abonnements.</string>

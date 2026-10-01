@@ -19,7 +19,10 @@ internal fun PodcastDownloadsContent(
     onOpen: (EpisodeEntity) -> Unit,
     onPlay: (EpisodeEntity) -> Unit,
     onDownload: (EpisodeEntity) -> Unit,
-    onRemove: (EpisodeEntity) -> Unit,
+    onRemove: suspend (EpisodeEntity) -> Result<Unit>,
+    undoActions: PodcastHomeUndoActions,
+    pendingRemovalEpisodeIds: Set<Long>,
+    onPendingRemovalEpisodeChange: (episodeId: Long, pending: Boolean) -> Unit,
     onLongPress: (EpisodeEntity) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -35,6 +38,9 @@ internal fun PodcastDownloadsContent(
         onPlay = onPlay,
         onDownload = onDownload,
         onRemove = onRemove,
+        undoActions = undoActions,
+        pendingRemovalEpisodeIds = pendingRemovalEpisodeIds,
+        onPendingRemovalEpisodeChange = onPendingRemovalEpisodeChange,
         onLongPress = onLongPress,
         modifier = modifier,
     )

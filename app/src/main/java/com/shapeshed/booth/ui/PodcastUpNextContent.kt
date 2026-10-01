@@ -16,6 +16,7 @@ internal fun PodcastUpNextContent(
     isBuffering: Boolean,
     onOpen: (EpisodeEntity) -> Unit,
     onRemove: suspend (Long) -> Result<Unit>,
+    onRestoreToQueue: suspend (episodeId: Long, position: Int) -> Result<Unit>,
     onRemoveError: (EpisodeEntity) -> Unit,
     onReorder: (List<Long>) -> Unit,
     reorderMode: Boolean,
@@ -25,6 +26,8 @@ internal fun PodcastUpNextContent(
     onPlay: (EpisodeEntity) -> Unit,
     onDownload: (EpisodeEntity) -> Unit,
     downloadProgress: Map<Long, DownloadProgress>,
+    undoActions: PodcastHomeUndoActions,
+    removedFromUpNextMessage: String,
     modifier: Modifier = Modifier,
 ) {
     PodcastQueueScreen(
@@ -36,6 +39,7 @@ internal fun PodcastUpNextContent(
         isBuffering = isBuffering,
         onOpen = onOpen,
         onRemove = onRemove,
+        onRestoreToQueue = onRestoreToQueue,
         onRemoveError = onRemoveError,
         onReorder = onReorder,
         reorderMode = reorderMode,
@@ -46,6 +50,8 @@ internal fun PodcastUpNextContent(
         onPlay = onPlay,
         onDownload = onDownload,
         downloadProgress = downloadProgress,
+        undoActions = undoActions,
+        removedFromUpNextMessage = removedFromUpNextMessage,
         modifier = modifier,
     )
 }
