@@ -37,7 +37,6 @@ import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -56,6 +55,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -79,6 +79,7 @@ internal fun PodcastQueueScreen(
     isBuffering: Boolean,
     onOpen: (EpisodeEntity) -> Unit,
     onRemove: suspend (Long) -> Result<Unit>,
+    onRestoreToQueue: suspend (episodeId: Long, position: Int) -> Result<Unit>,
     onRemoveError: (EpisodeEntity) -> Unit,
     onReorder: (List<Long>) -> Unit,
     reorderMode: Boolean,
@@ -88,21 +89,24 @@ internal fun PodcastQueueScreen(
     downloadProgress: Map<Long, DownloadProgress>,
     filter: QueueFilter,
     onFilterChange: (QueueFilter) -> Unit,
+    undoActions: PodcastHomeUndoActions,
+    removedFromUpNextMessage: String,
     modifier: Modifier = Modifier,
     showFilterChips: Boolean = true,
 ) {
     val listState = rememberLazyListState()
     var orderedEpisodes by remember { mutableStateOf(episodes) }
     var pendingRemovalIds by remember { mutableStateOf<Set<Long>>(emptySet()) }
-    var removalBackups by remember { mutableStateOf<Map<Long, QueueRemoval<EpisodeEntity>>>(emptyMap()) }
+    var scrollToRestoredEpisodeId by remember { mutableStateOf<Long?>(null) }
+    var restoredEpisodeForAnimation by remember { mutableStateOf<Long?>(null) }
     var draggingId by remember { mutableStateOf<Long?>(null) }
     var dragDistance by remember { mutableFloatStateOf(0f) }
     val haptic = LocalHapticFeedback.current
     LaunchedEffect(episodes) {
+        // A removal the database has now caught up with needs no longer be held back from the list.
         val confirmedRemovalIds = pendingRemovalIds.filter { id -> episodes.none { it.id == id } }.toSet()
         if (confirmedRemovalIds.isNotEmpty()) {
             pendingRemovalIds = pendingRemovalIds - confirmedRemovalIds
-            removalBackups = removalBackups - confirmedRemovalIds
         }
         if (draggingId == null) {
             orderedEpisodes = episodes.filterNot { it.id in pendingRemovalIds }
@@ -116,6 +120,16 @@ internal fun PodcastQueueScreen(
                 QueueFilter.IN_PROGRESS -> !episode.completed && episode.positionMs > 0L
                 QueueFilter.COMPLETED -> episode.completed
             }
+        }
+    }
+    LaunchedEffect(scrollToRestoredEpisodeId, visibleEpisodes, showFilterChips) {
+        val restoredEpisodeId = scrollToRestoredEpisodeId ?: return@LaunchedEffect
+        val episodeIndex = visibleEpisodes.indexOfFirst { it.id == restoredEpisodeId }
+        if (episodeIndex >= 0) {
+            // LazyColumn keeps its old first-visible item as the scroll anchor when an item is
+            // inserted above it. Explicitly align a restored head item so it is fully visible.
+            listState.animateScrollToItem(episodeIndex + if (showFilterChips) 1 else 0)
+            scrollToRestoredEpisodeId = null
         }
     }
     LazyColumn(
@@ -186,110 +200,142 @@ internal fun PodcastQueueScreen(
         items(visibleEpisodes, key = { "queue-${it.id}" }) { episode ->
             val podcastTitle = podcastsById[episode.podcastId]?.title.orEmpty()
             val isDragging = draggingId == episode.id
-            QueueEpisodeSwipeRow(
-                episode = episode,
-                podcastTitle = podcastTitle,
-                active = episode.id == activeEpisodeId,
-                progressOverride = if (episode.id == activeEpisodeId) activeProgress else null,
-                positionOverride = activeEpisodePositionOverride(
-                    episodeId = episode.id,
-                    activeEpisodeId = activeEpisodeId,
-                    playedFraction = activeProgress,
-                    episodeDurationMs = episode.durationMs,
-                ),
-                dragging = isDragging,
-                isPlaying = isPlaying,
-                isBuffering = isBuffering,
-                downloadProgress = downloadProgress[episode.id],
-                onOpen = { onOpen(episode) },
-                onPlay = { onPlay(episode) },
-                onDownload = { onDownload(episode) },
-                onLongPress = { onLongPress(episode) },
-                onRemove = {
-                    if (episode.id !in pendingRemovalIds) {
-                        val removal = removeQueueItem(orderedEpisodes, episode)
-                        if (removal == null) {
-                            Result.success(Unit)
-                        } else {
-                            orderedEpisodes = removal.first
-                            pendingRemovalIds = pendingRemovalIds + episode.id
-                            removalBackups = removalBackups + (episode.id to removal.second)
-                            val result = onRemove(episode.id)
-                            if (result.isFailure) {
-                                removalBackups[episode.id]?.let { backup ->
-                                    orderedEpisodes = restoreQueueItem(orderedEpisodes, backup)
+            PodcastRestoreAnimation(
+                restored = episode.id == restoredEpisodeForAnimation,
+                modifier = Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null),
+            ) {
+                QueueEpisodeSwipeRow(
+                    episode = episode,
+                    podcastTitle = podcastTitle,
+                    active = episode.id == activeEpisodeId,
+                    progressOverride = if (episode.id == activeEpisodeId) activeProgress else null,
+                    positionOverride = activeEpisodePositionOverride(
+                        episodeId = episode.id,
+                        activeEpisodeId = activeEpisodeId,
+                        playedFraction = activeProgress,
+                        episodeDurationMs = episode.durationMs,
+                    ),
+                    dragging = isDragging,
+                    isPlaying = isPlaying,
+                    isBuffering = isBuffering,
+                    downloadProgress = downloadProgress[episode.id],
+                    onOpen = { onOpen(episode) },
+                    onPlay = { onPlay(episode) },
+                    onDownload = { onDownload(episode) },
+                    onLongPress = { onLongPress(episode) },
+                    onRemove = {
+                        // The index the episode is put back at, captured when it was removed. Held here
+                        // rather than in state because the state that would hold it is cleared as soon as
+                        // the database catches up with the removal, which is long before the undo window
+                        // closes, so an undo arriving after that would find nothing to restore.
+                        var removedAt: QueueRemoval<EpisodeEntity>? = null
+                        undoActions.requestRemoval(
+                            message = removedFromUpNextMessage,
+                            apply = {
+                                val removal = removeQueueItem(orderedEpisodes, episode)
+                                if (removal == null) {
+                                    // Already gone from the list, so there is nothing to take back and
+                                    // nothing to undo. Reporting "not removed" also keeps a second undo
+                                    // offer from being posted for the same row.
+                                    false
+                                } else {
+                                    removedAt = removal.second
+                                    orderedEpisodes = removal.first
+                                    pendingRemovalIds = pendingRemovalIds + episode.id
+                                    // Awaited so the undo is only offered once the removal has actually
+                                    // happened, rather than being offered and then rolling itself back.
+                                    if (onRemove(episode.id).isSuccess) {
+                                        true
+                                    } else {
+                                        orderedEpisodes = restoreQueueItem(orderedEpisodes, removal.second)
+                                        pendingRemovalIds = pendingRemovalIds - episode.id
+                                        onRemoveError(episode)
+                                        false
+                                    }
                                 }
+                            },
+                            undo = {
+                                val removal = removedAt ?: return@requestRemoval
+                                // Put the row back before the write, so undo feels instant.
+                                orderedEpisodes = restoreQueueItem(orderedEpisodes, removal)
                                 pendingRemovalIds = pendingRemovalIds - episode.id
-                                removalBackups = removalBackups - episode.id
-                                onRemoveError(episode)
+                                restoredEpisodeForAnimation = episode.id
+                                if (removal.originalIndex == 0) {
+                                    scrollToRestoredEpisodeId = episode.id
+                                }
+                                // Checked, unlike the optimistic update above: a failed restore is
+                                // reverted by the next episodes emission, which would drop the row with
+                                // no explanation. That reads exactly like an undo that did nothing, so
+                                // the failure is reported the same way a failed removal is. The listener
+                                // is told the queue operation did not take, which is the outcome they
+                                // can see, rather than naming the step that failed.
+                                if (onRestoreToQueue(episode.id, removal.originalIndex).isFailure) {
+                                    onRemoveError(episode)
+                                }
+                            },
+                        )
+                    },
+                    showDragHandle = reorderMode && filter == QueueFilter.ALL,
+                    compact = false,
+                    modifier = Modifier
+                        .zIndex(if (isDragging) 1f else 0f)
+                        .graphicsLayer { translationY = if (isDragging) dragDistance else 0f },
+                    dragHandleModifier = if (reorderMode && filter == QueueFilter.ALL) {
+                        Modifier
+                            .pointerInput(episode.id) {
+                                detectDragGesturesAfterLongPress(
+                                    onDragStart = {
+                                        draggingId = episode.id
+                                        dragDistance = 0f
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    },
+                                    onDrag = { change, dragAmount ->
+                                        change.consume()
+                                        if (draggingId != episode.id) return@detectDragGesturesAfterLongPress
+                                        dragDistance += dragAmount.y
+                                        val currentIndex = orderedEpisodes.indexOfFirst { it.id == episode.id }
+                                        val currentInfo = listState.layoutInfo.visibleItemsInfo
+                                            .firstOrNull { it.key == "queue-${episode.id}" }
+                                            ?: return@detectDragGesturesAfterLongPress
+                                        val center = currentInfo.offset + currentInfo.size / 2 + dragDistance
+                                        val targetInfo = listState.layoutInfo.visibleItemsInfo.firstOrNull { info ->
+                                            info.key.toString().startsWith("queue-") &&
+                                                info.key != currentInfo.key &&
+                                                center > info.offset &&
+                                                center < info.offset + info.size
+                                        }
+                                        val targetId = targetInfo?.key
+                                            ?.toString()
+                                            ?.removePrefix("queue-")
+                                            ?.toLongOrNull()
+                                            ?: return@detectDragGesturesAfterLongPress
+                                        val targetIndex = orderedEpisodes.indexOfFirst { it.id == targetId }
+                                        if (targetIndex < 0) return@detectDragGesturesAfterLongPress
+                                        if (targetIndex in orderedEpisodes.indices && targetIndex != currentIndex) {
+                                            orderedEpisodes = reorderQueueItem(
+                                                orderedEpisodes,
+                                                episode,
+                                                orderedEpisodes[targetIndex],
+                                            )
+                                            dragDistance -= (targetInfo.offset - currentInfo.offset).toFloat()
+                                        }
+                                    },
+                                    onDragEnd = {
+                                        onReorder(orderedEpisodes.map(EpisodeEntity::id))
+                                        draggingId = null
+                                        dragDistance = 0f
+                                    },
+                                    onDragCancel = {
+                                        draggingId = null
+                                        dragDistance = 0f
+                                    },
+                                )
                             }
-                            result
-                        }
                     } else {
-                        Result.success(Unit)
-                    }
-                },
-                showDragHandle = reorderMode && filter == QueueFilter.ALL,
-                compact = false,
-                modifier = Modifier
-                    .animateItem()
-                    .zIndex(if (isDragging) 1f else 0f)
-                    .graphicsLayer { translationY = if (isDragging) dragDistance else 0f },
-                dragHandleModifier = if (reorderMode && filter == QueueFilter.ALL) {
-                    Modifier
-                        .pointerInput(episode.id) {
-                            detectDragGesturesAfterLongPress(
-                                onDragStart = {
-                                    draggingId = episode.id
-                                    dragDistance = 0f
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                },
-                                onDrag = { change, dragAmount ->
-                                    change.consume()
-                                    if (draggingId != episode.id) return@detectDragGesturesAfterLongPress
-                                    dragDistance += dragAmount.y
-                                    val currentIndex = orderedEpisodes.indexOfFirst { it.id == episode.id }
-                                    val currentInfo = listState.layoutInfo.visibleItemsInfo
-                                        .firstOrNull { it.key == "queue-${episode.id}" }
-                                        ?: return@detectDragGesturesAfterLongPress
-                                    val center = currentInfo.offset + currentInfo.size / 2 + dragDistance
-                                    val targetInfo = listState.layoutInfo.visibleItemsInfo.firstOrNull { info ->
-                                        info.key.toString().startsWith("queue-") &&
-                                            info.key != currentInfo.key &&
-                                            center > info.offset &&
-                                            center < info.offset + info.size
-                                    }
-                                    val targetId = targetInfo?.key
-                                        ?.toString()
-                                        ?.removePrefix("queue-")
-                                        ?.toLongOrNull()
-                                        ?: return@detectDragGesturesAfterLongPress
-                                    val targetIndex = orderedEpisodes.indexOfFirst { it.id == targetId }
-                                    if (targetIndex < 0) return@detectDragGesturesAfterLongPress
-                                    if (targetIndex in orderedEpisodes.indices && targetIndex != currentIndex) {
-                                        orderedEpisodes = reorderQueueItem(
-                                            orderedEpisodes,
-                                            episode,
-                                            orderedEpisodes[targetIndex],
-                                        )
-                                        dragDistance -= (targetInfo.offset - currentInfo.offset).toFloat()
-                                    }
-                                },
-                                onDragEnd = {
-                                    onReorder(orderedEpisodes.map(EpisodeEntity::id))
-                                    draggingId = null
-                                    dragDistance = 0f
-                                },
-                                onDragCancel = {
-                                    draggingId = null
-                                    dragDistance = 0f
-                                },
-                            )
-                        }
-                } else {
-                    Modifier
-                },
-            )
+                        Modifier
+                    },
+                )
+            }
         }
     }
 }
@@ -309,37 +355,49 @@ internal fun QueueEpisodeSwipeRow(
     onPlay: () -> Unit,
     onDownload: () -> Unit,
     onLongPress: () -> Unit,
-    onRemove: suspend () -> Result<Unit>,
+    onRemove: () -> Unit,
     showDragHandle: Boolean,
     modifier: Modifier = Modifier,
-    compact: Boolean = false,
     dragHandleModifier: Modifier = Modifier,
+    compact: Boolean = false,
 ) {
     val haptic = LocalHapticFeedback.current
-    var showRemovalConfirmation by remember { mutableStateOf(false) }
-    val coroutineScope = rememberCoroutineScope()
-    val queueEpisodeDescription = stringResource(R.string.queue_episode_description, episode.title, podcastTitle)
-    val queueSwipeHint = stringResource(R.string.queue_swipe_hint)
-    val selectedDescription = stringResource(R.string.selected_item)
-    val dismissState = rememberSwipeToDismissBoxState(
-        positionalThreshold = { distance -> distance * SWIPE_TO_DISMISS_THRESHOLD_FRACTION },
-    )
-    // One-shot onDismiss, not an effect on currentValue, for the same reason as the episode row:
-    // an effect keyed on observed state re-asks when the state is still dismissed after a rotation
-    // or a scroll, re-showing a confirmation dialog nobody swiped for.
+    val dismissState = rememberRowSwipeDismissState()
+    // One-shot onDismiss, not an effect on currentValue, for the same reason as the other rows: an
+    // effect keyed on observed state re-removes the episode when the state is still dismissed after a
+    // rotation or a scroll, with no gesture. A one-shot callback cannot re-fire.
+    //
+    // reset() rather than snapTo(Settled) so the row animates back and is immediately usable again.
     val dismissScope = rememberCoroutineScope()
+    val actedOn = rememberSwipeDismissGuard()
     SwipeToDismissBox(
         state = dismissState,
         onDismiss = { value ->
-            if (value == SwipeToDismissBoxValue.EndToStart) {
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                showRemovalConfirmation = true
-                dismissScope.launch { dismissState.reset() }
+            when (decideSwipeDismissAction(value, actedOn.intValue)) {
+                SwipeDismissAction.Act -> {
+                    actedOn.intValue = value.ordinal
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onRemove()
+                    dismissScope.launch {
+                        dismissState.reset()
+                        actedOn.intValue = NO_DIRECTION_ACTED_ON
+                    }
+                }
+
+                SwipeDismissAction.SettleAndRearm -> dismissScope.launch {
+                    dismissState.reset()
+                    actedOn.intValue = NO_DIRECTION_ACTED_ON
+                }
+
+                SwipeDismissAction.Ignore -> Unit
             }
         },
         enableDismissFromStartToEnd = false,
         enableDismissFromEndToStart = true,
-        modifier = modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium),
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.medium)
+            .testTag(SWIPE_ROW_TEST_TAG),
         backgroundContent = {
             Box(
                 modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.errorContainer),
@@ -448,25 +506,6 @@ internal fun QueueEpisodeSwipeRow(
             }
         }
     }
-    if (showRemovalConfirmation) {
-        AlertDialog(
-            onDismissRequest = { showRemovalConfirmation = false },
-            title = { Text(stringResource(R.string.remove_episode, episode.title)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showRemovalConfirmation = false
-                        coroutineScope.launch { onRemove() }
-                    },
-                ) { Text(stringResource(R.string.remove)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showRemovalConfirmation = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            },
-        )
-    }
 }
 
 @Composable
@@ -495,9 +534,7 @@ internal fun InboxEpisodeSwipeRow(
     val queueEpisodeDescription = stringResource(R.string.queue_episode_description, episode.title, podcastTitle)
     val queueSwipeHint = stringResource(R.string.queue_swipe_hint)
     val selectedDescription = stringResource(R.string.selected_item)
-    val dismissState = rememberSwipeToDismissBoxState(
-        positionalThreshold = { distance -> distance * SWIPE_TO_DISMISS_THRESHOLD_FRACTION },
-    )
+    val dismissState = rememberRowSwipeDismissState()
     // Read through updated state so the one-shot callback always calls the current lambda.
     val currentOnAddToQueue by rememberUpdatedState(onAddToQueue)
     val currentOnDismiss by rememberUpdatedState(onDismiss)
@@ -509,28 +546,39 @@ internal fun InboxEpisodeSwipeRow(
     //
     // reset() rather than snapTo(Settled), so the row animates back and is immediately usable.
     val scope = rememberCoroutineScope()
+    val actedOn = rememberSwipeDismissGuard()
     SwipeToDismissBox(
         state = dismissState,
         onDismiss = { value ->
-            when (value) {
-                SwipeToDismissBoxValue.StartToEnd -> {
+            when (decideSwipeDismissAction(value, actedOn.intValue)) {
+                SwipeDismissAction.Act -> {
+                    actedOn.intValue = value.ordinal
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    currentOnAddToQueue()
-                    scope.launch { dismissState.reset() }
+                    when (value) {
+                        SwipeToDismissBoxValue.StartToEnd -> currentOnAddToQueue()
+                        SwipeToDismissBoxValue.EndToStart -> currentOnDismiss()
+                        SwipeToDismissBoxValue.Settled -> Unit
+                    }
+                    scope.launch {
+                        dismissState.reset()
+                        actedOn.intValue = NO_DIRECTION_ACTED_ON
+                    }
                 }
 
-                SwipeToDismissBoxValue.EndToStart -> {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    currentOnDismiss()
-                    scope.launch { dismissState.reset() }
+                SwipeDismissAction.SettleAndRearm -> scope.launch {
+                    dismissState.reset()
+                    actedOn.intValue = NO_DIRECTION_ACTED_ON
                 }
 
-                SwipeToDismissBoxValue.Settled -> Unit
+                SwipeDismissAction.Ignore -> Unit
             }
         },
         enableDismissFromStartToEnd = swipeEnabled && !selectionMode,
         enableDismissFromEndToStart = swipeEnabled && !selectionMode,
-        modifier = modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium),
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.medium)
+            .testTag(SWIPE_ROW_TEST_TAG),
         backgroundContent = {
             val direction = dismissState.dismissDirection
             val isAdding = direction == SwipeToDismissBoxValue.StartToEnd

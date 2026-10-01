@@ -414,10 +414,41 @@ interface PodcastDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun addToQueue(item: QueueEntity)
 
+    /**
+     * Puts [episodeId] back at [position] in the queue, leaving every other episode in its existing
+     * relative order.
+     *
+     * This is how an undone removal is persisted. The optimistic in-memory list can put the row back
+     * on screen immediately, but only this survives a process restart, so undo does not quietly move
+     * the episode to the end of the queue.
+     *
+     * Rewrites the whole queue in one transaction rather than trying to shift rows with an
+     * `UPDATE ... SET position = position + 1`. That looks tidier and is wrong in two ways that only
+     * showed up once it was run: it shifts the row being restored as well, so a re-insert at the
+     * position it already occupied leaves a permanent hole in the numbering, and it cannot express
+     * moving an episode that is still queued. Rebuilding from the read order also repairs any
+     * numbering that is already inconsistent, and [reorderQueue] is the same whole-queue write.
+     */
+    @Transaction
+    suspend fun insertIntoQueue(episodeId: Long, position: Int) {
+        val others = queue().filterNot { it.episodeId == episodeId }
+        val index = position.coerceIn(0, others.size)
+        val rebuilt = others.take(index) +
+            listOf(QueueEntity(episodeId, index)) +
+            others.drop(index)
+        replaceQueue(rebuilt.mapIndexed { offset, item -> item.copy(position = offset) })
+    }
+
     @Transaction
     suspend fun addToQueueFromInbox(episodeId: Long) {
         addToQueue(QueueEntity(episodeId, nextQueuePosition()))
         setInbox(episodeId, false)
+    }
+
+    @Transaction
+    suspend fun undoAddToQueueFromInbox(episodeId: Long) {
+        removeFromQueue(episodeId)
+        setInbox(episodeId, true)
     }
 
     @Query("DELETE FROM queue WHERE episodeId = :episodeId")
@@ -487,6 +518,17 @@ interface PodcastDao {
 
     @Query("UPDATE podcasts SET isSubscribed = 0 WHERE id = :podcastId")
     suspend fun markPodcastUnsubscribed(podcastId: Long)
+
+    /**
+     * Undoes [markPodcastUnsubscribed] without refetching the feed.
+     *
+     * Unfollowing is a soft delete, so the row and every episode are still there and this is all an
+     * undo needs. Deliberately not [upsertPodcast] or the subscribe path: those re-parse the feed,
+     * which would make undo a network operation that can fail, and would re-stamp
+     * [PodcastEntity.subscribedAtMillis] and so lose the original subscribe order.
+     */
+    @Query("UPDATE podcasts SET isSubscribed = 1 WHERE id = :podcastId")
+    suspend fun markPodcastSubscribed(podcastId: Long)
 }
 
 @androidx.room.TypeConverters(DownloadAssetConverters::class)

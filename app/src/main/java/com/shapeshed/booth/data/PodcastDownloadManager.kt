@@ -2,6 +2,8 @@ package com.shapeshed.booth.data
 
 import android.app.DownloadManager
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Environment
 import androidx.core.net.toUri
 import java.io.File
@@ -10,12 +12,24 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
+internal fun isDownloadWaitingForWifi(status: Int, reason: Int, wifiOnly: Boolean, wifiAvailable: Boolean): Boolean =
+    when (status) {
+        DownloadManager.STATUS_PENDING -> wifiOnly && !wifiAvailable
+
+        DownloadManager.STATUS_PAUSED ->
+            reason == DownloadManager.PAUSED_QUEUED_FOR_WIFI ||
+                (wifiOnly && reason == DownloadManager.PAUSED_WAITING_FOR_NETWORK)
+
+        else -> false
+    }
+
 class PodcastDownloadManager(
     private val context: Context,
     private val repository: PodcastRepository,
     private val progressStore: DownloadProgressStore,
 ) {
     private val downloadManager = context.getSystemService(DownloadManager::class.java)
+    private val connectivityManager = context.getSystemService(ConnectivityManager::class.java)
     private val enqueueMutex = Mutex()
 
     suspend fun enqueue(
@@ -24,6 +38,7 @@ class PodcastDownloadManager(
         url: String,
         mimeType: String?,
         expectedBytes: Long?,
+        wifiOnly: Boolean = false,
     ): Boolean = enqueueMutex.withLock {
         require(url.toHttpUrlOrNull()?.scheme in setOf("http", "https")) {
             "Download URL must use HTTP or HTTPS"
@@ -65,6 +80,7 @@ class PodcastDownloadManager(
             .setDescription(if (assetType == DownloadAssetType.VIDEO) "Video" else "Audio")
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_HIDDEN)
             .setDestinationUri(destination.toUri())
+            .setAllowedOverMetered(!wifiOnly)
         mimeType?.let(request::setMimeType)
         val downloadId = downloadManager.enqueue(request)
         try {
@@ -94,7 +110,10 @@ class PodcastDownloadManager(
         true
     }
 
-    suspend fun syncActiveDownloads() {
+    suspend fun syncActiveDownloads(wifiOnly: Boolean = false) {
+        val wifiAvailable = connectivityManager.activeNetwork
+            ?.let(connectivityManager::getNetworkCapabilities)
+            ?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
         repository.downloadAssets.first()
             .filter { it.status in ACTIVE_STATUSES || it.status == DownloadAssetStatus.COMPLETED }
             .forEach { asset ->
@@ -113,11 +132,34 @@ class PodcastDownloadManager(
                     val bytes = it.getLong(it.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
                     val total = it.getLong(it.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
                         .takeIf { value -> value > 1024L }
+                    val reason = if (
+                        status == DownloadManager.STATUS_PAUSED || status == DownloadManager.STATUS_FAILED
+                    ) {
+                        it.getInt(it.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON))
+                    } else {
+                        DownloadManager.PAUSED_UNKNOWN
+                    }
                     var mappedStatus = when (status) {
                         DownloadManager.STATUS_RUNNING -> DownloadAssetStatus.DOWNLOADING
-                        DownloadManager.STATUS_PENDING -> DownloadAssetStatus.QUEUED
-                        DownloadManager.STATUS_PAUSED -> DownloadAssetStatus.QUEUED
+
+                        DownloadManager.STATUS_PENDING -> if (
+                            isDownloadWaitingForWifi(status, reason, wifiOnly, wifiAvailable)
+                        ) {
+                            DownloadAssetStatus.WAITING_FOR_WIFI
+                        } else {
+                            DownloadAssetStatus.QUEUED
+                        }
+
+                        DownloadManager.STATUS_PAUSED -> if (
+                            isDownloadWaitingForWifi(status, reason, wifiOnly, wifiAvailable)
+                        ) {
+                            DownloadAssetStatus.WAITING_FOR_WIFI
+                        } else {
+                            DownloadAssetStatus.QUEUED
+                        }
+
                         DownloadManager.STATUS_SUCCESSFUL -> DownloadAssetStatus.COMPLETED
+
                         else -> DownloadAssetStatus.FAILED
                     }
                     val path = asset.destinationUri.toUri().path.orEmpty()
@@ -146,11 +188,7 @@ class PodcastDownloadManager(
                             totalBytes = total,
                             errorMessage = when {
                                 invalidCompletedFile -> "Download completed but the local file was invalid."
-
-                                mappedStatus == DownloadAssetStatus.FAILED -> downloadManagerFailureMessage(
-                                    cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON)),
-                                )
-
+                                mappedStatus == DownloadAssetStatus.FAILED -> downloadManagerFailureMessage(reason)
                                 else -> null
                             },
                             completedAtMillis = if (mappedStatus == DownloadAssetStatus.COMPLETED) {
@@ -244,6 +282,7 @@ class PodcastDownloadManager(
     companion object {
         val ACTIVE_STATUSES = setOf(
             DownloadAssetStatus.QUEUED,
+            DownloadAssetStatus.WAITING_FOR_WIFI,
             DownloadAssetStatus.DOWNLOADING,
             DownloadAssetStatus.RETRYING,
         )

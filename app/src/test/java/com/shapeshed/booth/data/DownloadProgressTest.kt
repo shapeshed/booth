@@ -1,5 +1,6 @@
 package com.shapeshed.booth.data
 
+import android.app.DownloadManager
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -29,8 +30,68 @@ class DownloadProgressTest {
     @Test
     fun activeDurableAssetKeepsSyncRunning() {
         assertTrue(shouldSyncDownloads(listOf(asset(DownloadAssetStatus.QUEUED)), emptyMap()))
+        assertTrue(shouldSyncDownloads(listOf(asset(DownloadAssetStatus.WAITING_FOR_WIFI)), emptyMap()))
         assertTrue(shouldSyncDownloads(listOf(asset(DownloadAssetStatus.DOWNLOADING)), emptyMap()))
         assertTrue(shouldSyncDownloads(listOf(asset(DownloadAssetStatus.RETRYING)), emptyMap()))
+    }
+
+    @Test
+    fun waitingForWifiIsKeptAsAnActiveProgressState() {
+        val result = mergeDownloadProgress(
+            assets = listOf(asset(DownloadAssetStatus.WAITING_FOR_WIFI)),
+            liveProgress = emptyMap(),
+            nowElapsedMs = 4L,
+        )
+
+        assertTrue(result.getValue(7L).waitingForWifi)
+    }
+
+    @Test
+    fun networkPauseShowsWifiStateOnlyWhenWifiOnlyIsConfigured() {
+        assertTrue(
+            isDownloadWaitingForWifi(
+                DownloadManager.STATUS_PAUSED,
+                DownloadManager.PAUSED_QUEUED_FOR_WIFI,
+                wifiOnly = false,
+                wifiAvailable = false,
+            ),
+        )
+        assertTrue(
+            isDownloadWaitingForWifi(
+                DownloadManager.STATUS_PAUSED,
+                DownloadManager.PAUSED_WAITING_FOR_NETWORK,
+                wifiOnly = true,
+                wifiAvailable = false,
+            ),
+        )
+        assertFalse(
+            isDownloadWaitingForWifi(
+                DownloadManager.STATUS_PAUSED,
+                DownloadManager.PAUSED_WAITING_FOR_NETWORK,
+                wifiOnly = false,
+                wifiAvailable = false,
+            ),
+        )
+    }
+
+    @Test
+    fun pendingWifiOnlyDownloadWaitsWhenWifiIsUnavailable() {
+        assertTrue(
+            isDownloadWaitingForWifi(
+                DownloadManager.STATUS_PENDING,
+                DownloadManager.PAUSED_UNKNOWN,
+                wifiOnly = true,
+                wifiAvailable = false,
+            ),
+        )
+        assertFalse(
+            isDownloadWaitingForWifi(
+                DownloadManager.STATUS_PENDING,
+                DownloadManager.PAUSED_UNKNOWN,
+                wifiOnly = true,
+                wifiAvailable = true,
+            ),
+        )
     }
 
     @Test

@@ -34,6 +34,8 @@ internal fun PodcastHomeInboxDestination(
     onRefresh: () -> Unit,
     refreshing: Boolean,
     downloadProgress: Map<Long, DownloadProgress>,
+    restoredEpisodeId: Long? = null,
+    onRestore: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     PodcastHomeInboxContent(
@@ -53,6 +55,8 @@ internal fun PodcastHomeInboxDestination(
         onRefresh = onRefresh,
         refreshing = refreshing,
         downloadProgress = downloadProgress,
+        restoredEpisodeId = restoredEpisodeId,
+        onRestore = onRestore,
         modifier = modifier,
     )
 }
@@ -81,6 +85,8 @@ internal fun ScopedPodcastHomeInboxDestination(
     onRefresh: () -> Unit,
     refreshing: Boolean,
     downloadProgress: Map<Long, DownloadProgress>,
+    restoredEpisodeId: Long? = null,
+    onRestore: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val progress by playbackProgressFlow.collectAsStateWithLifecycle()
@@ -101,6 +107,8 @@ internal fun ScopedPodcastHomeInboxDestination(
         onRefresh = onRefresh,
         refreshing = refreshing,
         downloadProgress = downloadProgress,
+        restoredEpisodeId = restoredEpisodeId,
+        onRestore = onRestore,
         modifier = modifier,
     )
 }

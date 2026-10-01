@@ -49,6 +49,7 @@ class EpisodeDownloadWorker(appContext: Context, workerParams: WorkerParameters)
         val entryPoint = boothWorkerEntryPoint(applicationContext)
         val repository = entryPoint.podcastRepository
         val progressStore = entryPoint.downloadProgressStore
+        val wifiOnly = entryPoint.settings.podcastDownloadNetwork.first() == PodcastDownloadNetwork.WIFI_ONLY
         val episode = repository.episode(episodeId)
             ?: return@withContext Result.failure().also { progressStore.clear(episodeId) }
         try {
@@ -60,6 +61,7 @@ class EpisodeDownloadWorker(appContext: Context, workerParams: WorkerParameters)
                     url = episode.audioUrl,
                     mimeType = episode.mimeType,
                     expectedBytes = episode.audioSizeBytes,
+                    wifiOnly = wifiOnly,
                 )
             }
             val downloadVideo = entryPoint.settings.podcastDownloadVideos.first()
@@ -74,6 +76,7 @@ class EpisodeDownloadWorker(appContext: Context, workerParams: WorkerParameters)
                     url = episode.videoUrl,
                     mimeType = episode.videoMimeType,
                     expectedBytes = episode.videoSizeBytes,
+                    wifiOnly = wifiOnly,
                 )
             }
             Result.success()

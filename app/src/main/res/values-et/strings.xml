@@ -72,6 +72,7 @@
     <string name="unfollow_podcast_title">Lõpeta %1$s tellimus</string>
     <string name="unfollow_podcast_message">Uued episoodid ei ilmu enam postkasti. Allalaaditud episoodid säilitatakse.</string>
     <string name="unfollow">Lõpeta jälgimine</string>
+    <string name="unfollowed">Jälgimine lõpetatud</string>
     <string name="no_episodes_available_yet">Saadaval episoode veel pole</string>
     <string name="remove_download">Eemalda allalaadimine</string>
     <string name="reorder">Järjesta ümber</string>
@@ -106,6 +107,7 @@
     <string name="remove_all_from_inbox">Eemalda kõik sisendkaustast</string>
     <string name="stop_playback">Peata esitamine</string>
     <string name="removed_from_up_next">Järjekorrast eemaldatud</string>
+    <string name="added_to_up_next">Lisatud loendisse „Järgmisena“</string>
     <string name="available_offline">Saadaval võrguühenduseta</string>
     <string name="explicit_content">Täiskasvanutele mõeldud sisu</string>
     <string name="download_episode">Laadi episood alla</string>
@@ -146,8 +148,6 @@
     <string name="your_listening_home_coming_soon">Sinu kuulamise avaleht tuleb peagi.</string>
     <string name="follow">Jälgi</string>
     <string name="episodes_from_subscriptions">Sinu tellitud taskuhäälingute episoodid kuvatakse siin.</string>
-    <string name="episode_singular">Episood</string>
-    <string name="episode_plural">Episoodid</string>
     <string name="up_next_all">Kõik</string>
     <string name="up_next_unplayed">Kuulamata</string>
     <string name="up_next_in_progress">Pooleli</string>
@@ -160,7 +160,7 @@
     <string name="dismiss_episode">Sulge episood</string>
     <string name="dismiss">Sulge</string>
     <string name="select_an_episode">Vali episood</string>
-    <string name="selected_episodes_removed_from_inbox">%1$d %2$s eemaldati sisendkaustast</string>
+    <plurals name="episodes_removed_from_inbox"><item quantity="one">%d episood eemaldati taskuhäälingu sisendkaustast</item><item quantity="other">%d episoodi eemaldati taskuhäälingu sisendkaustast</item></plurals>
     <string name="podcast_settings_title">Taskuhäälingu seaded</string>
     <string name="discover">Avasta</string>
     <string name="podcast_inbox">Taskuhäälingu sisendkaust</string>
@@ -180,6 +180,7 @@
     <string name="new_episodes_from_subscriptions">Sinu tellimuste uued episoodid</string>
     <string name="failed">Ebaõnnestunud</string>
     <string name="downloaded">Alla laaditud</string>
+    <string name="download_waiting_for_wifi">Ootab Wi-Fi-ühendust</string>
     <string name="downloaded_size">%1$s alla laaditud</string>
     <string name="downloaded_episodes_offline">Alla laaditud episoodid kuvatakse siin võrguühenduseta kuulamiseks.</string>
     <string name="smallest">Väikseim</string>
@@ -230,6 +231,8 @@
         <item quantity="other">%d new podcast episodes</item>
     </plurals>
     <string name="error_remove_up_next">Episoodi ei saanud loendist „Järgmisena“ eemaldada</string>
+    <string name="download_removed">Allalaadimine eemaldatud</string>
+    <string name="error_remove_download">Allalaadimist ei saanud eemaldada</string>
     <string name="error_add_up_next">Episoodi ei saanud loendisse „Järgmisena“ lisada</string>
     <string name="get_started_title">Alusta kuulamist</string>
     <string name="get_started_summary">Leia meeldivaid podcaste, lisa RSS-voog või impordi oma tellimused.</string>

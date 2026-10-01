@@ -72,6 +72,7 @@
     <string name="unfollow_podcast_title">Отменить подписку на %1$s</string>
     <string name="unfollow_podcast_message">Новые выпуски больше не будут появляться во входящих. Загруженные выпуски будут сохранены.</string>
     <string name="unfollow">Отписаться</string>
+    <string name="unfollowed">Подписка отменена</string>
     <string name="no_episodes_available_yet">Доступных эпизодов пока нет</string>
     <string name="remove_download">Удалить загрузку</string>
     <string name="reorder">Изменить порядок</string>
@@ -106,6 +107,7 @@
     <string name="remove_all_from_inbox">Удалить всё из входящих</string>
     <string name="stop_playback">Остановить воспроизведение</string>
     <string name="removed_from_up_next">Удалено из «Далее»</string>
+    <string name="added_to_up_next">Добавлено в «Далее»</string>
     <string name="available_offline">Доступно офлайн</string>
     <string name="explicit_content">Контент для взрослых</string>
     <string name="download_episode">Загрузить эпизод</string>
@@ -146,8 +148,6 @@
     <string name="your_listening_home_coming_soon">Главная для прослушивания скоро появится.</string>
     <string name="follow">Подписаться</string>
     <string name="episodes_from_subscriptions">Здесь отображаются эпизоды подкастов, на которые вы подписаны.</string>
-    <string name="episode_singular">Эпизод</string>
-    <string name="episode_plural">Эпизоды</string>
     <string name="up_next_all">Все</string>
     <string name="up_next_unplayed">Непрослушанные</string>
     <string name="up_next_in_progress">В процессе</string>
@@ -160,7 +160,7 @@
     <string name="dismiss_episode">Закрыть эпизод</string>
     <string name="dismiss">Закрыть</string>
     <string name="select_an_episode">Выберите эпизод</string>
-    <string name="selected_episodes_removed_from_inbox">%1$d %2$s удалено из входящих</string>
+    <plurals name="episodes_removed_from_inbox"><item quantity="one">Удалён %d выпуск из входящих подкаста</item><item quantity="few">Удалено %d выпуска из входящих подкаста</item><item quantity="many">Удалено %d выпусков из входящих подкаста</item><item quantity="other">Удалено %d выпуска из входящих подкаста</item></plurals>
     <string name="podcast_settings_title">Настройки подкаста</string>
     <string name="discover">Обзор</string>
     <string name="podcast_inbox">Входящие подкаста</string>
@@ -180,6 +180,7 @@
     <string name="new_episodes_from_subscriptions">Новые эпизоды ваших подписок</string>
     <string name="failed">Ошибка</string>
     <string name="downloaded">Загружено</string>
+    <string name="download_waiting_for_wifi">Ожидание Wi-Fi</string>
     <string name="downloaded_size">Загружено: %1$s</string>
     <string name="downloaded_episodes_offline">Загруженные эпизоды отображаются здесь для прослушивания офлайн.</string>
     <string name="smallest">Маленькие</string>
@@ -232,6 +233,8 @@
         <item quantity="other">%d new podcast episodes</item>
     </plurals>
     <string name="error_remove_up_next">Не удалось удалить выпуск из списка «Далее»</string>
+    <string name="download_removed">Загрузка удалена</string>
+    <string name="error_remove_download">Не удалось удалить загрузку</string>
     <string name="error_add_up_next">Не удалось добавить выпуск в список «Далее»</string>
     <string name="get_started_title">Начните слушать</string>
     <string name="get_started_summary">Найдите интересные подкасты, добавьте RSS-ленту или импортируйте подписки.</string>

@@ -72,6 +72,7 @@
     <string name="unfollow_podcast_title">¿Dejar de seguir %1$s?</string>
     <string name="unfollow_podcast_message">Los episodios nuevos ya no aparecerán en tu bandeja de entrada. Los episodios descargados se conservarán.</string>
     <string name="unfollow">Dejar de seguir</string>
+    <string name="unfollowed">Dejado de seguir</string>
     <string name="no_episodes_available_yet">Aún no hay episodios disponibles.</string>
     <string name="remove_download">Eliminar descarga</string>
     <string name="reorder">Reordenar</string>
@@ -106,6 +107,7 @@
     <string name="remove_all_from_inbox">Eliminar todo de la bandeja de entrada</string>
     <string name="stop_playback">Detener reproducción</string>
     <string name="removed_from_up_next">Eliminado de A continuación</string>
+    <string name="added_to_up_next">Añadido a A continuación</string>
     <string name="available_offline">Disponible sin conexión</string>
     <string name="explicit_content">Contenido explícito</string>
     <string name="download_episode">Descargar episodio</string>
@@ -146,8 +148,6 @@
     <string name="your_listening_home_coming_soon">Tu inicio de escucha llegará pronto.</string>
     <string name="follow">Seguir</string>
     <string name="episodes_from_subscriptions">Los episodios de tus suscripciones aparecerán aquí.</string>
-    <string name="episode_singular">episodio</string>
-    <string name="episode_plural">episodios</string>
     <string name="up_next_all">Todos</string>
     <string name="up_next_unplayed">No reproducidos</string>
     <string name="up_next_in_progress">En curso</string>
@@ -160,7 +160,7 @@
     <string name="dismiss_episode">Descartar episodio</string>
     <string name="dismiss">Descartar</string>
     <string name="select_an_episode">Selecciona un episodio</string>
-    <string name="selected_episodes_removed_from_inbox">%1$d %2$s eliminado(s) de la bandeja de entrada</string>
+    <plurals name="episodes_removed_from_inbox"><item quantity="one">%d episodio eliminado de la bandeja de entrada</item><item quantity="other">%d episodios eliminados de la bandeja de entrada</item><item quantity="many">%d episodios eliminados de la bandeja de entrada</item></plurals>
     <string name="podcast_settings_title">Ajustes del podcast</string>
     <string name="discover">Descubrir</string>
     <string name="podcast_inbox">Bandeja de entrada</string>
@@ -180,6 +180,7 @@
     <string name="new_episodes_from_subscriptions">Los episodios nuevos de tus suscripciones aparecerán aquí.</string>
     <string name="failed">Error</string>
     <string name="downloaded">Descargado</string>
+    <string name="download_waiting_for_wifi">Esperando Wi-Fi</string>
     <string name="downloaded_size">%1$s descargado</string>
     <string name="downloaded_episodes_offline">Los episodios descargados aparecerán aquí para escucharlos sin conexión.</string>
     <string name="smallest">Más pequeños</string>
@@ -231,6 +232,8 @@
         <item quantity="many">%d new podcast episodes</item>
     </plurals>
     <string name="error_remove_up_next">No se pudo quitar el episodio de A continuación</string>
+    <string name="download_removed">Descarga eliminada</string>
+    <string name="error_remove_download">No se pudo eliminar la descarga</string>
     <string name="error_add_up_next">No se pudo añadir el episodio a A continuación</string>
     <string name="get_started_title">Empieza a escuchar</string>
     <string name="get_started_summary">Encuentra podcasts que te gusten, añade un feed RSS o importa tus suscripciones.</string>

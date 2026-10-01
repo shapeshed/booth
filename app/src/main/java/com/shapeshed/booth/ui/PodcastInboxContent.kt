@@ -26,6 +26,8 @@ internal fun PodcastInboxContent(
     selectedEpisodeIds: Set<Long>,
     onToggleSelection: (Long) -> Unit,
     downloadProgress: Map<Long, DownloadProgress>,
+    restoredEpisodeId: Long? = null,
+    onRestore: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     PodcastInbox(
@@ -46,6 +48,8 @@ internal fun PodcastInboxContent(
         selectedEpisodeIds = selectedEpisodeIds,
         onToggleSelection = onToggleSelection,
         downloadProgress = downloadProgress,
+        restoredEpisodeId = restoredEpisodeId,
+        onRestore = onRestore,
         modifier = modifier,
     )
 }

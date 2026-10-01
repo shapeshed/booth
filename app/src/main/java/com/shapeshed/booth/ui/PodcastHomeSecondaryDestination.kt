@@ -23,7 +23,7 @@ import kotlinx.coroutines.flow.StateFlow
 internal class PodcastSecondaryActions(
     val play: (episode: EpisodeEntity, podcastTitle: String) -> Unit,
     val download: (episodeId: Long) -> Unit,
-    val removeDownload: (episodeId: Long) -> Unit,
+    val removeDownload: suspend (episodeId: Long) -> Result<Unit>,
     val addToQueue: (episodeId: Long) -> Unit,
     val refreshSubscriptions: () -> Unit,
 )
@@ -41,6 +41,9 @@ internal fun PodcastHomeSecondaryDestination(
     allEpisodes: kotlinx.coroutines.flow.Flow<androidx.paging.PagingData<EpisodeEntity>>,
     playbackProgressFlow: StateFlow<PlaybackProgress>,
     refreshing: Boolean,
+    undoActions: PodcastHomeUndoActions,
+    pendingDownloadRemovalIds: Set<Long>,
+    onPendingDownloadRemovalChange: (episodeId: Long, pending: Boolean) -> Unit,
     onOpen: (EpisodeEntity, EpisodeNavigationOrigin) -> Unit,
     onAction: (EpisodeEntity) -> Unit,
     modifier: Modifier = Modifier,
@@ -60,6 +63,9 @@ internal fun PodcastHomeSecondaryDestination(
             },
             onDownload = { actions.download(it.id) },
             onRemove = { actions.removeDownload(it.id) },
+            undoActions = undoActions,
+            pendingRemovalEpisodeIds = pendingDownloadRemovalIds,
+            onPendingRemovalEpisodeChange = onPendingDownloadRemovalChange,
             onLongPress = onAction,
             modifier = modifier,
         )

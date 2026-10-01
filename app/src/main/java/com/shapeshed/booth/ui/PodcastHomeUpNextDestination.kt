@@ -15,8 +15,10 @@ import kotlinx.coroutines.flow.StateFlow
  * Takes the two queue actions as callbacks rather than the ViewModel. Two of them is small enough
  * that an action class would be ceremony, unlike the discovery screen, which needed ten.
  *
- * [onRemove] is suspend because removing from the queue has to survive the caller being cancelled
- * mid-drag; the ViewModel's implementation is where that guarantee lives.
+ * Remove and restore are both suspend because each has to survive the caller being cancelled; the
+ * ViewModel's implementations are where that guarantee lives. The undo is offered only once the
+ * removal has been awaited and reported success, so a listener is never handed an undo for a removal
+ * that rolled itself back.
  */
 @Composable
 internal fun PodcastHomeUpNextDestination(
@@ -34,7 +36,10 @@ internal fun PodcastHomeUpNextDestination(
     onReorder: (List<Long>) -> Unit,
     onPlay: (EpisodeEntity) -> Unit,
     onRemoveFromQueue: suspend (episodeId: Long) -> Result<Unit>,
+    onRestoreToQueue: suspend (episodeId: Long, position: Int) -> Result<Unit>,
     onDownload: (EpisodeEntity) -> Unit,
+    undoActions: PodcastHomeUndoActions,
+    removedFromUpNextMessage: String,
     modifier: Modifier = Modifier,
 ) {
     PodcastUpNextContent(
@@ -46,6 +51,7 @@ internal fun PodcastHomeUpNextDestination(
         isBuffering = playback.isBuffering,
         onOpen = onOpen,
         onRemove = onRemoveFromQueue,
+        onRestoreToQueue = onRestoreToQueue,
         onRemoveError = onRemoveError,
         onReorder = onReorder,
         reorderMode = reorderMode,
@@ -55,6 +61,8 @@ internal fun PodcastHomeUpNextDestination(
         onPlay = onPlay,
         onDownload = onDownload,
         downloadProgress = downloadProgress,
+        undoActions = undoActions,
+        removedFromUpNextMessage = removedFromUpNextMessage,
         modifier = modifier,
     )
 }
@@ -83,7 +91,10 @@ internal fun ScopedPodcastHomeUpNextDestination(
     onReorder: (List<Long>) -> Unit,
     onPlay: (EpisodeEntity) -> Unit,
     onRemoveFromQueue: suspend (episodeId: Long) -> Result<Unit>,
+    onRestoreToQueue: suspend (episodeId: Long, position: Int) -> Result<Unit>,
     onDownload: (EpisodeEntity) -> Unit,
+    undoActions: PodcastHomeUndoActions,
+    removedFromUpNextMessage: String,
     modifier: Modifier = Modifier,
 ) {
     val progress by playbackProgressFlow.collectAsStateWithLifecycle()
@@ -102,7 +113,10 @@ internal fun ScopedPodcastHomeUpNextDestination(
         onReorder = onReorder,
         onPlay = onPlay,
         onRemoveFromQueue = onRemoveFromQueue,
+        onRestoreToQueue = onRestoreToQueue,
         onDownload = onDownload,
+        undoActions = undoActions,
+        removedFromUpNextMessage = removedFromUpNextMessage,
         modifier = modifier,
     )
 }

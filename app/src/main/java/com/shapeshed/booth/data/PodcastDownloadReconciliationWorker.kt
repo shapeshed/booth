@@ -11,6 +11,7 @@ import com.shapeshed.booth.di.boothWorkerEntryPoint
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 
 /** Reconciles DownloadManager state after process death or a missed completion broadcast. */
@@ -19,7 +20,8 @@ class PodcastDownloadReconciliationWorker(appContext: Context, workerParams: Wor
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         try {
             val entryPoint = boothWorkerEntryPoint(applicationContext)
-            entryPoint.downloadManager.syncActiveDownloads()
+            val wifiOnly = entryPoint.settings.podcastDownloadNetwork.first() == PodcastDownloadNetwork.WIFI_ONLY
+            entryPoint.downloadManager.syncActiveDownloads(wifiOnly)
             Result.success()
         } catch (cancelled: CancellationException) {
             throw cancelled

@@ -6,7 +6,7 @@ import java.io.File
 import kotlinx.coroutines.flow.Flow
 
 enum class DownloadAssetType { AUDIO, VIDEO }
-enum class DownloadAssetStatus { QUEUED, DOWNLOADING, RETRYING, COMPLETED, FAILED, CANCELLED }
+enum class DownloadAssetStatus { QUEUED, WAITING_FOR_WIFI, DOWNLOADING, RETRYING, COMPLETED, FAILED, CANCELLED }
 
 internal fun isValidDownloadedFile(file: File, expectedBytes: Long?): Boolean = file.isFile && file.length() > 0L &&
     (expectedBytes == null || expectedBytes <= 0L || file.length() == expectedBytes)

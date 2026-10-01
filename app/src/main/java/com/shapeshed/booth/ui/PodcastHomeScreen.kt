@@ -205,6 +205,17 @@ internal val PodcastEpisodeArtworkSize = 80.dp
 // Require an intentional horizontal gesture so vertical list scrolling does not dismiss rows.
 internal const val SWIPE_TO_DISMISS_THRESHOLD_FRACTION = 0.5f
 
+/**
+ * Identifies the swipe target of a list row, for tests that perform a real gesture.
+ *
+ * The rows carry no single node whose text identifies them: the podcast title sits in a
+ * contentDescription on some of them and not others, and a downloads row has no podcast title at all.
+ * Targeting one of those is how a gesture test ends up asserting against the wrong node, or finds
+ * none and fails in a message that says nothing about the swipe. Every row's box carries this, so a
+ * test asks for the row itself rather than inferring which node is meant to be the row.
+ */
+internal const val SWIPE_ROW_TEST_TAG = "swipe-row"
+
 // Mutable with a default on purpose: the inset changes as the mini player animates, and every
 // screen that draws above it should not have to supply an inset it does not care about. Listed in
 // .editorconfig under compose_allowed_composition_locals, which is the rule's own allowlist.
@@ -475,11 +486,11 @@ fun PodcastHomeScreen(
     val nowPlayingActions = rememberNowPlayingActions(playbackViewModel, viewModel)
     val episodeActionActions = rememberEpisodeActionActions(context, viewModel, playbackViewModel)
     val settingsActions = rememberSettingsActions(viewModel)
-    val secondaryActions = remember(viewModel, playbackViewModel) {
+    val secondaryActions = remember(viewModel, playbackViewModel, context) {
         PodcastSecondaryActions(
             play = playbackViewModel::play,
             download = { viewModel.download(context, it) },
-            removeDownload = { viewModel.removeDownload(context, it) },
+            removeDownload = viewModel::removeDownloadAwait,
             addToQueue = { viewModel.addToQueueFromInbox(it) },
             refreshSubscriptions = { viewModel.refreshSubscriptions(context) },
         )
@@ -633,6 +644,16 @@ fun PodcastHomeScreen(
     val couldNotAddPodcastFormat = stringResource(R.string.could_not_add_podcast)
     val removeUpNextFailed = stringResource(R.string.error_remove_up_next)
     val addUpNextFailed = stringResource(R.string.error_add_up_next)
+    // Hoisted because the swipe handler that offers the undo is not a composable scope and cannot
+    // call stringResource itself.
+    val removedFromUpNext = stringResource(R.string.removed_from_up_next)
+    val undoStrings = remember(context) { podcastUndoStrings(context) }
+    val undoSnackbars = remember(scope, snackbarHostState, undoStrings) {
+        UndoSnackbars(
+            scope = scope,
+            presenter = snackbarPresenter(snackbarHostState, undoStrings.undoLabel),
+        )
+    }
     var notifiedSubscriptionFailures by remember { mutableStateOf<Set<String>>(emptySet()) }
     // Collected as an event rather than read off the state. A Channel delivers each outcome once,
     // so rotating the device no longer re-announces the last completed import, which is what
@@ -665,7 +686,7 @@ fun PodcastHomeScreen(
                     )
                 }
             }
-            snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short)
+            undoSnackbars.showMessage(message)
         }
     }
     LaunchedEffect(state.importFirstPodcastSaved) {
@@ -731,20 +752,32 @@ fun PodcastHomeScreen(
                     it.podcast.feedUrl == feedUrl
                 }
             }
-            snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short)
+            undoSnackbars.showMessage(message)
         }
     }
-    val undoActions = remember(viewModel, snackbarHostState) {
+    // The episode an undo has just put back, so the Inbox can scroll it into view. Cleared once
+    // shown, so undoing the same episode twice scrolls twice rather than setting the state to the
+    // value it already held.
+    var restoredInboxEpisodeId by remember { mutableStateOf<Long?>(null) }
+    var pendingDownloadRemovalIds by remember { mutableStateOf<Set<Long>>(emptySet()) }
+    val undoActions = remember(viewModel, undoSnackbars, undoStrings) {
         PodcastHomeUndoActions(
-            context = context,
             scope = scope,
-            snackbarHostState = snackbarHostState,
-            removePodcast = viewModel::remove,
-            addToQueueFromInbox = { episodeId, onError ->
-                viewModel.addToQueueFromInbox(episodeId, onError = onError)
+            snackbars = undoSnackbars,
+            strings = undoStrings,
+            addToQueueFromInbox = { episodeId, onAdded, onError ->
+                viewModel.addToQueueFromInbox(episodeId, onAdded = onAdded, onError = onError)
+            },
+            undoAddToQueueFromInbox = { episodeId ->
+                viewModel.undoAddToQueueFromInbox(episodeId).also { result ->
+                    if (result.isSuccess) restoredInboxEpisodeId = episodeId
+                }
             },
             dismissFromInbox = viewModel::dismissFromInbox,
-            restoreToInbox = viewModel::restoreToInbox,
+            restoreToInbox = { episodeId ->
+                viewModel.restoreToInbox(episodeId)
+                restoredInboxEpisodeId = episodeId
+            },
         )
     }
     val windowSizeClass = currentWindowAdaptiveInfoV2().windowSizeClass
@@ -903,7 +936,7 @@ fun PodcastHomeScreen(
             onShowNowPlayingChange = { showNowPlaying = it },
             onEpisodeAction = { pendingEpisodeAction = it },
             onQueueError = {
-                scope.launch { snackbarHostState.showSnackbar(addUpNextFailed) }
+                undoSnackbars.showMessage(addUpNextFailed)
             },
             onOpenPodcast = ::popTopLevelRoute,
             onCategory = ::openDiscoveryCategory,
@@ -1138,11 +1171,10 @@ fun PodcastHomeScreen(
                                             markEpisodePlayed = viewModel::markPlayed,
                                             markEpisodeUnplayed = viewModel::markUnplayed,
                                             undoActions = undoActions,
+                                            undoSnackbars = undoSnackbars,
                                             podcastsById = podcastsById,
                                             downloadProgress = downloadProgress,
                                             queueEpisodeIds = queueEpisodeIds,
-                                            scope = scope,
-                                            snackbarHostState = snackbarHostState,
                                             onMenuExpandedChange = { inboxSelectionMenuExpanded = it },
                                             onClearSelection = { selectedInboxIds = emptySet() },
                                             onPendingAction = { pendingEpisodeAction = it },
@@ -1368,8 +1400,8 @@ fun PodcastHomeScreen(
                                                     ),
                                                 )
                                             },
-                                            onAddToQueue = { undoActions.requestInboxAction(it, addToQueue = true) },
-                                            onDismiss = { undoActions.requestInboxAction(it, addToQueue = false) },
+                                            onAddToQueue = { undoActions.requestAddToQueue(it.id) },
+                                            onDismiss = { undoActions.dismissInboxEpisode(it) },
                                             onActions = { episode ->
                                                 pendingEpisodeAction = createSubscribedEpisodeAction(
                                                     episode = episode,
@@ -1392,6 +1424,8 @@ fun PodcastHomeScreen(
                                             onRefresh = { viewModel.refreshSubscriptions(context) },
                                             refreshing = refreshing,
                                             downloadProgress = downloadProgress,
+                                            restoredEpisodeId = restoredInboxEpisodeId,
+                                            onRestore = { restoredInboxEpisodeId = null },
                                             modifier = Modifier.fillMaxSize(),
                                         )
                                     } else if (tab == PodcastTab.UP_NEXT) {
@@ -1402,6 +1436,7 @@ fun PodcastHomeScreen(
                                             playbackProgressFlow = playbackViewModel.progress,
                                             downloadProgress = downloadProgress,
                                             onRemoveFromQueue = viewModel::removeFromQueueAwait,
+                                            onRestoreToQueue = viewModel::restoreToQueueAwait,
                                             onDownload = { viewModel.download(context, it.id) },
                                             reorderMode = queueReorderMode,
                                             filter = queueFilter,
@@ -1429,8 +1464,10 @@ fun PodcastHomeScreen(
                                                 )
                                             },
                                             onRemoveError = {
-                                                scope.launch { snackbarHostState.showSnackbar(removeUpNextFailed) }
+                                                undoSnackbars.showMessage(removeUpNextFailed)
                                             },
+                                            undoActions = undoActions,
+                                            removedFromUpNextMessage = removedFromUpNext,
                                             onReorder = viewModel::reorderQueue,
                                             onPlay = { episode ->
                                                 if (playback.episode?.id == episode.id) {
@@ -1486,7 +1523,13 @@ fun PodcastHomeScreen(
                                                 topLevelBackStack.add(PodcastNavigationKey.Subscriptions)
                                                 topLevelBackStack.add(PodcastNavigationKey.PodcastDetail(it))
                                             },
-                                            onRemovePodcast = undoActions::requestPodcastRemoval,
+                                            onRemovePodcast = { podcast ->
+                                                undoActions.unfollowPodcastWithUndo(
+                                                    podcast = podcast,
+                                                    remove = { viewModel.remove(podcast) },
+                                                    restore = { viewModel.restoreSubscription(podcast) },
+                                                )
+                                            },
                                             onSearchResultClick = { feedUrl -> enqueueFeedSubscription(feedUrl) },
                                             onOpenSearch = ::openGlobalSearch,
                                             onImportOpml = platformActions.importOpml,
@@ -1637,11 +1680,7 @@ fun PodcastHomeScreen(
                                                             viewModel.addToQueueFromInbox(
                                                                 displayEpisode.id,
                                                                 onError = {
-                                                                    scope.launch {
-                                                                        snackbarHostState.showSnackbar(
-                                                                            addUpNextFailed,
-                                                                        )
-                                                                    }
+                                                                    undoSnackbars.showMessage(addUpNextFailed)
                                                                 },
                                                             )
                                                         }
@@ -1803,6 +1842,15 @@ fun PodcastHomeScreen(
                                         allEpisodes = remember { viewModel.allEpisodes(null) },
                                         playbackProgressFlow = playbackViewModel.progress,
                                         refreshing = refreshing,
+                                        undoActions = undoActions,
+                                        pendingDownloadRemovalIds = pendingDownloadRemovalIds,
+                                        onPendingDownloadRemovalChange = { episodeId, pending ->
+                                            pendingDownloadRemovalIds = if (pending) {
+                                                pendingDownloadRemovalIds + episodeId
+                                            } else {
+                                                pendingDownloadRemovalIds - episodeId
+                                            }
+                                        },
                                         onOpen = { episode, origin ->
                                             episodeOrigin = when (origin) {
                                                 EpisodeNavigationOrigin.Downloads -> EpisodeOrigin.DOWNLOADS
@@ -1957,7 +2005,16 @@ fun PodcastHomeScreen(
                                 onSearch = viewModel::search,
 
                                 undoActions = undoActions,
-                                onConfirmUnsubscribe = { retainedPodcastAfterUnsubscribe = it },
+                                onConfirmUnsubscribe = { podcast ->
+                                    // Two effects, in this order. The detail screen is showing
+                                    // this podcast and unfollowing removes it from the list, so the
+                                    // object is held onto to keep the screen composed; then the
+                                    // unfollow itself. No undo here: the dialog above already
+                                    // explained what unfollowing costs and was answered, so a
+                                    // snackbar offering to reverse it would be noise.
+                                    retainedPodcastAfterUnsubscribe = podcast
+                                    viewModel.remove(podcast)
+                                },
                                 directFeedUrl = directFeedUrl,
                                 onDirectFeedUrlChange = { directFeedUrl = it },
                                 onAddPodcast = {
@@ -1968,11 +2025,11 @@ fun PodcastHomeScreen(
                             )
                             PodcastHomeEpisodeActionsOverlay(
                                 routeState = routeState,
-                                selectedTab = selectedTab,
+                                canReorder = topLevelBackStack.lastOrNull() == PodcastNavigationKey.UpNext,
                                 context = context,
                                 actions = episodeActionActions,
-                                scope = scope,
-                                snackbarHostState = snackbarHostState,
+                                undoActions = undoActions,
+                                undoSnackbars = undoSnackbars,
                             )
                         }
                     }
