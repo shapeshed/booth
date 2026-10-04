@@ -1,5 +1,7 @@
 package com.shapeshed.booth.data
 
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -40,12 +42,12 @@ class SleepTimerBudget(val totalMs: Long) {
 /**
  * The timer's visible state, for the sheet and the notification.
  *
- * The service is the only writer and the only reader that matters, so this stays an `object`:
- * a single-writer process global has no lock to get wrong, unlike the progress stores which are
- * written from several threads. The authoritative remaining time lives in [SleepTimerBudget]; this
- * is only what the UI observes.
+ * Bound as a `@Singleton` so it is visible in the Hilt object graph and replaceable in tests.
+ * The service is the only writer; the authoritative remaining time lives in [SleepTimerBudget];
+ * this is only what the UI observes.
  */
-object SleepTimerStore {
+@Singleton
+class SleepTimerStore @Inject constructor() {
     private val _state = MutableStateFlow<SleepTimerState?>(null)
     val state: StateFlow<SleepTimerState?> = _state.asStateFlow()
 

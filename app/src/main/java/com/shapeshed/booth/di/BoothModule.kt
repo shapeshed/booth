@@ -18,6 +18,7 @@ import com.shapeshed.booth.data.Prof18FeedParser
 import com.shapeshed.booth.data.RssPodcastFeedProvider
 import com.shapeshed.booth.data.SaxStreamingFeedParser
 import com.shapeshed.booth.data.SettingsStore
+import com.shapeshed.booth.data.SleepTimerStore
 import com.shapeshed.booth.data.StreamingCompletePodcastFeedProvider
 import com.shapeshed.booth.data.StreamingPodcastFeedProvider
 import dagger.Module
@@ -141,6 +142,10 @@ object BoothModule {
     @Provides
     @Singleton
     fun providePodcastSubscriptionProgressStore(): PodcastSubscriptionProgressStore = PodcastSubscriptionProgressStore()
+
+    @Provides
+    @Singleton
+    fun provideSleepTimerStore(): SleepTimerStore = SleepTimerStore()
 
     @Provides
     @Singleton

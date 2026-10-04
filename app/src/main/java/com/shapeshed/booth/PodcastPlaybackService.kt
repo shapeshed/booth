@@ -106,6 +106,7 @@ class PodcastPlaybackService : MediaLibraryService() {
     private lateinit var session: MediaLibrarySession
     private lateinit var repository: PodcastRepository
     private var settings: SettingsStore? = null
+    private lateinit var sleepTimerStore: SleepTimerStore
     private var sleepTimerJob: Job? = null
     private var progressSaveJob: Job? = null
     private var currentMediaId: Long? = null
@@ -143,6 +144,7 @@ class PodcastPlaybackService : MediaLibraryService() {
         val entryPoint = boothPlaybackEntryPoint(application)
         repository = entryPoint.podcastRepository
         settings = entryPoint.settings
+        sleepTimerStore = entryPoint.sleepTimerStore
         player = ExoPlayer.Builder(this)
             .setSeekBackIncrementMs(10_000L)
             .setSeekForwardIncrementMs(30_000L)
@@ -563,7 +565,7 @@ class PodcastPlaybackService : MediaLibraryService() {
 
     private fun publishSleepTimer(budget: SleepTimerBudget, persist: Boolean) {
         val state = budget.state()
-        SleepTimerStore.set(state)
+        sleepTimerStore.set(state)
         if (persist) {
             serviceScope.launch { settings?.setSleepTimer(state) }
         }
@@ -571,7 +573,7 @@ class PodcastPlaybackService : MediaLibraryService() {
 
     private fun finishSleepTimer() {
         sleepTimerJob = null
-        SleepTimerStore.clear()
+        sleepTimerStore.clear()
         serviceScope.launch { settings?.clearSleepTimer() }
         player.pause()
     }
@@ -596,7 +598,7 @@ class PodcastPlaybackService : MediaLibraryService() {
     private fun stopSleepTimer(clearPersisted: Boolean) {
         sleepTimerJob?.cancel()
         sleepTimerJob = null
-        SleepTimerStore.clear()
+        sleepTimerStore.clear()
         if (clearPersisted) {
             serviceScope.launch { settings?.clearSleepTimer() }
         }

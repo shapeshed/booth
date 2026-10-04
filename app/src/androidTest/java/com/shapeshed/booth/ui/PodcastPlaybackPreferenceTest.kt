@@ -11,6 +11,7 @@ import com.shapeshed.booth.data.PodcastFeed
 import com.shapeshed.booth.data.PodcastFeedProvider
 import com.shapeshed.booth.data.PodcastRepository
 import com.shapeshed.booth.data.SettingsStore
+import com.shapeshed.booth.data.SleepTimerStore
 import com.shapeshed.booth.data.podcastId
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -54,7 +55,7 @@ class PodcastPlaybackPreferenceTest {
                 lastRefreshMillis = null,
             )
             repository.upsertBackupPodcast(podcast)
-            val viewModel = PodcastPlaybackViewModel(SettingsStore(context), repository)
+            val viewModel = PodcastPlaybackViewModel(SettingsStore(context), repository, SleepTimerStore())
 
             viewModel.setPodcastPlaybackSpeed(podcast.id, 1.5f)
 
@@ -81,7 +82,7 @@ class PodcastPlaybackPreferenceTest {
             val podcast = testPodcast()
             repository.upsertBackupPodcast(podcast)
             val settings = SettingsStore(context)
-            val viewModel = PodcastPlaybackViewModel(settings, repository)
+            val viewModel = PodcastPlaybackViewModel(settings, repository, SleepTimerStore())
 
             settings.setPodcastPlaybackSpeed(1.5f)
             viewModel.setPodcastPlaybackSpeed(podcast.id, 0.75f)
@@ -117,7 +118,7 @@ class PodcastPlaybackPreferenceTest {
             val repository = repository(database)
             val podcast = testPodcast()
             repository.upsertBackupPodcast(podcast)
-            val viewModel = PodcastPlaybackViewModel(SettingsStore(context), repository)
+            val viewModel = PodcastPlaybackViewModel(SettingsStore(context), repository, SleepTimerStore())
 
             // The slider cannot produce these, but a restored backup or a media-session command can,
             // and Media3 rejects a speed outside its supported range rather than clamping it.
