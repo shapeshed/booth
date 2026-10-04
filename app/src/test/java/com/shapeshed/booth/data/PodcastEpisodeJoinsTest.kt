@@ -1,6 +1,7 @@
 package com.shapeshed.booth.data
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PodcastEpisodeJoinsTest {
@@ -26,6 +27,25 @@ class PodcastEpisodeJoinsTest {
         )
 
         assertEquals(listOf(10L, 20L), downloadEpisodeIds(assets))
+    }
+
+    @Test
+    fun downloadCandidatesUseOnlyCandidateMediaAndExistingAssets() {
+        val candidates = listOf(
+            episode(1L).copy(localUri = "file:///episode-1.mp3"),
+            episode(2L),
+            episode(3L),
+            episode(3L),
+        )
+        val assets = listOf(
+            asset(2L, DownloadAssetType.AUDIO, 1L),
+            asset(3L, DownloadAssetType.AUDIO, 2L).copy(status = DownloadAssetStatus.FAILED),
+        )
+
+        val result = episodesNeedingDownload(candidates, assets)
+
+        assertEquals(listOf(3L), result.map(EpisodeEntity::id))
+        assertTrue(result.none(EpisodeEntity::hasLocalMedia))
     }
 
     private fun asset(episodeId: Long, type: DownloadAssetType, downloadId: Long) = DownloadAssetEntity(

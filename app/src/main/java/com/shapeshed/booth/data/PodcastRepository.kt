@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
@@ -76,11 +77,8 @@ class PodcastRepository(
     }
 
     /**
-     * Rebuilds the whole index.
-     *
-     * The request type existed and was handled but never sent, so a previously lost batch could
-     * never be recovered. The ViewModel calls this once at startup, which makes the index
-     * self-healing and means the remaining risk is only a batch lost within one process run.
+     * Explicit full rebuild for recovery, never for list startup. Normal searches repair only
+     * missing entries, retaining the existing index and avoiding a whole-library Kotlin allocation.
      */
     suspend fun rebuildSearchIndex() = indexEpisodes {
         dao.clearEpisodeSearch()
@@ -142,7 +140,15 @@ class PodcastRepository(
     }.flow
 
     fun searchEpisodes(query: String, limit: Int = 80): Flow<List<PodcastEpisodeSearchResult>> =
-        podcastFtsQuery(query)?.let { dao.observeEpisodesMatching(it, limit) }
+        podcastFtsQuery(query)?.let { ftsQuery ->
+            dao.observeEpisodesMatching(ftsQuery, limit).onStart {
+                // Older builds and interrupted/best-effort writes can leave missing entries.
+                // Repair only when FTS is used; blank queries at home startup need no index.
+                // One SQL statement keeps the missing-row check and insert atomic, and a
+                // cancelled search cancels its repair rather than leaving detached work behind.
+                indexEpisodes { dao.insertMissingEpisodeSearchEntries() }
+            }
+        }
             ?: if (query.isBlank()) {
                 dao.observeRecentEpisodesForSearch(limit.coerceAtMost(40))
             } else {
@@ -152,6 +158,14 @@ class PodcastRepository(
     val queue: Flow<List<QueueEntity>> = dao.observeQueue()
 
     val downloadAssets: Flow<List<DownloadAssetEntity>> = downloadDao.observeAll()
+
+    suspend fun downloadAssetsForEpisodes(episodeIds: Collection<Long>): List<DownloadAssetEntity> {
+        val assets = mutableListOf<DownloadAssetEntity>()
+        episodeIds.distinct().chunked(DOWNLOAD_ASSET_QUERY_BATCH_SIZE).forEach { batch ->
+            if (batch.isNotEmpty()) assets += downloadDao.findForEpisodes(batch)
+        }
+        return assets
+    }
 
     fun episodes(podcastId: Long): Flow<List<EpisodeEntity>> = dao.observeEpisodes(podcastId)
 
@@ -588,6 +602,7 @@ class PodcastRepository(
 
     private companion object {
         const val MIN_PLAUSIBLE_MEDIA_BYTES = 1024L
+        const val DOWNLOAD_ASSET_QUERY_BATCH_SIZE = 900
 
         /**
          * How many recent publish dates to read when inferring a feed's cadence.

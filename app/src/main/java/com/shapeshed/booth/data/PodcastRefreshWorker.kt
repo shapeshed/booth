@@ -27,6 +27,7 @@ import com.shapeshed.booth.EXTRA_INITIAL_PODCAST_NOTIFICATION_ACTION
 import com.shapeshed.booth.PODCAST_NOTIFICATION_ACTION_ADD_TO_QUEUE
 import com.shapeshed.booth.PODCAST_NOTIFICATION_ACTION_PLAY
 import com.shapeshed.booth.R
+import com.shapeshed.booth.di.BoothWorkerEntryPoint
 import com.shapeshed.booth.di.boothWorkerEntryPoint
 import java.io.ByteArrayOutputStream
 import java.io.IOException
@@ -44,6 +45,12 @@ import okhttp3.Request
 class PodcastRefreshWorker(context: Context, workerParams: WorkerParameters) : CoroutineWorker(context, workerParams) {
     override suspend fun doWork(): Result {
         val entryPoint = boothWorkerEntryPoint(applicationContext)
+        return entryPoint.podcastRefreshCoordinator.withExclusiveRefresh {
+            refresh(entryPoint)
+        }
+    }
+
+    private suspend fun refresh(entryPoint: BoothWorkerEntryPoint): Result {
         val repository = entryPoint.podcastRepository
         val settings = entryPoint.settings
         var retryableFailure = false
@@ -115,12 +122,8 @@ class PodcastRefreshWorker(context: Context, workerParams: WorkerParameters) : C
                     }
             }
         }
-        val allEpisodes = repository.podcasts.first()
-            .flatMap { subscribed -> repository.episodes(subscribed.id).first() }
         val downloadsToEnqueue = entryPoint.downloadManager.episodesToDownload(
             candidates = queuedDownloadCandidates,
-            downloadedEpisodes = allEpisodes,
-            downloadAssets = repository.downloadAssets.first(),
         )
         downloadsToEnqueue.forEach { episode ->
             val request = OneTimeWorkRequestBuilder<EpisodeDownloadWorker>()
@@ -134,7 +137,8 @@ class PodcastRefreshWorker(context: Context, workerParams: WorkerParameters) : C
             )
         }
         if (newEpisodes.isNotEmpty()) {
-            applicationContext.postPodcastNotifications(newEpisodes, entryPoint.okHttpClient)
+            val queuedEpisodeIds = repository.queue.first().mapTo(mutableSetOf(), QueueEntity::episodeId)
+            applicationContext.postPodcastNotifications(newEpisodes, queuedEpisodeIds, entryPoint.okHttpClient)
         }
 
         // Re-arm from the pattern as it now stands, so a feed that turns out to be weekly is not
@@ -214,6 +218,7 @@ private data class NewPodcastEpisodeNotification(
 
 private suspend fun Context.postPodcastNotifications(
     episodes: List<NewPodcastEpisodeNotification>,
+    queuedEpisodeIds: Set<Long>,
     client: okhttp3.OkHttpClient,
 ) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
@@ -275,11 +280,13 @@ private suspend fun Context.postPodcastNotifications(
                 getString(R.string.notification_action_play),
                 actionIntent(PODCAST_NOTIFICATION_ACTION_PLAY),
             )
-            .addAction(
+        if (shouldShowAddToQueueNotificationAction(episode.episodeId, queuedEpisodeIds)) {
+            builder.addAction(
                 R.drawable.ic_notification_queue,
                 getString(R.string.notification_action_add_to_queue),
                 actionIntent(PODCAST_NOTIFICATION_ACTION_ADD_TO_QUEUE),
             )
+        }
         if (artwork != null) {
             builder
                 .setLargeIcon(artwork)
@@ -321,6 +328,9 @@ private suspend fun Context.postPodcastNotifications(
             .build(),
     )
 }
+
+internal fun shouldShowAddToQueueNotificationAction(episodeId: Long, queuedEpisodeIds: Set<Long>): Boolean =
+    episodeId !in queuedEpisodeIds
 
 private suspend fun loadNotificationBitmap(client: okhttp3.OkHttpClient, imageUrl: String): Bitmap? =
     withContext(Dispatchers.IO) {

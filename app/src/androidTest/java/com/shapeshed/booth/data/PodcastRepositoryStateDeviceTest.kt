@@ -73,11 +73,39 @@ class PodcastRepositoryStateDeviceTest {
         assertTrue(repository.searchEpisodes("First").first().isNotEmpty())
 
         database.podcastDao().clearEpisodeSearch()
-        assertTrue(repository.searchEpisodes("First").first().isEmpty())
+        assertTrue(database.podcastDao().observeEpisodesMatching("First", 10).first().isEmpty())
 
         repository.rebuildSearchIndex()
 
         assertTrue(repository.searchEpisodes("First").first().isNotEmpty())
+    }
+
+    @Test
+    fun blankSearchDoesNotRepairTheIndexDuringListStartup() = runBlocking {
+        repository.subscribe(FEED_URL)
+        database.podcastDao().clearEpisodeSearch()
+
+        assertTrue(repository.searchEpisodes("").first().isNotEmpty())
+        assertTrue(database.podcastDao().observeEpisodesMatching("First", 10).first().isEmpty())
+    }
+
+    @Test
+    fun searchingRepairsMissingIndexEntriesWithoutAStartupRebuild() = runBlocking {
+        repository.subscribe(FEED_URL)
+        database.podcastDao().clearEpisodeSearch()
+
+        assertTrue(repository.searchEpisodes("First").first().isNotEmpty())
+        // Repeated searches remain valid and do not duplicate the recovered entry.
+        assertEquals(1, repository.searchEpisodes("First").first().size)
+    }
+
+    @Test
+    fun searchRepairPreservesEntriesAlreadyIndexed() = runBlocking {
+        repository.subscribe(FEED_URL)
+        val episode = database.podcastDao().episodesForPodcast(podcast.id).single()
+        database.podcastDao().upsertEpisodeSearch(listOf(toSearchEntity(episode).copy(title = "PreservedMarker")))
+
+        assertEquals(1, repository.searchEpisodes("PreservedMarker").first().size)
     }
 
     @Test

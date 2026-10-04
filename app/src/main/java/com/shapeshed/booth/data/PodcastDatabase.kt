@@ -159,7 +159,7 @@ data class EpisodeEntity(
     val favorite: Boolean = false,
 )
 
-/** Search-only projection. It is maintained asynchronously after feed persistence. */
+/** Search-only projection. It is maintained inline after feed persistence. */
 @Fts4
 @Entity(tableName = "episode_search_fts")
 data class EpisodeSearchFtsEntity(
@@ -310,6 +310,17 @@ interface PodcastDao {
 
     @Query("DELETE FROM episode_search_fts")
     suspend fun clearEpisodeSearch()
+
+    /** Repairs missing rows in SQLite without materializing the episode library in app memory. */
+    @Query(
+        """
+        INSERT INTO episode_search_fts (rowid, title, descriptionHtml, podcastId)
+        SELECT e.id, e.title, COALESCE(e.descriptionHtml, ''), CAST(e.podcastId AS TEXT)
+        FROM episodes e
+        WHERE NOT EXISTS (SELECT 1 FROM episode_search_fts f WHERE f.rowid = e.id)
+        """,
+    )
+    suspend fun insertMissingEpisodeSearchEntries()
 
     /**
      * The newest publish dates for one feed, for deriving its refresh cadence.

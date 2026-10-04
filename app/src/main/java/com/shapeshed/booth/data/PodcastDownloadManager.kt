@@ -263,20 +263,10 @@ class PodcastDownloadManager(
     // files here. A count cap with eviction was the alternative, and it silently deleted unplayed
     // downloads, oldest first, to hold a total under a number, which is not a policy a listener
     // expects to lose episodes to.
-    suspend fun episodesToDownload(
-        candidates: List<EpisodeEntity>,
-        downloadedEpisodes: List<EpisodeEntity>,
-        downloadAssets: List<DownloadAssetEntity>,
-    ): List<EpisodeEntity> {
-        val currentEpisodeIds = downloadedEpisodes
-            .asSequence()
-            .filter(EpisodeEntity::hasLocalMedia)
-            .mapTo(mutableSetOf(), EpisodeEntity::id)
-        downloadAssets
-            .asSequence()
-            .filter { it.status in ACTIVE_STATUSES || it.status == DownloadAssetStatus.COMPLETED }
-            .mapTo(currentEpisodeIds, DownloadAssetEntity::episodeId)
-        return candidates.distinctBy(EpisodeEntity::id).filterNot { it.id in currentEpisodeIds }
+    suspend fun episodesToDownload(candidates: List<EpisodeEntity>): List<EpisodeEntity> {
+        if (candidates.isEmpty()) return emptyList()
+        val assets = repository.downloadAssetsForEpisodes(candidates.map(EpisodeEntity::id))
+        return episodesNeedingDownload(candidates, assets)
     }
 
     companion object {
@@ -287,4 +277,20 @@ class PodcastDownloadManager(
             DownloadAssetStatus.RETRYING,
         )
     }
+}
+
+/** Filters only the requested candidates; callers should not load the full episode library. */
+internal fun episodesNeedingDownload(
+    candidates: List<EpisodeEntity>,
+    downloadAssets: List<DownloadAssetEntity>,
+): List<EpisodeEntity> {
+    val currentEpisodeIds = candidates
+        .asSequence()
+        .filter(EpisodeEntity::hasLocalMedia)
+        .mapTo(mutableSetOf(), EpisodeEntity::id)
+    downloadAssets
+        .asSequence()
+        .filter { it.status in PodcastDownloadManager.ACTIVE_STATUSES || it.status == DownloadAssetStatus.COMPLETED }
+        .mapTo(currentEpisodeIds, DownloadAssetEntity::episodeId)
+    return candidates.distinctBy(EpisodeEntity::id).filterNot { it.id in currentEpisodeIds }
 }

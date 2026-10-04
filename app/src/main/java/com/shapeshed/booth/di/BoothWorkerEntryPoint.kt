@@ -4,6 +4,7 @@ import android.content.Context
 import com.shapeshed.booth.data.DownloadProgressStore
 import com.shapeshed.booth.data.PodcastBackupManager
 import com.shapeshed.booth.data.PodcastDownloadManager
+import com.shapeshed.booth.data.PodcastRefreshCoordinator
 import com.shapeshed.booth.data.PodcastRepository
 import com.shapeshed.booth.data.PodcastSubscriptionProgressStore
 import com.shapeshed.booth.data.SettingsStore
@@ -34,6 +35,9 @@ interface BoothWorkerEntryPoint {
 
     /** Singleton, so its enqueue mutex is shared rather than per instance. */
     val downloadManager: PodcastDownloadManager
+
+    /** Shared process lock prevents simultaneous feed workers from materializing large episode sets. */
+    val podcastRefreshCoordinator: PodcastRefreshCoordinator
 
     val backupManager: PodcastBackupManager
 }

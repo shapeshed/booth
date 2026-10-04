@@ -59,6 +59,7 @@ private fun Intent.initialPodcastEpisodeIdExtra(): Long? =
 
 private fun Intent.initialPodcastNotificationActionExtra(): String? =
     getStringExtra(EXTRA_INITIAL_PODCAST_NOTIFICATION_ACTION)
+        ?.takeIf { it == PODCAST_NOTIFICATION_ACTION_PLAY || it == PODCAST_NOTIFICATION_ACTION_ADD_TO_QUEUE }
 
 private fun Intent.debugGettingStartedExtra(): Boolean =
     BuildConfig.DEBUG && getBooleanExtra(EXTRA_DEBUG_GETTING_STARTED, false)
