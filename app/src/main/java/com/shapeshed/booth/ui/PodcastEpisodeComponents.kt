@@ -37,6 +37,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAddCheck
+import androidx.compose.material.icons.rounded.Block
+import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.FileDownload
@@ -79,6 +81,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -88,8 +91,13 @@ import coil3.compose.AsyncImage
 import com.shapeshed.booth.R
 import com.shapeshed.booth.data.DownloadAssetEntity
 import com.shapeshed.booth.data.DownloadAssetStatus
+import com.shapeshed.booth.data.DownloadBadge
 import com.shapeshed.booth.data.DownloadProgress
 import com.shapeshed.booth.data.EpisodeEntity
+import com.shapeshed.booth.data.PodcastDownloadManager
+import com.shapeshed.booth.data.downloadBadge
+import com.shapeshed.booth.data.explainsFailure
+import com.shapeshed.booth.data.isActive
 import com.shapeshed.booth.data.isDownloaded
 import java.time.Instant
 import java.time.ZoneId
@@ -198,12 +206,20 @@ internal fun EpisodeTitleBlock(
     episode: EpisodeEntity,
     active: Boolean,
     downloadProgress: DownloadProgress? = null,
+    downloadAsset: DownloadAssetEntity? = null,
     downloaded: Boolean = episode.isDownloaded(downloadProgress),
+    onShowDownloadFailure: (() -> Unit)? = null,
     explicit: Boolean? = episode.explicit,
     trailingContent: (@Composable (() -> Unit))? = null,
 ) {
-    val showDownloadStatus = downloaded || downloadProgress?.isActive == true ||
-        downloadProgress?.waitingForWifi == true || downloadProgress?.completed == true
+    // One resolver for every list view, so a failed download reads the same in Up next, Inbox and
+    // Downloads. See downloadBadge for the precedence rules.
+    val downloadBadge = downloadBadge(
+        asset = downloadAsset,
+        progress = downloadProgress,
+        isDownloaded = downloaded,
+    )
+    val showDownloadStatus = downloadBadge != DownloadBadge.NONE
 
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         if (episode.publishedAtMillis != null || showDownloadStatus || trailingContent != null) {
@@ -237,29 +253,20 @@ internal fun EpisodeTitleBlock(
                 }
                 Spacer(Modifier.weight(1f))
                 if (showDownloadStatus) {
-                    if (downloadProgress?.waitingForWifi == true && !downloaded) {
-                        Icon(
-                            imageVector = Icons.Rounded.WifiOff,
-                            contentDescription = stringResource(R.string.download_waiting_for_wifi),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(16.dp),
-                        )
-                    } else if (downloadProgress?.isActive == true && !downloaded) {
-                        if (downloadProgress.fraction != null) {
-                            CircularProgressIndicator(
-                                progress = { downloadProgress.fraction ?: 0f },
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp,
-                            )
-                        } else {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp,
-                            )
-                        }
+                    // The badge sits in this one slot on every screen. When it reports a failure it
+                    // becomes the way into the explanation and the retry, which is why it is only
+                    // clickable in that case: an indicator that looks interactive should do
+                    // something.
+                    val failureClick = if (downloadBadge.explainsFailure()) {
+                        onShowDownloadFailure
                     } else {
-                        OfflineEpisodeIndicator()
+                        null
                     }
+                    EpisodeDownloadBadge(
+                        badge = downloadBadge,
+                        fraction = downloadProgress?.fraction,
+                        onClick = failureClick,
+                    )
                 }
                 trailingContent?.invoke()
             }
@@ -611,6 +618,122 @@ internal fun OfflineEpisodeIndicator() {
     )
 }
 
+/**
+ * The single download indicator, drawn in the same place on every episode row.
+ *
+ * Kept as one composable so the three list views cannot drift apart again: they used to each pick
+ * their own icon and their own slot, which is why a failed download showed an error icon in the
+ * middle of the Downloads metadata line and showed nothing at all in Up next and Inbox.
+ *
+ * [onClick] is only ever non-null for the states that explain a failure. Making the whole 16dp icon
+ * the tap target would be too small to hit comfortably, so the clickable area is padded out to
+ * 32dp and the extra space is transparent, leaving the layout otherwise untouched.
+ */
+@Composable
+internal fun EpisodeDownloadBadge(
+    badge: DownloadBadge,
+    fraction: Float? = null,
+    onClick: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
+) {
+    val label = badgeContentDescription(badge)
+    val tint = when (badge) {
+        DownloadBadge.FAILED, DownloadBadge.CANCELLED -> MaterialTheme.colorScheme.error
+        DownloadBadge.DOWNLOADED, DownloadBadge.RETRYING -> MaterialTheme.colorScheme.primary
+        DownloadBadge.DOWNLOADING, DownloadBadge.WAITING_FOR_WIFI -> MaterialTheme.colorScheme.onSurfaceVariant
+        DownloadBadge.NONE -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    // Order matters here: `padding` must come *before* `size`, because the outermost modifier is the
+    // one that sets the final bounds. `size(16.dp).padding(8.dp)` leaves the icon a 0x0 content box, so
+    // it lays out and reports semantics correctly but draws nothing at all. Padding first and sizing
+    // second gives a 32dp touch target around a 16dp icon.
+    val badgeModifier = modifier
+        .semantics { contentDescription = label }
+        .then(
+            if (onClick != null) {
+                Modifier
+                    .clickable(
+                        role = Role.Button,
+                        onClickLabel = stringResource(R.string.download_failure_details),
+                        onClick = onClick,
+                    )
+                    .padding(8.dp)
+            } else {
+                Modifier
+            },
+        )
+        .size(16.dp)
+
+    when (badge) {
+        // Callers already gate on `showDownloadStatus`, so this is unreachable today. It draws a bare
+        // 16dp space with no semantics and no click rather than reusing the badge modifier, which
+        // would attach an empty content description and an empty click target to nothing.
+        DownloadBadge.NONE -> Spacer(Modifier.size(16.dp))
+
+        DownloadBadge.DOWNLOADED -> Icon(
+            imageVector = Icons.Rounded.OfflinePin,
+            contentDescription = null,
+            tint = tint,
+            modifier = badgeModifier,
+        )
+
+        DownloadBadge.FAILED -> Icon(
+            imageVector = Icons.Rounded.ErrorOutline,
+            contentDescription = null,
+            tint = tint,
+            modifier = badgeModifier,
+        )
+
+        DownloadBadge.CANCELLED -> Icon(
+            imageVector = Icons.Rounded.Block,
+            contentDescription = null,
+            tint = tint,
+            modifier = badgeModifier,
+        )
+
+        DownloadBadge.WAITING_FOR_WIFI -> Icon(
+            imageVector = Icons.Rounded.WifiOff,
+            contentDescription = null,
+            tint = tint,
+            modifier = badgeModifier,
+        )
+
+        // Retrying draws a spinner rather than an icon: it is genuinely in flight, and the previous
+        // code drew nothing at all here, leaving a retrying download looking untouched.
+        DownloadBadge.RETRYING -> CircularProgressIndicator(
+            progress = { fraction ?: 0f },
+            modifier = badgeModifier,
+            strokeWidth = 2.dp,
+        )
+
+        DownloadBadge.DOWNLOADING -> if (fraction != null) {
+            CircularProgressIndicator(
+                progress = { fraction },
+                modifier = badgeModifier,
+                strokeWidth = 2.dp,
+            )
+        } else {
+            // No total size yet, so there is no fraction to draw. Indeterminate, rather than 0%,
+            // which would read as "not started" for a transfer that is under way.
+            CircularProgressIndicator(
+                modifier = badgeModifier,
+                strokeWidth = 2.dp,
+            )
+        }
+    }
+}
+
+@Composable
+private fun badgeContentDescription(badge: DownloadBadge): String = when (badge) {
+    DownloadBadge.NONE -> ""
+    DownloadBadge.DOWNLOADED -> stringResource(R.string.available_offline)
+    DownloadBadge.FAILED -> stringResource(R.string.download_failed)
+    DownloadBadge.CANCELLED -> stringResource(R.string.cancelled)
+    DownloadBadge.WAITING_FOR_WIFI -> stringResource(R.string.download_waiting_for_wifi)
+    DownloadBadge.RETRYING -> stringResource(R.string.retrying)
+    DownloadBadge.DOWNLOADING -> stringResource(R.string.downloading)
+}
+
 @Composable
 internal fun ExplicitEpisodeIndicator() {
     val explicitContentDescription = stringResource(R.string.explicit_content)
@@ -642,43 +765,6 @@ internal fun EpisodeTrailingSlot(content: @Composable () -> Unit) {
         contentAlignment = Alignment.Center,
     ) {
         content()
-    }
-}
-
-@Composable
-internal fun DownloadEpisodeMetadataLine(
-    episode: EpisodeEntity,
-    podcastTitle: String,
-    asset: DownloadAssetEntity,
-    progress: DownloadProgress?,
-    active: Boolean,
-    downloaded: Boolean,
-    completed: Boolean,
-) {
-    val metadataColor = if (active) {
-        MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
-    }
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            downloadSizeLabel(asset, episode, progress)?.let { sizeLabel ->
-                Text(sizeLabel, style = MaterialTheme.typography.bodySmall, color = metadataColor)
-            }
-            if (asset.status == DownloadAssetStatus.FAILED ||
-                asset.status == DownloadAssetStatus.CANCELLED ||
-                asset.status == DownloadAssetStatus.WAITING_FOR_WIFI
-            ) {
-                DownloadStatusIcon(
-                    asset = asset,
-                    isDownloaded = downloaded,
-                    contentDescription = downloadStatusLabel(asset, downloaded, progress),
-                )
-            }
-        }
     }
 }
 
@@ -1233,14 +1319,6 @@ private fun downloadProgressLabel(progress: DownloadProgress): String {
     }
     return "$percent · $remaining"
 }
-
-internal val DownloadProgress.isActive: Boolean
-    // A queued download has no total size yet, so its fraction is null. It is still
-    // active and must render an indeterminate spinner until DownloadManager reports it.
-    get() {
-        val currentFraction = fraction
-        return !completed && !waitingForWifi && (currentFraction == null || currentFraction < 1f)
-    }
 
 internal fun formatPlaybackTime(milliseconds: Long): String {
     if (milliseconds <= 0L) return "0:00"

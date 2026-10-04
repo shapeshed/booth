@@ -63,6 +63,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.shapeshed.booth.R
+import com.shapeshed.booth.data.DownloadAssetEntity
 import com.shapeshed.booth.data.DownloadProgress
 import com.shapeshed.booth.data.EpisodeEntity
 import com.shapeshed.booth.data.PodcastEntity
@@ -92,8 +93,14 @@ internal fun PodcastQueueScreen(
     undoActions: PodcastHomeUndoActions,
     removedFromUpNextMessage: String,
     modifier: Modifier = Modifier,
+    downloadAssets: Map<Long, DownloadAssetEntity> = emptyMap(),
+    onRetryDownload: (episodeId: Long) -> Unit = {},
+    onRemoveDownload: suspend (episodeId: Long) -> Result<Unit> = { Result.success(Unit) },
     showFilterChips: Boolean = true,
 ) {
+    // Which episode's failure is being explained, if any. Held here rather than per row so the
+    // dialog survives the row scrolling out of the lazy list while it is open.
+    val downloadFailure = rememberDownloadFailureState()
     val listState = rememberLazyListState()
     var orderedEpisodes by remember { mutableStateOf(episodes) }
     var pendingRemovalIds by remember { mutableStateOf<Set<Long>>(emptySet()) }
@@ -219,6 +226,8 @@ internal fun PodcastQueueScreen(
                     isPlaying = isPlaying,
                     isBuffering = isBuffering,
                     downloadProgress = downloadProgress[episode.id],
+                    downloadAsset = downloadAssets[episode.id],
+                    onShowDownloadFailure = { downloadFailure.show(episode) },
                     onOpen = { onOpen(episode) },
                     onPlay = { onPlay(episode) },
                     onDownload = { onDownload(episode) },
@@ -338,6 +347,15 @@ internal fun PodcastQueueScreen(
             }
         }
     }
+
+    // Outside the LazyColumn so it is not recycled with the rows. An explanation that vanished
+    // because the list scrolled would be worse than no explanation.
+    DownloadFailureDialogHost(
+        state = downloadFailure,
+        assetsByEpisodeId = downloadAssets,
+        onRetry = onRetryDownload,
+        onRemove = onRemoveDownload,
+    )
 }
 
 @Composable
@@ -359,6 +377,8 @@ internal fun QueueEpisodeSwipeRow(
     showDragHandle: Boolean,
     modifier: Modifier = Modifier,
     dragHandleModifier: Modifier = Modifier,
+    downloadAsset: DownloadAssetEntity? = null,
+    onShowDownloadFailure: (() -> Unit)? = null,
     compact: Boolean = false,
 ) {
     val haptic = LocalHapticFeedback.current
@@ -461,6 +481,8 @@ internal fun QueueEpisodeSwipeRow(
                                 active,
                                 downloaded = episode.isDownloaded(downloadProgress),
                                 downloadProgress = downloadProgress,
+                                downloadAsset = downloadAsset,
+                                onShowDownloadFailure = onShowDownloadFailure,
                             )
                         }
                     },
@@ -528,6 +550,8 @@ internal fun InboxEpisodeSwipeRow(
     positionOverride: Long?,
     downloadProgress: DownloadProgress?,
     modifier: Modifier = Modifier,
+    downloadAsset: DownloadAssetEntity? = null,
+    onShowDownloadFailure: (() -> Unit)? = null,
     swipeEnabled: Boolean = true,
 ) {
     val haptic = LocalHapticFeedback.current
@@ -687,6 +711,8 @@ internal fun InboxEpisodeSwipeRow(
                             active,
                             downloaded = episode.isDownloaded(downloadProgress),
                             downloadProgress = downloadProgress,
+                            downloadAsset = downloadAsset,
+                            onShowDownloadFailure = onShowDownloadFailure,
                         )
                     },
                 )

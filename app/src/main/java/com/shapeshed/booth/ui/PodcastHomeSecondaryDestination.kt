@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.StateFlow
 internal class PodcastSecondaryActions(
     val play: (episode: EpisodeEntity, podcastTitle: String) -> Unit,
     val download: (episodeId: Long) -> Unit,
+    val retryDownload: (episodeId: Long) -> Unit,
     val removeDownload: suspend (episodeId: Long) -> Result<Unit>,
     val addToQueue: (episodeId: Long) -> Unit,
     val refreshSubscriptions: () -> Unit,
@@ -63,6 +64,7 @@ internal fun PodcastHomeSecondaryDestination(
             },
             onDownload = { actions.download(it.id) },
             onRemove = { actions.removeDownload(it.id) },
+            onRetryDownload = actions.retryDownload,
             undoActions = undoActions,
             pendingRemovalEpisodeIds = pendingDownloadRemovalIds,
             onPendingRemovalEpisodeChange = onPendingDownloadRemovalChange,

@@ -294,7 +294,7 @@ class PodcastSwipeRowTest {
     @Test
     fun swipingADownloadKeepsItUntilSnackbarExpires() {
         var removed = 0
-        val presenter = PendingUndoSnackbarPresenter()
+        val presenter = PendingUndoPresenter()
         val pendingIds = mutableStateOf(emptySet<Long>())
 
         composeRule.setContent {
@@ -316,7 +316,7 @@ class PodcastSwipeRowTest {
                         Result.success(Unit)
                     },
                     onLongPress = {},
-                    undoActions = rememberDownloadUndoActions(scope, presenter),
+                    undoActions = rememberTestDownloadUndoActions(scope, presenter),
                     pendingRemovalEpisodeIds = pendingIds.value,
                     onPendingRemovalEpisodeChange = { id, pending ->
                         pendingIds.value = if (pending) pendingIds.value + id else pendingIds.value - id
@@ -338,7 +338,7 @@ class PodcastSwipeRowTest {
     @Test
     fun undoingADownloadSwipeRestoresTheRowWithoutDeletingIt() {
         var removed = 0
-        val presenter = PendingUndoSnackbarPresenter()
+        val presenter = PendingUndoPresenter()
         val pendingIds = mutableStateOf(emptySet<Long>())
 
         composeRule.setContent {
@@ -360,7 +360,7 @@ class PodcastSwipeRowTest {
                         Result.success(Unit)
                     },
                     onLongPress = {},
-                    undoActions = rememberDownloadUndoActions(scope, presenter),
+                    undoActions = rememberTestDownloadUndoActions(scope, presenter),
                     pendingRemovalEpisodeIds = pendingIds.value,
                     onPendingRemovalEpisodeChange = { id, pending ->
                         pendingIds.value = if (pending) pendingIds.value + id else pendingIds.value - id
@@ -377,43 +377,6 @@ class PodcastSwipeRowTest {
 
         composeRule.onNodeWithText("Episode 1").assertIsDisplayed()
         composeRule.runOnIdle { assertEquals(0, removed) }
-    }
-
-    @androidx.compose.runtime.Composable
-    private fun rememberDownloadUndoActions(
-        scope: CoroutineScope,
-        presenter: PendingUndoSnackbarPresenter,
-    ): PodcastHomeUndoActions = remember(scope, presenter) {
-        PodcastHomeUndoActions(
-            scope = scope,
-            snackbars = UndoSnackbars(scope, presenter),
-            strings = PodcastHomeUndoStrings(
-                undoLabel = "Undo",
-                removedFromInbox = "Removed from Inbox",
-                episodesRemovedFromInbox = { "$it episodes removed from Inbox" },
-                addToNextFailed = "Could not add to Up next",
-                addedToNext = "Added to Up next",
-                removeFromNextFailed = "Could not remove from Up next",
-                unfollowed = "Unfollowed",
-                downloadRemoved = "Download removed",
-                removeDownloadFailed = "Could not remove download",
-            ),
-            addToQueueFromInbox = { _, _, _ -> },
-            undoAddToQueueFromInbox = { Result.success(Unit) },
-            dismissFromInbox = {},
-            restoreToInbox = {},
-        )
-    }
-
-    private class PendingUndoSnackbarPresenter : UndoSnackbarPresenter {
-        private var result: CompletableDeferred<Boolean>? = null
-
-        override suspend fun present(offer: UndoOffer): Boolean =
-            CompletableDeferred<Boolean>().also { result = it }.await()
-
-        fun resolve(undo: Boolean) {
-            result?.complete(undo)
-        }
     }
 
     @Test

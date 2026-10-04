@@ -17,6 +17,7 @@ import androidx.work.workDataOf
 import com.shapeshed.booth.data.APPLE_DIRECTORY_PROVIDER_ID
 import com.shapeshed.booth.data.CategoryEntity
 import com.shapeshed.booth.data.DefaultPodcastDiscoveryCatalog
+import com.shapeshed.booth.data.DownloadAssetType
 import com.shapeshed.booth.data.DownloadProgress
 import com.shapeshed.booth.data.DownloadProgressStore
 import com.shapeshed.booth.data.EPISODE_ID_INPUT
@@ -1305,6 +1306,34 @@ class PodcastViewModel @Inject constructor(
         // pending state now so every list view gives immediate feedback on the tap.
         progressStore.request(episodeId)
         enqueueDownload(context, episodeId)
+    }
+
+    /**
+     * Retries a download the user has explicitly asked to try again.
+     *
+     * Distinct from [download] in two ways that both matter:
+     *
+     * - The stored retry count is cleared first. Automatic retries are capped, so a row that has
+     *   already used them up would fail again immediately and the button would look broken. The cap
+     *   is a guard against a bad URL looping forever on its own, not a limit on what a person may
+     *   ask for.
+     * - `REPLACE` rather than `KEEP`, because there is normally a finished or failed worker still
+     *   registered under this episode's unique name, and `KEEP` would drop the new request.
+     */
+    fun retryDownload(context: android.content.Context, episodeId: Long) {
+        viewModelScope.launch {
+            repository.resetDownloadRetryCount(episodeId, DownloadAssetType.AUDIO)
+            progressStore.request(episodeId)
+            val request = OneTimeWorkRequestBuilder<EpisodeDownloadWorker>()
+                .setInputData(workDataOf(EPISODE_ID_INPUT to episodeId))
+                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.SECONDS)
+                .build()
+            WorkManager.getInstance(context.applicationContext).enqueueUniqueWork(
+                "podcast-download-$episodeId",
+                ExistingWorkPolicy.REPLACE,
+                request,
+            )
+        }
     }
 
     private suspend fun addToQueueAndMaybeDownload(episodeId: Long) {

@@ -259,6 +259,11 @@ fun PodcastHomeScreen(
     val queueEntries = homeUiState.queueEntries
     val queueEpisodes = homeUiState.queueEpisodes
     val downloadAssets = homeUiState.downloadAssets
+    // Keyed by episode so the three list views can ask about one episode's download without
+    // searching the list, and so a row's badge does not depend on list order.
+    val downloadAssetsByEpisode = remember(downloadAssets) {
+        downloadAssets.associateBy { it.episodeId }
+    }
     val downloadedEpisodes = homeUiState.downloadedEpisodes
     val previewEpisodeEntities = homeUiState.previewEpisodeEntities
     val downloadProgress = homeUiState.downloadProgress
@@ -490,6 +495,7 @@ fun PodcastHomeScreen(
         PodcastSecondaryActions(
             play = playbackViewModel::play,
             download = { viewModel.download(context, it) },
+            retryDownload = { viewModel.retryDownload(context, it) },
             removeDownload = viewModel::removeDownloadAwait,
             addToQueue = { viewModel.addToQueueFromInbox(it) },
             refreshSubscriptions = { viewModel.refreshSubscriptions(context) },
@@ -1424,6 +1430,9 @@ fun PodcastHomeScreen(
                                             onRefresh = { viewModel.refreshSubscriptions(context) },
                                             refreshing = refreshing,
                                             downloadProgress = downloadProgress,
+                                            downloadAssets = downloadAssetsByEpisode,
+                                            onRetryDownload = secondaryActions.retryDownload,
+                                            onRemoveDownload = secondaryActions.removeDownload,
                                             restoredEpisodeId = restoredInboxEpisodeId,
                                             onRestore = { restoredInboxEpisodeId = null },
                                             modifier = Modifier.fillMaxSize(),
@@ -1435,6 +1444,9 @@ fun PodcastHomeScreen(
                                             playback = playback,
                                             playbackProgressFlow = playbackViewModel.progress,
                                             downloadProgress = downloadProgress,
+                                            downloadAssets = downloadAssetsByEpisode,
+                                            onRetryDownload = secondaryActions.retryDownload,
+                                            onRemoveDownload = secondaryActions.removeDownload,
                                             onRemoveFromQueue = viewModel::removeFromQueueAwait,
                                             onRestoreToQueue = viewModel::restoreToQueueAwait,
                                             onDownload = { viewModel.download(context, it.id) },

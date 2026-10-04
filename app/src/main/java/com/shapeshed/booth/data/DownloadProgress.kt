@@ -19,6 +19,21 @@ data class DownloadProgress(
 }
 
 /**
+ * Whether this transfer is still under way.
+ *
+ * Lives beside [DownloadProgress] rather than in the UI because it is pure data logic that both the
+ * badge resolver and the composables need; keeping one copy stops the two from disagreeing about
+ * whether a queued download counts as active.
+ */
+val DownloadProgress.isActive: Boolean
+    // A queued download has no total size yet, so its fraction is null. It is still
+    // active and must render an indeterminate spinner until DownloadManager reports it.
+    get() {
+        val currentFraction = fraction
+        return !completed && !waitingForWifi && (currentFraction == null || currentFraction < 1f)
+    }
+
+/**
  * In-flight download progress, keyed by episode.
  *
  * A class rather than an `object` so it is an ordinary injectable singleton: this state is written

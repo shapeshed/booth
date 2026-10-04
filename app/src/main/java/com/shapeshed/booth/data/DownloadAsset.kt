@@ -68,6 +68,19 @@ interface DownloadAssetDao {
         completedAtMillis: Long?,
     )
 
+    /**
+     * Clears the retry counter so an explicit user retry starts from a clean slate.
+     *
+     * Without this, retrying a download that has already exhausted `MAX_DOWNLOAD_RETRIES` does
+     * nothing: the next failure hits the `retryCount < MAX_DOWNLOAD_RETRIES` guard, the row is marked
+     * FAILED again immediately, and the user is left tapping a button that appears broken. The
+     * automatic retries stay capped; this only resets the budget when a person asks for another go.
+     */
+    @androidx.room.Query(
+        "UPDATE download_assets SET retryCount = 0, errorMessage = NULL, updatedAtMillis = :updatedAtMillis WHERE episodeId = :episodeId AND assetType = :assetType",
+    )
+    suspend fun resetRetryCount(episodeId: Long, assetType: DownloadAssetType, updatedAtMillis: Long)
+
     @androidx.room.Query(
         "UPDATE download_assets SET status = :status, errorMessage = :errorMessage, retryCount = retryCount + 1, updatedAtMillis = :updatedAtMillis WHERE episodeId = :episodeId AND assetType = :assetType",
     )
