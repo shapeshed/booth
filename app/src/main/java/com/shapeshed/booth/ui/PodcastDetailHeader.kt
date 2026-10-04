@@ -42,8 +42,8 @@ internal fun PodcastDetailHeader(
     showSubscriptionAction: Boolean = true,
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.block),
+        verticalArrangement = Arrangement.spacedBy(Spacing.block),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -95,12 +95,12 @@ internal fun PodcastDetailHeader(
         if (categories.isNotEmpty()) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.inline),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Row(
                     modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.inline),
                 ) {
                     categories.take(5).forEach { category ->
                         AssistChip(onClick = { onCategory(category) }, label = { Text(category) })
@@ -110,7 +110,7 @@ internal fun PodcastDetailHeader(
         }
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.inline),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             latestAction(Modifier.weight(1f))
