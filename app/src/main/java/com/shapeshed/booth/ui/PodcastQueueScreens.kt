@@ -68,6 +68,7 @@ import com.shapeshed.booth.data.DownloadProgress
 import com.shapeshed.booth.data.EpisodeEntity
 import com.shapeshed.booth.data.PodcastEntity
 import com.shapeshed.booth.data.isDownloaded
+import com.shapeshed.booth.ui.theme.Spacing
 import kotlinx.coroutines.launch
 
 @Composable
@@ -143,13 +144,12 @@ internal fun PodcastQueueScreen(
         modifier = modifier,
         state = listState,
         contentPadding = PaddingValues(
-            start = 16.dp,
-            end = 16.dp,
-            top = 8.dp,
-            bottom =
-                16.dp + LocalPodcastMiniPlayerInset.current,
+            start = Spacing.screenInset,
+            end = Spacing.screenInset,
+            top = Spacing.listTop,
+            bottom = Spacing.miniPlayer + LocalPodcastMiniPlayerInset.current,
         ),
-        verticalArrangement = Arrangement.spacedBy(PODCAST_LIST_ITEM_SPACING),
+        verticalArrangement = Arrangement.spacedBy(Spacing.listItem),
     ) {
         if (showFilterChips) {
             item(key = "queue-filters") {

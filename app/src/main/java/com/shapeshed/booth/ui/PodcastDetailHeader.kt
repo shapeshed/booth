@@ -24,6 +24,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.shapeshed.booth.R
+import com.shapeshed.booth.ui.theme.Spacing
 
 @Composable
 internal fun PodcastDetailHeader(
@@ -55,22 +56,27 @@ internal fun PodcastDetailHeader(
                 modifier = Modifier.size(144.dp),
                 onClick = onArtworkClick,
             )
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    title,
-                    style = MaterialTheme.typography.headlineSmall,
-                    maxLines = 4,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                author?.takeIf(String::isNotBlank)?.let {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.listItem)) {
+                // The identity lines are one unit: the title and the name under it.
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.titleStack)) {
                     Text(
-                        it,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
+                        title,
+                        style = MaterialTheme.typography.headlineSmall,
+                        maxLines = 4,
                         overflow = TextOverflow.Ellipsis,
                     )
+                    author?.takeIf(String::isNotBlank)?.let {
+                        Text(
+                            it,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
+                // The description is a separate thought, so it gets a block gap rather than the
+                // title-stack gap: at 4dp it read as a third identity line.
                 description?.takeIf(String::isNotBlank)?.let {
                     Text(
                         it,

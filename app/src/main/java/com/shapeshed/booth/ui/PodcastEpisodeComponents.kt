@@ -99,6 +99,7 @@ import com.shapeshed.booth.data.downloadBadge
 import com.shapeshed.booth.data.explainsFailure
 import com.shapeshed.booth.data.isActive
 import com.shapeshed.booth.data.isDownloaded
+import com.shapeshed.booth.ui.theme.Spacing
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -1031,13 +1032,13 @@ internal fun PodcastEpisodeDetailContent(
                         },
                         onToggleQueue = onToggleQueue,
                         onToggleFavorite = onToggleFavorite,
-                        modifier = Modifier.padding(bottom = 12.dp),
+                        modifier = Modifier.padding(bottom = Spacing.headingStack),
                     )
                 }
             }
         }
         item(key = "episode-heading") {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.headingStack)) {
                 publishedAtMillis?.let { published ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -1064,6 +1065,7 @@ internal fun PodcastEpisodeDetailContent(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
                         .clickable(onClick = onOpenPodcast)
+                        // Touch-target padding rather than a rhythm gap, so it is sized directly.
                         .padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -1098,8 +1100,6 @@ internal fun PodcastEpisodeDetailContent(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                if (!twoPane) {
-                }
                 onWatch?.let { watch ->
                     OutlinedButton(onClick = watch, modifier = Modifier.fillMaxWidth()) {
                         Icon(Icons.Rounded.VideoLibrary, contentDescription = null)
@@ -1118,7 +1118,7 @@ internal fun PodcastEpisodeDetailContent(
         }
         if (descriptionBlocks.isNotEmpty()) {
             item(key = "episode-description") {
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.block)) {
                     descriptionBlocks.forEach { block -> DescriptionBlockContent(block) }
                 }
             }
@@ -1202,7 +1202,11 @@ internal fun PodcastEpisodeDetailContent(
                         },
                         onToggleQueue = onToggleQueue,
                         onToggleFavorite = onToggleFavorite,
-                        modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 12.dp),
+                        modifier = Modifier.padding(
+                            start = Spacing.screenInsetWide,
+                            end = Spacing.screenInsetWide,
+                            bottom = Spacing.headingStack,
+                        ),
                     )
                 }
                 LazyColumn(
@@ -1210,12 +1214,12 @@ internal fun PodcastEpisodeDetailContent(
                         .fillMaxWidth()
                         .weight(1f),
                     contentPadding = PaddingValues(
-                        start = 24.dp,
-                        top = 16.dp,
-                        end = 24.dp,
-                        bottom = 16.dp + LocalPodcastMiniPlayerInset.current,
+                        start = Spacing.screenInsetWide,
+                        top = Spacing.block,
+                        end = Spacing.screenInsetWide,
+                        bottom = Spacing.miniPlayer + LocalPodcastMiniPlayerInset.current,
                     ),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.block),
                     content = detailItems,
                 )
             }
@@ -1224,12 +1228,12 @@ internal fun PodcastEpisodeDetailContent(
         LazyColumn(
             modifier = modifier,
             contentPadding = PaddingValues(
-                start = 16.dp,
+                start = Spacing.screenInset,
                 top = 0.dp,
-                end = 16.dp,
-                bottom = 16.dp + LocalPodcastMiniPlayerInset.current,
+                end = Spacing.screenInset,
+                bottom = Spacing.miniPlayer + LocalPodcastMiniPlayerInset.current,
             ),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(Spacing.block),
         ) {
             item(key = "episode-artwork") {
                 Box(

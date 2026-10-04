@@ -71,6 +71,7 @@ import com.shapeshed.booth.data.EpisodeEntity
 import com.shapeshed.booth.data.PodcastDownloadManager
 import com.shapeshed.booth.data.PodcastEntity
 import com.shapeshed.booth.data.isDownloaded
+import com.shapeshed.booth.ui.theme.Spacing
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -156,13 +157,12 @@ internal fun PodcastInbox(
             modifier = Modifier
                 .fillMaxSize(),
             contentPadding = PaddingValues(
-                start = 16.dp,
-                end = 16.dp,
-                top = 8.dp,
-                bottom =
-                    16.dp + LocalPodcastMiniPlayerInset.current,
+                start = Spacing.screenInset,
+                end = Spacing.screenInset,
+                top = Spacing.listTop,
+                bottom = Spacing.miniPlayer + LocalPodcastMiniPlayerInset.current,
             ),
-            verticalArrangement = Arrangement.spacedBy(PODCAST_LIST_ITEM_SPACING),
+            verticalArrangement = Arrangement.spacedBy(Spacing.listItem),
         ) {
             if (visibleEpisodes.itemCount == 0 && visibleEpisodes.loadState.refresh is LoadState.Loading) {
                 item(key = "inbox-loading") {
@@ -333,16 +333,16 @@ internal fun PodcastDownloadsScreen(
         modifier = modifier,
         state = listState,
         contentPadding = PaddingValues(
-            start = 8.dp,
-            end = 8.dp,
-            top = 8.dp,
-            bottom = 16.dp + LocalPodcastMiniPlayerInset.current,
+            start = Spacing.screenInset,
+            end = Spacing.screenInset,
+            top = Spacing.listTop,
+            bottom = Spacing.miniPlayer + LocalPodcastMiniPlayerInset.current,
         ),
-        verticalArrangement = Arrangement.spacedBy(PODCAST_LIST_ITEM_SPACING),
+        verticalArrangement = Arrangement.spacedBy(Spacing.listItem),
     ) {
         item(key = "download-filters") {
             LazyRow(
-                contentPadding = PaddingValues(horizontal = 8.dp),
+                contentPadding = PaddingValues(horizontal = Spacing.screenInset),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 item {
@@ -478,7 +478,7 @@ internal fun PodcastDownloadsScreen(
                 text = sizeLabel,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                modifier = Modifier.padding(horizontal = Spacing.screenInset, vertical = 4.dp),
             )
         }
         if (visibleAssets.isEmpty()) {

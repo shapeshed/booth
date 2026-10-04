@@ -13,6 +13,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.shapeshed.booth.R
 import com.shapeshed.booth.data.PodcastEntity
+import com.shapeshed.booth.ui.theme.Spacing
 
 @Composable
 internal fun PodcastManagementScreen(
@@ -26,12 +27,12 @@ internal fun PodcastManagementScreen(
     LazyColumn(
         modifier = modifier,
         contentPadding = PaddingValues(
-            start = 16.dp,
-            top = 16.dp,
-            end = 16.dp,
-            bottom = 24.dp + LocalPodcastMiniPlayerInset.current,
+            start = Spacing.screenInset,
+            top = Spacing.listTop,
+            end = Spacing.screenInset,
+            bottom = Spacing.section + LocalPodcastMiniPlayerInset.current,
         ),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(Spacing.listItem),
     ) {
         item {
             val allEnabled = podcasts.isNotEmpty() && podcasts.all {

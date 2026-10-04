@@ -40,6 +40,7 @@ import com.shapeshed.booth.data.PodcastEntity
 import com.shapeshed.booth.data.PodcastEpisodeSearchResult
 import com.shapeshed.booth.data.PodcastSearchResult
 import com.shapeshed.booth.data.searchableCategories
+import com.shapeshed.booth.ui.theme.Spacing
 
 internal enum class SearchEpisodeSort { RELEVANCE, NEWEST, OLDEST, TITLE }
 internal enum class SearchEpisodePlayedFilter { ALL, UNPLAYED, IN_PROGRESS, PLAYED }
@@ -126,8 +127,8 @@ internal fun PodcastGlobalSearchContent(
         // Global search renders at the root while the mini player can be up, so its last results
         // would sit underneath it. Every other scrolling list in the app adds this.
         contentPadding = PaddingValues(
-            top = 8.dp,
-            bottom = 24.dp + LocalPodcastMiniPlayerInset.current,
+            top = Spacing.listTop,
+            bottom = Spacing.section + LocalPodcastMiniPlayerInset.current,
         ),
         verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {

@@ -100,6 +100,7 @@ import com.shapeshed.booth.data.canonicalFeedUrl
 import com.shapeshed.booth.data.isAdded
 import com.shapeshed.booth.data.isInProgress
 import com.shapeshed.booth.data.shouldSyncDownloads
+import com.shapeshed.booth.ui.theme.Spacing
 import java.util.Locale
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -199,7 +200,7 @@ internal val PodcastEpisodeAction.hasPlaybackPosition: Boolean
     }
 
 // Material's 8dp spacing rhythm for adjacent card-like list items.
-internal val PODCAST_LIST_ITEM_SPACING = 8.dp
+internal val PODCAST_LIST_ITEM_SPACING = Spacing.listItem
 internal val PodcastEpisodeArtworkSize = 80.dp
 
 // Require an intentional horizontal gesture so vertical list scrolling does not dismiss rows.

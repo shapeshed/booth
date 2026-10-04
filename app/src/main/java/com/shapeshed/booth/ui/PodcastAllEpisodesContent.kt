@@ -24,6 +24,7 @@ import androidx.paging.compose.itemKey
 import com.shapeshed.booth.data.DownloadProgress
 import com.shapeshed.booth.data.EpisodeEntity
 import com.shapeshed.booth.data.PodcastEntity
+import com.shapeshed.booth.ui.theme.Spacing
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,12 +48,12 @@ internal fun PodcastAllEpisodesContent(
         modifier = modifier,
         state = listState,
         contentPadding = PaddingValues(
-            start = 16.dp,
-            end = 16.dp,
-            top = 16.dp,
-            bottom = 16.dp + LocalPodcastMiniPlayerInset.current,
+            start = Spacing.screenInset,
+            end = Spacing.screenInset,
+            top = Spacing.listTop,
+            bottom = Spacing.miniPlayer + LocalPodcastMiniPlayerInset.current,
         ),
-        verticalArrangement = Arrangement.spacedBy(PODCAST_LIST_ITEM_SPACING),
+        verticalArrangement = Arrangement.spacedBy(Spacing.listItem),
     ) {
         if (episodes.loadState.refresh is LoadState.Loading && episodes.itemCount == 0) {
             item(key = "all-episodes-loading") {

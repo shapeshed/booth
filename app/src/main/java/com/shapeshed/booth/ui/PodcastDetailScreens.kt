@@ -54,6 +54,7 @@ import com.shapeshed.booth.data.EpisodeEntity
 import com.shapeshed.booth.data.PodcastEntity
 import com.shapeshed.booth.data.displayCategories
 import com.shapeshed.booth.data.isDownloaded
+import com.shapeshed.booth.ui.theme.BoothTypography
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
@@ -228,7 +229,7 @@ internal fun PodcastDetail(
                     .padding(start = 24.dp, end = 24.dp, bottom = 32.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                Text(stringResource(R.string.about_this_podcast), style = MaterialTheme.typography.headlineSmall)
+                Text(stringResource(R.string.about_this_podcast), style = BoothTypography.sectionHeader)
                 descriptionBlocks.forEach { block -> DescriptionBlockContent(block) }
             }
         }

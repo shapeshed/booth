@@ -44,6 +44,7 @@ import com.shapeshed.booth.R
 import com.shapeshed.booth.data.PodcastDiscoveryCategories
 import com.shapeshed.booth.data.PodcastDiscoveryCategory
 import com.shapeshed.booth.data.PodcastSearchResult
+import com.shapeshed.booth.ui.theme.Spacing
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 @Composable
@@ -110,7 +111,7 @@ internal fun PodcastGettingStarted(
                     .fillMaxWidth()
                     .semantics { heading() },
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Spacing.titleStack))
             Text(
                 text = stringResource(R.string.get_started_summary),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
