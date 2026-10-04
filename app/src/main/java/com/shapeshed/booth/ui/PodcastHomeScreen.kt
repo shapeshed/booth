@@ -267,6 +267,7 @@ fun PodcastHomeScreen(
     val downloadedEpisodes = homeUiState.downloadedEpisodes
     val previewEpisodeEntities = homeUiState.previewEpisodeEntities
     val downloadProgress = homeUiState.downloadProgress
+    val hasUnseenInboxEpisodes = homeUiState.hasUnseenInboxEpisodes
     val hasActiveDownloads = remember(downloadAssets, downloadProgress) {
         shouldSyncDownloads(downloadAssets, downloadProgress)
     }
@@ -800,6 +801,16 @@ fun PodcastHomeScreen(
     val atRoot = selectedPodcast == null && selectedEpisode == null && !showDiscovery &&
         !showPodcastAppSettings && !showDownloads && !showAllEpisodes
     val inboxSelectionMode = selectedTab == PodcastTab.HOME && selectedInboxIds.isNotEmpty() && atRoot
+
+    // The Inbox badge means "arrived since you last opened the Inbox", so looking at it clears it.
+    // Keyed on the flag as well as visibility, so an episode that arrives from a refresh while the
+    // Inbox is on screen does not raise a badge over a list the user is already reading.
+    val inboxVisible = selectedTab == PodcastTab.HOME && atRoot
+    LaunchedEffect(inboxVisible, hasUnseenInboxEpisodes) {
+        if (inboxVisible && hasUnseenInboxEpisodes) {
+            viewModel.markInboxViewed()
+        }
+    }
 
     PodcastHomeEffects(
         context = context,
@@ -1349,7 +1360,7 @@ fun PodcastHomeScreen(
                 PodcastHomeBottomNavigation(
                     visible = !useNavigationRail && atRoot,
                     selectedTab = selectedTab,
-                    inboxCount = inbox.itemCount,
+                    hasUnseenInboxEpisodes = hasUnseenInboxEpisodes,
                     onSelectTab = ::selectTabFromHome,
                 )
             },
@@ -1367,7 +1378,7 @@ fun PodcastHomeScreen(
                     PodcastHomeNavigationRail(
                         visible = false,
                         selectedTab = selectedTab,
-                        inboxCount = inbox.itemCount,
+                        hasUnseenInboxEpisodes = hasUnseenInboxEpisodes,
                         onSelectTab = ::selectTabFromHome,
                     )
                     Box(
@@ -2051,7 +2062,7 @@ fun PodcastHomeScreen(
         PodcastHomeNavigationRail(
             visible = useNavigationRail,
             selectedTab = selectedTab,
-            inboxCount = inbox.itemCount,
+            hasUnseenInboxEpisodes = hasUnseenInboxEpisodes,
             onSelectTab = ::selectTabFromHome,
             modifier = Modifier.align(Alignment.CenterStart),
         )

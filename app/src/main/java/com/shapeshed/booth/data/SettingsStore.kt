@@ -34,6 +34,7 @@ class SettingsStore(private val context: Context) {
     private val searchProviderKey = stringPreferencesKey("podcast_search_provider")
     private val sleepTimerRemainingMsKey = longPreferencesKey("podcast_sleep_timer_remaining_ms")
     private val sleepTimerTotalMsKey = longPreferencesKey("podcast_sleep_timer_total_ms")
+    private val lastInboxViewedAtMillisKey = longPreferencesKey("podcast_last_inbox_viewed_at_millis")
 
     val podcastSubscriptionsViewMode: Flow<PodcastSubscriptionsViewMode> = context.dataStore.data.map { prefs ->
         prefs[subscriptionsViewModeKey]
@@ -49,6 +50,20 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setPodcastSelectedTab(tab: String) {
         context.dataStore.edit { it[selectedTabKey] = tab }
+    }
+
+    /**
+     * When the Inbox was last looked at, used to decide whether the tab badge is shown.
+     *
+     * Defaults to 0 rather than to "now" so a fresh install counts everything already in the Inbox as
+     * unseen and shows the dot, which is the honest state: the user has not seen any of it.
+     */
+    val lastInboxViewedAtMillis: Flow<Long> = context.dataStore.data.map {
+        it[lastInboxViewedAtMillisKey] ?: 0L
+    }
+
+    suspend fun setLastInboxViewedAtMillis(millis: Long) {
+        context.dataStore.edit { it[lastInboxViewedAtMillisKey] = millis }
     }
 
     val podcastLastEpisodeId: Flow<Long?> = context.dataStore.data.map { it[lastEpisodeIdKey] }

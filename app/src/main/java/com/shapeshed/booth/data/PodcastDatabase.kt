@@ -261,6 +261,27 @@ interface PodcastDao {
     )
     fun observeInbox(): androidx.paging.PagingSource<Int, EpisodeEntity>
 
+    /**
+     * The most recently added episode currently in the Inbox, or null when it is empty.
+     *
+     * Compared against the stored "last viewed" time to decide whether the tab badge is shown. MAX is
+     * enough because only the newest arrival can be newer than the marker: if the newest one is not,
+     * none are.
+     *
+     * `MAX` ignores NULLs, so a row with no `firstSeenAtMillis` simply cannot raise the badge on its
+     * own. That is the safe direction to be wrong in: the alternative, substituting 0, would make such
+     * a row look like an arrival from 1970 and badge the tab for an episode that may be years old.
+     */
+    @Query(
+        """
+        SELECT MAX(e.firstSeenAtMillis)
+        FROM episodes e
+        INNER JOIN podcasts p ON p.id = e.podcastId
+        WHERE e.inInbox = 1 AND p.isSubscribed = 1
+        """,
+    )
+    fun observeNewestInboxFirstSeenAt(): kotlinx.coroutines.flow.Flow<Long?>
+
     @Query("SELECT * FROM episodes ORDER BY publishedAtMillis DESC, firstSeenAtMillis DESC")
     fun observeAllEpisodes(): androidx.paging.PagingSource<Int, EpisodeEntity>
 

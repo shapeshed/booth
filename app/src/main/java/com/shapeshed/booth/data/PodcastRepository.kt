@@ -129,6 +129,9 @@ class PodcastRepository(
         config = PagingConfig(pageSize = 40, prefetchDistance = 10, enablePlaceholders = false),
     ) { dao.observeInbox() }.flow
 
+    /** Newest arrival currently in the Inbox, or null when it is empty. Drives the tab badge. */
+    fun newestInboxFirstSeenAt(): Flow<Long?> = dao.observeNewestInboxFirstSeenAt()
+
     fun allEpisodesPager(podcastIds: List<Long>? = null): Flow<PagingData<EpisodeEntity>> = Pager(
         config = PagingConfig(pageSize = 40, prefetchDistance = 10, enablePlaceholders = false),
     ) {

@@ -61,6 +61,7 @@ import com.shapeshed.booth.data.buildPodcastCatalogIndex
 import com.shapeshed.booth.data.downloadEpisodeIds
 import com.shapeshed.booth.data.encodeAppleCategories
 import com.shapeshed.booth.data.encodeAppleCategoryIds
+import com.shapeshed.booth.data.hasUnseenInboxEpisodes
 import com.shapeshed.booth.data.mergeDownloadProgress
 import com.shapeshed.booth.data.orderedQueueEpisodes
 import com.shapeshed.booth.data.podcastId
@@ -404,6 +405,31 @@ class PodcastViewModel @Inject constructor(
         progressStore.progress,
     ) { assets, liveProgress -> mergeDownloadProgress(assets, liveProgress) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    /**
+     * Whether the Inbox tab should show its badge.
+     *
+     * "Arrived since the Inbox was last opened", not "the Inbox is not empty". The old rule never
+     * cleared by itself, so the dot could sit over episodes the user had already dealt with.
+     */
+    val hasUnseenInboxEpisodes: StateFlow<Boolean> = combine(
+        repository.newestInboxFirstSeenAt(),
+        settings.lastInboxViewedAtMillis,
+    ) { newestInboxFirstSeenAt, lastViewedAtMillis ->
+        hasUnseenInboxEpisodes(newestInboxFirstSeenAt, lastViewedAtMillis)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    /**
+     * Records that the Inbox has been looked at, clearing the badge.
+     *
+     * Called while the Inbox is on screen rather than only on entering it, so an episode that arrives
+     * from a refresh mid-visit does not raise a badge for a list the user is already looking at.
+     */
+    fun markInboxViewed() {
+        viewModelScope.launch {
+            settings.setLastInboxViewedAtMillis(System.currentTimeMillis())
+        }
+    }
 
     private val _state = MutableStateFlow(PodcastHomeState())
     val state: StateFlow<PodcastHomeState> = _state.asStateFlow()

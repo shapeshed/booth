@@ -22,22 +22,32 @@ import androidx.compose.material3.ShortNavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import com.shapeshed.booth.R
+
+/**
+ * Test tag for the unseen-episodes dot.
+ *
+ * The dot is a decorative `Badge` with no semantics and no text, so there is nothing else to assert
+ * on: without a tag the only way to test it would be a screenshot. The tag is added only when the dot
+ * is drawn, so its presence *is* the assertion.
+ */
+internal const val INBOX_BADGE_TEST_TAG = "inbox-unseen-badge"
 
 @Composable
 internal fun PodcastHomeBottomNavigation(
     visible: Boolean,
     selectedTab: PodcastTab,
-    inboxCount: Int,
+    hasUnseenInboxEpisodes: Boolean,
     onSelectTab: (PodcastTab) -> Unit,
 ) {
     if (!visible) return
     ShortNavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainerLow) {
         PodcastHomeNavigationItems(
             selectedTab = selectedTab,
-            inboxCount = inboxCount,
+            hasUnseenInboxEpisodes = hasUnseenInboxEpisodes,
             onSelectTab = onSelectTab,
             tabItem = { selected, onClick, icon, label ->
                 ShortNavigationBarItem(
@@ -55,7 +65,7 @@ internal fun PodcastHomeBottomNavigation(
 internal fun PodcastHomeNavigationRail(
     visible: Boolean,
     selectedTab: PodcastTab,
-    inboxCount: Int,
+    hasUnseenInboxEpisodes: Boolean,
     onSelectTab: (PodcastTab) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -70,7 +80,7 @@ internal fun PodcastHomeNavigationRail(
         ) {
             PodcastHomeNavigationItems(
                 selectedTab = selectedTab,
-                inboxCount = inboxCount,
+                hasUnseenInboxEpisodes = hasUnseenInboxEpisodes,
                 onSelectTab = onSelectTab,
                 tabItem = { selected, onClick, icon, label ->
                     NavigationRailItem(
@@ -88,7 +98,7 @@ internal fun PodcastHomeNavigationRail(
 @Composable
 private fun PodcastHomeNavigationItems(
     selectedTab: PodcastTab,
-    inboxCount: Int,
+    hasUnseenInboxEpisodes: Boolean,
     onSelectTab: (PodcastTab) -> Unit,
     tabItem: @Composable (
         selected: Boolean,
@@ -103,7 +113,7 @@ private fun PodcastHomeNavigationItems(
         {
             BadgedBox(
                 badge = {
-                    if (inboxCount > 0) Badge()
+                    if (hasUnseenInboxEpisodes) Badge(modifier = Modifier.testTag(INBOX_BADGE_TEST_TAG))
                 },
             ) {
                 Icon(Icons.Rounded.Inbox, contentDescription = null)
