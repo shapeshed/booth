@@ -151,7 +151,14 @@ class PodcastDownloadReceiver : BroadcastReceiver() {
 }
 
 private const val TAG = "PodcastDownloadReceiver"
-private const val MAX_DOWNLOAD_RETRIES = 3
+
+/**
+ * How many times a failed transfer is retried before the row is marked FAILED for good.
+ *
+ * Public rather than private because the failure dialog quotes this number to the user, and a
+ * second hard-coded copy in the UI would be a promise the code does not keep.
+ */
+const val MAX_DOWNLOAD_RETRIES = 3
 
 internal fun shouldRetryDownload(reason: Int, retryCount: Int): Boolean =
     retryCount < MAX_DOWNLOAD_RETRIES && reason in setOf(

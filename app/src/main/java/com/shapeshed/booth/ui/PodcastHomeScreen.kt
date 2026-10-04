@@ -100,6 +100,7 @@ import com.shapeshed.booth.data.canonicalFeedUrl
 import com.shapeshed.booth.data.isAdded
 import com.shapeshed.booth.data.isInProgress
 import com.shapeshed.booth.data.shouldSyncDownloads
+import com.shapeshed.booth.ui.theme.Spacing
 import java.util.Locale
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -199,7 +200,7 @@ internal val PodcastEpisodeAction.hasPlaybackPosition: Boolean
     }
 
 // Material's 8dp spacing rhythm for adjacent card-like list items.
-internal val PODCAST_LIST_ITEM_SPACING = 8.dp
+internal val PODCAST_LIST_ITEM_SPACING = Spacing.listItem
 internal val PodcastEpisodeArtworkSize = 80.dp
 
 // Require an intentional horizontal gesture so vertical list scrolling does not dismiss rows.
@@ -259,9 +260,15 @@ fun PodcastHomeScreen(
     val queueEntries = homeUiState.queueEntries
     val queueEpisodes = homeUiState.queueEpisodes
     val downloadAssets = homeUiState.downloadAssets
+    // Keyed by episode so the three list views can ask about one episode's download without
+    // searching the list, and so a row's badge does not depend on list order.
+    val downloadAssetsByEpisode = remember(downloadAssets) {
+        downloadAssets.associateBy { it.episodeId }
+    }
     val downloadedEpisodes = homeUiState.downloadedEpisodes
     val previewEpisodeEntities = homeUiState.previewEpisodeEntities
     val downloadProgress = homeUiState.downloadProgress
+    val hasUnseenInboxEpisodes = homeUiState.hasUnseenInboxEpisodes
     val hasActiveDownloads = remember(downloadAssets, downloadProgress) {
         shouldSyncDownloads(downloadAssets, downloadProgress)
     }
@@ -490,6 +497,7 @@ fun PodcastHomeScreen(
         PodcastSecondaryActions(
             play = playbackViewModel::play,
             download = { viewModel.download(context, it) },
+            retryDownload = { viewModel.retryDownload(context, it) },
             removeDownload = viewModel::removeDownloadAwait,
             addToQueue = { viewModel.addToQueueFromInbox(it) },
             refreshSubscriptions = { viewModel.refreshSubscriptions(context) },
@@ -794,6 +802,16 @@ fun PodcastHomeScreen(
     val atRoot = selectedPodcast == null && selectedEpisode == null && !showDiscovery &&
         !showPodcastAppSettings && !showDownloads && !showAllEpisodes
     val inboxSelectionMode = selectedTab == PodcastTab.HOME && selectedInboxIds.isNotEmpty() && atRoot
+
+    // The Inbox badge means "arrived since you last opened the Inbox", so looking at it clears it.
+    // Keyed on the flag as well as visibility, so an episode that arrives from a refresh while the
+    // Inbox is on screen does not raise a badge over a list the user is already reading.
+    val inboxVisible = selectedTab == PodcastTab.HOME && atRoot
+    LaunchedEffect(inboxVisible, hasUnseenInboxEpisodes) {
+        if (inboxVisible && hasUnseenInboxEpisodes) {
+            viewModel.markInboxViewed()
+        }
+    }
 
     PodcastHomeEffects(
         context = context,
@@ -1343,7 +1361,7 @@ fun PodcastHomeScreen(
                 PodcastHomeBottomNavigation(
                     visible = !useNavigationRail && atRoot,
                     selectedTab = selectedTab,
-                    inboxCount = inbox.itemCount,
+                    hasUnseenInboxEpisodes = hasUnseenInboxEpisodes,
                     onSelectTab = ::selectTabFromHome,
                 )
             },
@@ -1361,7 +1379,7 @@ fun PodcastHomeScreen(
                     PodcastHomeNavigationRail(
                         visible = false,
                         selectedTab = selectedTab,
-                        inboxCount = inbox.itemCount,
+                        hasUnseenInboxEpisodes = hasUnseenInboxEpisodes,
                         onSelectTab = ::selectTabFromHome,
                     )
                     Box(
@@ -1424,6 +1442,9 @@ fun PodcastHomeScreen(
                                             onRefresh = { viewModel.refreshSubscriptions(context) },
                                             refreshing = refreshing,
                                             downloadProgress = downloadProgress,
+                                            downloadAssets = downloadAssetsByEpisode,
+                                            onRetryDownload = secondaryActions.retryDownload,
+                                            onRemoveDownload = secondaryActions.removeDownload,
                                             restoredEpisodeId = restoredInboxEpisodeId,
                                             onRestore = { restoredInboxEpisodeId = null },
                                             modifier = Modifier.fillMaxSize(),
@@ -1435,6 +1456,9 @@ fun PodcastHomeScreen(
                                             playback = playback,
                                             playbackProgressFlow = playbackViewModel.progress,
                                             downloadProgress = downloadProgress,
+                                            downloadAssets = downloadAssetsByEpisode,
+                                            onRetryDownload = secondaryActions.retryDownload,
+                                            onRemoveDownload = secondaryActions.removeDownload,
                                             onRemoveFromQueue = viewModel::removeFromQueueAwait,
                                             onRestoreToQueue = viewModel::restoreToQueueAwait,
                                             onDownload = { viewModel.download(context, it.id) },
@@ -2039,7 +2063,7 @@ fun PodcastHomeScreen(
         PodcastHomeNavigationRail(
             visible = useNavigationRail,
             selectedTab = selectedTab,
-            inboxCount = inbox.itemCount,
+            hasUnseenInboxEpisodes = hasUnseenInboxEpisodes,
             onSelectTab = ::selectTabFromHome,
             modifier = Modifier.align(Alignment.CenterStart),
         )

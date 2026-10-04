@@ -24,6 +24,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.shapeshed.booth.R
+import com.shapeshed.booth.ui.theme.Spacing
 
 @Composable
 internal fun PodcastDetailHeader(
@@ -41,8 +42,8 @@ internal fun PodcastDetailHeader(
     showSubscriptionAction: Boolean = true,
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.block),
+        verticalArrangement = Arrangement.spacedBy(Spacing.block),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -55,22 +56,27 @@ internal fun PodcastDetailHeader(
                 modifier = Modifier.size(144.dp),
                 onClick = onArtworkClick,
             )
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    title,
-                    style = MaterialTheme.typography.headlineSmall,
-                    maxLines = 4,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                author?.takeIf(String::isNotBlank)?.let {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Spacing.listItem)) {
+                // The identity lines are one unit: the title and the name under it.
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.titleStack)) {
                     Text(
-                        it,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
+                        title,
+                        style = MaterialTheme.typography.headlineSmall,
+                        maxLines = 4,
                         overflow = TextOverflow.Ellipsis,
                     )
+                    author?.takeIf(String::isNotBlank)?.let {
+                        Text(
+                            it,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
+                // The description is a separate thought, so it gets a block gap rather than the
+                // title-stack gap: at 4dp it read as a third identity line.
                 description?.takeIf(String::isNotBlank)?.let {
                     Text(
                         it,
@@ -89,12 +95,12 @@ internal fun PodcastDetailHeader(
         if (categories.isNotEmpty()) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.inline),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Row(
                     modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.inline),
                 ) {
                     categories.take(5).forEach { category ->
                         AssistChip(onClick = { onCategory(category) }, label = { Text(category) })
@@ -104,7 +110,7 @@ internal fun PodcastDetailHeader(
         }
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.inline),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             latestAction(Modifier.weight(1f))

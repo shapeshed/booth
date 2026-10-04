@@ -24,6 +24,7 @@ internal fun PodcastDownloadsContent(
     pendingRemovalEpisodeIds: Set<Long>,
     onPendingRemovalEpisodeChange: (episodeId: Long, pending: Boolean) -> Unit,
     onLongPress: (EpisodeEntity) -> Unit,
+    onRetryDownload: (episodeId: Long) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     PodcastDownloadsScreen(
@@ -42,6 +43,7 @@ internal fun PodcastDownloadsContent(
         pendingRemovalEpisodeIds = pendingRemovalEpisodeIds,
         onPendingRemovalEpisodeChange = onPendingRemovalEpisodeChange,
         onLongPress = onLongPress,
+        onRetryDownload = onRetryDownload,
         modifier = modifier,
     )
 }

@@ -82,22 +82,41 @@ class EpisodeDownloadWorker(appContext: Context, workerParams: WorkerParameters)
             Result.success()
         } catch (cancelled: CancellationException) {
             throw cancelled
-        } catch (_: IllegalArgumentException) {
+        } catch (rejected: IllegalArgumentException) {
             // A URL the system will not accept never becomes acceptable.
-            progressStore.clear(episodeId)
+            failDownloadPermanently(episodeId, rejected.message)
             Result.failure()
-        } catch (_: Exception) {
+        } catch (failure: Exception) {
             when (classifyEnqueueFailure(runAttemptCount)) {
                 EnqueueFailure.RETRY -> Result.retry()
 
-                // Clearing the progress keeps the row from sitting at a percentage that will never
-                // move, now that nothing is going to drive it.
                 EnqueueFailure.GIVE_UP -> {
-                    progressStore.clear(episodeId)
+                    failDownloadPermanently(episodeId, failure.message)
                     Result.failure()
                 }
             }
         }
+    }
+
+    /**
+     * Records a permanent enqueue failure so the row stops looking like it is still going.
+     *
+     * Both failure paths used to clear the progress store and stop there, which left the asset row
+     * sitting at QUEUED with nothing driving it: no spinner to wait on, no failure to explain, and
+     * nothing for the badge or the retry dialog to show. Clearing the progress is still needed, to
+     * stop the row sitting at a percentage that will never move, but it is not sufficient on its own.
+     *
+     * The retry count is reset as well, so that a later user-initiated retry starts from a full
+     * budget instead of inheriting attempts this worker already spent.
+     */
+    private suspend fun failDownloadPermanently(episodeId: Long, reason: String?) {
+        val entryPoint = boothWorkerEntryPoint(applicationContext)
+        entryPoint.downloadProgressStore.clear(episodeId)
+        entryPoint.podcastRepository.markDownloadFailedPermanently(
+            episodeId = episodeId,
+            assetType = DownloadAssetType.AUDIO,
+            reason = reason,
+        )
     }
 
     private fun isHls(url: String, mimeType: String?): Boolean =

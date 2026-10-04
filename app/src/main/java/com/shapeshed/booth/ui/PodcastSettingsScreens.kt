@@ -68,6 +68,7 @@ import com.shapeshed.booth.data.PodcastDownloadNetwork
 import com.shapeshed.booth.data.PodcastEntity
 import com.shapeshed.booth.data.PodcastIndexCredentials
 import com.shapeshed.booth.data.PodcastSearchProvider
+import com.shapeshed.booth.ui.theme.Spacing
 
 /** How many podcasts currently opt in to each automatic behaviour, for the management screens. */
 internal data class PodcastManagementCounts(val total: Int, val autoQueue: Int, val notifications: Int)
@@ -150,12 +151,12 @@ internal fun PodcastAppSettingsScreen(
                 .widthIn(max = 720.dp)
                 .testTag("podcast_app_settings_list"),
             contentPadding = PaddingValues(
-                start = 16.dp,
-                top = 12.dp,
-                end = 16.dp,
-                bottom = 12.dp + LocalPodcastMiniPlayerInset.current,
+                start = Spacing.screenInset,
+                top = Spacing.listTop,
+                end = Spacing.screenInset,
+                bottom = Spacing.block + LocalPodcastMiniPlayerInset.current,
             ),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
+            verticalArrangement = Arrangement.spacedBy(Spacing.section),
         ) {
             item {
                 SettingsGroupLabel(text = stringResource(R.string.playback))
@@ -639,12 +640,12 @@ internal fun PodcastSettingsScreen(
         LazyColumn(
             modifier = Modifier.fillMaxWidth().widthIn(max = 720.dp),
             contentPadding = PaddingValues(
-                start = 16.dp,
-                top = 16.dp,
-                end = 16.dp,
-                bottom = 24.dp + LocalPodcastMiniPlayerInset.current,
+                start = Spacing.screenInset,
+                top = Spacing.listTop,
+                end = Spacing.screenInset,
+                bottom = Spacing.section + LocalPodcastMiniPlayerInset.current,
             ),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(Spacing.listItem),
         ) {
             item {
                 SettingsGroupLabel(text = stringResource(R.string.playback))

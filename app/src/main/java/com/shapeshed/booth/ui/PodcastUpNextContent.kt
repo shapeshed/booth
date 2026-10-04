@@ -2,6 +2,7 @@ package com.shapeshed.booth.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.shapeshed.booth.data.DownloadAssetEntity
 import com.shapeshed.booth.data.DownloadProgress
 import com.shapeshed.booth.data.EpisodeEntity
 import com.shapeshed.booth.data.PodcastEntity
@@ -26,8 +27,11 @@ internal fun PodcastUpNextContent(
     onPlay: (EpisodeEntity) -> Unit,
     onDownload: (EpisodeEntity) -> Unit,
     downloadProgress: Map<Long, DownloadProgress>,
+    downloadAssets: Map<Long, DownloadAssetEntity> = emptyMap(),
     undoActions: PodcastHomeUndoActions,
     removedFromUpNextMessage: String,
+    onRetryDownload: (episodeId: Long) -> Unit = {},
+    onRemoveDownload: suspend (episodeId: Long) -> Result<Unit> = { Result.success(Unit) },
     modifier: Modifier = Modifier,
 ) {
     PodcastQueueScreen(
@@ -50,8 +54,11 @@ internal fun PodcastUpNextContent(
         onPlay = onPlay,
         onDownload = onDownload,
         downloadProgress = downloadProgress,
+        downloadAssets = downloadAssets,
         undoActions = undoActions,
         removedFromUpNextMessage = removedFromUpNextMessage,
+        onRetryDownload = onRetryDownload,
+        onRemoveDownload = onRemoveDownload,
         modifier = modifier,
     )
 }

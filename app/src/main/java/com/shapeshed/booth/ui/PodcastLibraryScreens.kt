@@ -72,6 +72,7 @@ import androidx.compose.ui.unit.dp
 import com.shapeshed.booth.R
 import com.shapeshed.booth.data.PodcastEntity
 import com.shapeshed.booth.data.PodcastSubscriptionsViewMode
+import com.shapeshed.booth.ui.theme.Spacing
 import kotlinx.coroutines.launch
 
 @Composable
@@ -132,10 +133,10 @@ internal fun PodcastLibrary(
                 Arrangement.spacedBy(PODCAST_LIST_ITEM_SPACING)
             },
             contentPadding = PaddingValues(
-                start = 16.dp,
-                end = 16.dp,
-                top = if (cards) 8.dp else 0.dp,
-                bottom = 16.dp + LocalPodcastMiniPlayerInset.current,
+                start = Spacing.screenInset,
+                end = Spacing.screenInset,
+                top = Spacing.listTop,
+                bottom = Spacing.miniPlayer + LocalPodcastMiniPlayerInset.current,
             ),
         ) {
             if (importProgress != null) {

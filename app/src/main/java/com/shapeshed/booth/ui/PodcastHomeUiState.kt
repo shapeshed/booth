@@ -24,6 +24,8 @@ internal data class PodcastHomeUiState(
     val playback: PlaybackUiState,
     val settings: com.shapeshed.booth.data.PodcastSettingsState,
     val downloadProgress: Map<Long, com.shapeshed.booth.data.DownloadProgress>,
+    /** Whether the Inbox tab badge should show: episodes arrived since it was last opened. */
+    val hasUnseenInboxEpisodes: Boolean,
 )
 
 @Composable
@@ -47,6 +49,7 @@ internal fun rememberPodcastHomeUiState(
     val playback by playbackViewModel.state.collectAsStateWithLifecycle()
     val settings by viewModel.podcastSettings.collectAsStateWithLifecycle()
     val downloadProgress by viewModel.downloadProgress.collectAsStateWithLifecycle()
+    val hasUnseenInboxEpisodes by viewModel.hasUnseenInboxEpisodes.collectAsStateWithLifecycle()
 
     return PodcastHomeUiState(
         podcasts = podcasts,
@@ -65,5 +68,6 @@ internal fun rememberPodcastHomeUiState(
         playback = playback,
         settings = settings,
         downloadProgress = downloadProgress,
+        hasUnseenInboxEpisodes = hasUnseenInboxEpisodes,
     )
 }

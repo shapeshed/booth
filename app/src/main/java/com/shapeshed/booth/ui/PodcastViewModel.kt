@@ -17,6 +17,7 @@ import androidx.work.workDataOf
 import com.shapeshed.booth.data.APPLE_DIRECTORY_PROVIDER_ID
 import com.shapeshed.booth.data.CategoryEntity
 import com.shapeshed.booth.data.DefaultPodcastDiscoveryCatalog
+import com.shapeshed.booth.data.DownloadAssetType
 import com.shapeshed.booth.data.DownloadProgress
 import com.shapeshed.booth.data.DownloadProgressStore
 import com.shapeshed.booth.data.EPISODE_ID_INPUT
@@ -60,6 +61,7 @@ import com.shapeshed.booth.data.buildPodcastCatalogIndex
 import com.shapeshed.booth.data.downloadEpisodeIds
 import com.shapeshed.booth.data.encodeAppleCategories
 import com.shapeshed.booth.data.encodeAppleCategoryIds
+import com.shapeshed.booth.data.hasUnseenInboxEpisodes
 import com.shapeshed.booth.data.mergeDownloadProgress
 import com.shapeshed.booth.data.orderedQueueEpisodes
 import com.shapeshed.booth.data.podcastId
@@ -403,6 +405,31 @@ class PodcastViewModel @Inject constructor(
         progressStore.progress,
     ) { assets, liveProgress -> mergeDownloadProgress(assets, liveProgress) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    /**
+     * Whether the Inbox tab should show its badge.
+     *
+     * "Arrived since the Inbox was last opened", not "the Inbox is not empty". The old rule never
+     * cleared by itself, so the dot could sit over episodes the user had already dealt with.
+     */
+    val hasUnseenInboxEpisodes: StateFlow<Boolean> = combine(
+        repository.newestInboxFirstSeenAt(),
+        settings.lastInboxViewedAtMillis,
+    ) { newestInboxFirstSeenAt, lastViewedAtMillis ->
+        hasUnseenInboxEpisodes(newestInboxFirstSeenAt, lastViewedAtMillis)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    /**
+     * Records that the Inbox has been looked at, clearing the badge.
+     *
+     * Called while the Inbox is on screen rather than only on entering it, so an episode that arrives
+     * from a refresh mid-visit does not raise a badge for a list the user is already looking at.
+     */
+    fun markInboxViewed() {
+        viewModelScope.launch {
+            settings.setLastInboxViewedAtMillis(System.currentTimeMillis())
+        }
+    }
 
     private val _state = MutableStateFlow(PodcastHomeState())
     val state: StateFlow<PodcastHomeState> = _state.asStateFlow()
@@ -1305,6 +1332,34 @@ class PodcastViewModel @Inject constructor(
         // pending state now so every list view gives immediate feedback on the tap.
         progressStore.request(episodeId)
         enqueueDownload(context, episodeId)
+    }
+
+    /**
+     * Retries a download the user has explicitly asked to try again.
+     *
+     * Distinct from [download] in two ways that both matter:
+     *
+     * - The stored retry count is cleared first. Automatic retries are capped, so a row that has
+     *   already used them up would fail again immediately and the button would look broken. The cap
+     *   is a guard against a bad URL looping forever on its own, not a limit on what a person may
+     *   ask for.
+     * - `REPLACE` rather than `KEEP`, because there is normally a finished or failed worker still
+     *   registered under this episode's unique name, and `KEEP` would drop the new request.
+     */
+    fun retryDownload(context: android.content.Context, episodeId: Long) {
+        viewModelScope.launch {
+            repository.resetDownloadRetryCount(episodeId, DownloadAssetType.AUDIO)
+            progressStore.request(episodeId)
+            val request = OneTimeWorkRequestBuilder<EpisodeDownloadWorker>()
+                .setInputData(workDataOf(EPISODE_ID_INPUT to episodeId))
+                .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.SECONDS)
+                .build()
+            WorkManager.getInstance(context.applicationContext).enqueueUniqueWork(
+                "podcast-download-$episodeId",
+                ExistingWorkPolicy.REPLACE,
+                request,
+            )
+        }
     }
 
     private suspend fun addToQueueAndMaybeDownload(episodeId: Long) {

@@ -71,6 +71,7 @@ import com.shapeshed.booth.data.EpisodeEntity
 import com.shapeshed.booth.data.PodcastDownloadManager
 import com.shapeshed.booth.data.PodcastEntity
 import com.shapeshed.booth.data.isDownloaded
+import com.shapeshed.booth.ui.theme.Spacing
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -93,6 +94,9 @@ internal fun PodcastInbox(
     selectedEpisodeIds: Set<Long>,
     onToggleSelection: (Long) -> Unit,
     downloadProgress: Map<Long, DownloadProgress>,
+    downloadAssets: Map<Long, DownloadAssetEntity> = emptyMap(),
+    onRetryDownload: (episodeId: Long) -> Unit = {},
+    onRemoveDownload: suspend (episodeId: Long) -> Result<Unit> = { Result.success(Unit) },
     /**
      * An episode an undo has just put back, whose row is revealed when Paging presents it.
      *
@@ -106,6 +110,8 @@ internal fun PodcastInbox(
     modifier: Modifier = Modifier,
 ) {
     val visibleEpisodes = episodes
+    // Which episode's download failure is being explained, if any.
+    val downloadFailure = rememberDownloadFailureState()
     val listState = rememberLazyListState()
     var refreshWasActive by remember { mutableStateOf(false) }
     var restoreAnimationReady by remember(restoredEpisodeId) { mutableStateOf(false) }
@@ -151,13 +157,12 @@ internal fun PodcastInbox(
             modifier = Modifier
                 .fillMaxSize(),
             contentPadding = PaddingValues(
-                start = 16.dp,
-                end = 16.dp,
-                top = 8.dp,
-                bottom =
-                    16.dp + LocalPodcastMiniPlayerInset.current,
+                start = Spacing.screenInset,
+                end = Spacing.screenInset,
+                top = Spacing.listTop,
+                bottom = Spacing.miniPlayer + LocalPodcastMiniPlayerInset.current,
             ),
-            verticalArrangement = Arrangement.spacedBy(PODCAST_LIST_ITEM_SPACING),
+            verticalArrangement = Arrangement.spacedBy(Spacing.listItem),
         ) {
             if (visibleEpisodes.itemCount == 0 && visibleEpisodes.loadState.refresh is LoadState.Loading) {
                 item(key = "inbox-loading") {
@@ -219,12 +224,23 @@ internal fun PodcastInbox(
                             episodeDurationMs = episode.durationMs,
                         ),
                         downloadProgress = downloadProgress[episode.id],
+                        downloadAsset = downloadAssets[episode.id],
+                        onShowDownloadFailure = { downloadFailure.show(episode) },
                         swipeEnabled = true,
                     )
                 }
             }
         }
     }
+
+    // Held at the screen rather than per row, so the explanation does not vanish when the row it
+    // belongs to scrolls out of the lazy list.
+    DownloadFailureDialogHost(
+        state = downloadFailure,
+        assetsByEpisodeId = downloadAssets,
+        onRetry = onRetryDownload,
+        onRemove = onRemoveDownload,
+    )
 }
 
 @Composable
@@ -244,9 +260,13 @@ internal fun PodcastDownloadsScreen(
     undoActions: PodcastHomeUndoActions,
     pendingRemovalEpisodeIds: Set<Long>,
     onPendingRemovalEpisodeChange: (episodeId: Long, pending: Boolean) -> Unit,
+    onRetryDownload: (episodeId: Long) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var sortOrder by rememberSaveable { mutableStateOf(DownloadsSortOrder.DATE_NEWEST) }
+    // Which episode's failure is being explained. Held at the screen rather than per row so it
+    // survives the row scrolling away while the dialog is open.
+    val downloadFailure = rememberDownloadFailureState()
     var dateMenuExpanded by rememberSaveable { mutableStateOf(false) }
     var sizeMenuExpanded by rememberSaveable { mutableStateOf(false) }
     var stateMenuExpanded by rememberSaveable { mutableStateOf(false) }
@@ -313,16 +333,16 @@ internal fun PodcastDownloadsScreen(
         modifier = modifier,
         state = listState,
         contentPadding = PaddingValues(
-            start = 8.dp,
-            end = 8.dp,
-            top = 8.dp,
-            bottom = 16.dp + LocalPodcastMiniPlayerInset.current,
+            start = Spacing.screenInset,
+            end = Spacing.screenInset,
+            top = Spacing.listTop,
+            bottom = Spacing.miniPlayer + LocalPodcastMiniPlayerInset.current,
         ),
-        verticalArrangement = Arrangement.spacedBy(PODCAST_LIST_ITEM_SPACING),
+        verticalArrangement = Arrangement.spacedBy(Spacing.listItem),
     ) {
         item(key = "download-filters") {
             LazyRow(
-                contentPadding = PaddingValues(horizontal = 8.dp),
+                contentPadding = PaddingValues(horizontal = Spacing.screenInset),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 item {
@@ -458,7 +478,7 @@ internal fun PodcastDownloadsScreen(
                 text = sizeLabel,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                modifier = Modifier.padding(horizontal = Spacing.screenInset, vertical = 4.dp),
             )
         }
         if (visibleAssets.isEmpty()) {
@@ -601,28 +621,31 @@ internal fun PodcastDownloadsScreen(
                                         isActive,
                                         downloaded = isDownloaded,
                                         downloadProgress = episodeProgress,
+                                        downloadAsset = asset,
+                                        onShowDownloadFailure = {
+                                            downloadFailure.show(episode)
+                                        },
                                     )
                                 },
                                 supportingContent = {
-                                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                        DownloadEpisodeMetadataLine(
-                                            episode = episode,
-                                            podcastTitle = podcastTitle,
-                                            asset = asset,
-                                            progress = episodeProgress,
-                                            active = isActive,
-                                            downloaded = isDownloaded,
-                                            completed = isCompleted,
-                                        )
-                                        EpisodeActionRow(
-                                            episode = episode,
-                                            isPlaying = isActive && isPlaying,
-                                            isBuffering = isActive && isBuffering,
-                                            showPlayback = isDownloaded,
-                                            onPlay = { onPlay(episode) },
-                                            onActions = { onLongPress(episode) },
-                                        )
-                                    }
+                                    // The status badge lives in the title block with every other
+                                    // state, and the size moved into the dialog, so this row carries
+                                    // nothing but the playback controls. That is what puts the failed
+                                    // row's icon in the same top-right slot as a downloaded one
+                                    // instead of partway down a metadata line.
+                                    EpisodeActionRow(
+                                        episode = episode,
+                                        isPlaying = isActive && isPlaying,
+                                        isBuffering = isActive && isBuffering,
+                                        // A failed download has no local file, but the episode is
+                                        // still playable by streaming, and hiding the control would
+                                        // make the row look like it cannot be played at all. Gating
+                                        // on "downloaded" rather than "playable" is what left this row
+                                        // with no play button.
+                                        showPlayback = true,
+                                        onPlay = { onPlay(episode) },
+                                        onActions = { onLongPress(episode) },
+                                    )
                                 },
                             )
                         }
@@ -631,79 +654,18 @@ internal fun PodcastDownloadsScreen(
             }
         }
     }
-}
 
-@Composable
-internal fun downloadStatusLabel(
-    asset: DownloadAssetEntity,
-    isDownloaded: Boolean,
-    progress: DownloadProgress?,
-): String = when {
-    isDownloaded -> stringResource(R.string.downloaded)
-
-    asset.status == DownloadAssetStatus.FAILED -> stringResource(R.string.download_failed)
-
-    asset.status == DownloadAssetStatus.RETRYING -> stringResource(R.string.retrying)
-
-    asset.status == DownloadAssetStatus.WAITING_FOR_WIFI -> stringResource(R.string.download_waiting_for_wifi)
-
-    asset.status == DownloadAssetStatus.CANCELLED -> stringResource(R.string.cancelled)
-
-    progress?.fraction == null && (progress?.bytesDownloaded ?: 0L) > 0L ->
-        stringResource(R.string.downloaded_size, formatFileSize(progress?.bytesDownloaded ?: 0L))
-
-    else -> stringResource(R.string.downloading)
-}
-
-@Composable
-internal fun DownloadStatusIcon(
-    asset: DownloadAssetEntity?,
-    isDownloaded: Boolean,
-    contentDescription: String,
-    isActive: Boolean = asset?.status in PodcastDownloadManager.ACTIVE_STATUSES,
-) {
-    if (!isDownloaded && asset?.status != DownloadAssetStatus.FAILED &&
-        asset?.status != DownloadAssetStatus.WAITING_FOR_WIFI &&
-        asset?.status != DownloadAssetStatus.CANCELLED
-    ) {
-        return
-    }
-    val imageVector = when {
-        isDownloaded -> Icons.Rounded.Check
-        asset?.status == DownloadAssetStatus.FAILED -> Icons.Rounded.ErrorOutline
-        asset?.status == DownloadAssetStatus.WAITING_FOR_WIFI -> Icons.Rounded.WifiOff
-        asset?.status == DownloadAssetStatus.CANCELLED -> Icons.Rounded.Block
-        else -> Icons.Rounded.FileDownload
-    }
-    Icon(
-        imageVector = imageVector,
-        contentDescription = contentDescription,
-        tint = when {
-            isDownloaded -> MaterialTheme.colorScheme.primary
-            asset?.status == DownloadAssetStatus.FAILED -> MaterialTheme.colorScheme.error
-            isActive -> MaterialTheme.colorScheme.primary
-            else -> MaterialTheme.colorScheme.primary
+    DownloadFailureDialogHost(
+        state = downloadFailure,
+        // This screen already has the asset rows, keyed by episode for the lookup the dialog needs.
+        assetsByEpisodeId = remember(assets) { assets.associateBy { it.episodeId } },
+        onRetry = onRetryDownload,
+        // Unreachable in practice: the row only exists because the episode was in this map. Treating a
+        // miss as success avoids raising a removal-failed snackbar for a row that is already gone.
+        onRemove = { episodeId ->
+            episodes[episodeId]?.let { episode -> onRemove(episode) } ?: Result.success(Unit)
         },
-        modifier = Modifier.size(16.dp),
     )
-}
-
-internal fun downloadSizeLabel(
-    asset: DownloadAssetEntity,
-    episode: EpisodeEntity,
-    progress: DownloadProgress?,
-): String? {
-    val total = asset.totalBytes ?: episode.audioSizeBytes
-    return when {
-        asset.status in PodcastDownloadManager.ACTIVE_STATUSES && total != null && total > 0L ->
-            "${formatFileSize(progress?.bytesDownloaded ?: 0L)} / ${formatFileSize(total)}"
-
-        total != null && total > 0L -> formatFileSize(total)
-
-        progress != null && progress.bytesDownloaded > 0L -> "${formatFileSize(progress.bytesDownloaded)} downloaded"
-
-        else -> null
-    }
 }
 
 internal fun downloadStateRank(asset: DownloadAssetEntity, preferred: DownloadsSortOrder): Int {

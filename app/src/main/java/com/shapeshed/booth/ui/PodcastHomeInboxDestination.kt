@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.LazyPagingItems
+import com.shapeshed.booth.data.DownloadAssetEntity
 import com.shapeshed.booth.data.DownloadProgress
 import com.shapeshed.booth.data.EpisodeEntity
 import com.shapeshed.booth.data.PodcastEntity
@@ -34,6 +35,9 @@ internal fun PodcastHomeInboxDestination(
     onRefresh: () -> Unit,
     refreshing: Boolean,
     downloadProgress: Map<Long, DownloadProgress>,
+    downloadAssets: Map<Long, DownloadAssetEntity> = emptyMap(),
+    onRetryDownload: (episodeId: Long) -> Unit = {},
+    onRemoveDownload: suspend (episodeId: Long) -> Result<Unit> = { Result.success(Unit) },
     restoredEpisodeId: Long? = null,
     onRestore: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -55,6 +59,9 @@ internal fun PodcastHomeInboxDestination(
         onRefresh = onRefresh,
         refreshing = refreshing,
         downloadProgress = downloadProgress,
+        downloadAssets = downloadAssets,
+        onRetryDownload = onRetryDownload,
+        onRemoveDownload = onRemoveDownload,
         restoredEpisodeId = restoredEpisodeId,
         onRestore = onRestore,
         modifier = modifier,
@@ -85,6 +92,9 @@ internal fun ScopedPodcastHomeInboxDestination(
     onRefresh: () -> Unit,
     refreshing: Boolean,
     downloadProgress: Map<Long, DownloadProgress>,
+    downloadAssets: Map<Long, DownloadAssetEntity> = emptyMap(),
+    onRetryDownload: (episodeId: Long) -> Unit = {},
+    onRemoveDownload: suspend (episodeId: Long) -> Result<Unit> = { Result.success(Unit) },
     restoredEpisodeId: Long? = null,
     onRestore: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -107,6 +117,9 @@ internal fun ScopedPodcastHomeInboxDestination(
         onRefresh = onRefresh,
         refreshing = refreshing,
         downloadProgress = downloadProgress,
+        downloadAssets = downloadAssets,
+        onRetryDownload = onRetryDownload,
+        onRemoveDownload = onRemoveDownload,
         restoredEpisodeId = restoredEpisodeId,
         onRestore = onRestore,
         modifier = modifier,

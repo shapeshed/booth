@@ -1,11 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <baseline version="1.0">
-    <file name="src/main/java/com/shapeshed/booth/ui/PodcastDetailSwipePager.kt">
-        <error line="26" column="5" source="compose:content-slot-reused" />
-    </file>
-    <file name="src/main/java/com/shapeshed/booth/ui/PodcastEpisodeSwipePager.kt">
-        <error line="26" column="5" source="compose:content-slot-reused" />
-    </file>
     <file name="src/main/java/com/shapeshed/booth/ui/PodcastHomeAppContent.kt">
         <error line="15" column="14" source="compose:param-order-check" />
     </file>
@@ -13,12 +7,9 @@
         <error line="26" column="14" source="compose:multiple-emitters-check" />
     </file>
     <file name="src/main/java/com/shapeshed/booth/ui/PodcastHomeNavigationChrome.kt">
-        <error line="93" column="5" source="compose:content-slot-reused" />
+        <error line="103" column="5" source="compose:content-slot-reused" />
     </file>
     <file name="src/main/java/com/shapeshed/booth/ui/PodcastHomeRootActions.kt">
         <error line="26" column="14" source="compose:multiple-emitters-check" />
-    </file>
-    <file name="src/main/java/com/shapeshed/booth/ui/PodcastQueueScreens.kt">
-        <error line="298" column="14" source="compose:param-order-check" />
     </file>
 </baseline>

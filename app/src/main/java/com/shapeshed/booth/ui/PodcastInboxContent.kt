@@ -3,6 +3,7 @@ package com.shapeshed.booth.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.paging.compose.LazyPagingItems
+import com.shapeshed.booth.data.DownloadAssetEntity
 import com.shapeshed.booth.data.DownloadProgress
 import com.shapeshed.booth.data.EpisodeEntity
 import com.shapeshed.booth.data.PodcastEntity
@@ -26,6 +27,9 @@ internal fun PodcastInboxContent(
     selectedEpisodeIds: Set<Long>,
     onToggleSelection: (Long) -> Unit,
     downloadProgress: Map<Long, DownloadProgress>,
+    downloadAssets: Map<Long, DownloadAssetEntity> = emptyMap(),
+    onRetryDownload: (episodeId: Long) -> Unit = {},
+    onRemoveDownload: suspend (episodeId: Long) -> Result<Unit> = { Result.success(Unit) },
     restoredEpisodeId: Long? = null,
     onRestore: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -48,6 +52,9 @@ internal fun PodcastInboxContent(
         selectedEpisodeIds = selectedEpisodeIds,
         onToggleSelection = onToggleSelection,
         downloadProgress = downloadProgress,
+        downloadAssets = downloadAssets,
+        onRetryDownload = onRetryDownload,
+        onRemoveDownload = onRemoveDownload,
         restoredEpisodeId = restoredEpisodeId,
         onRestore = onRestore,
         modifier = modifier,

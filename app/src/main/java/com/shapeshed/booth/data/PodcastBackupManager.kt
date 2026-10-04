@@ -207,13 +207,26 @@ class PodcastBackupManager(
     internal suspend fun import(json: String): Int {
         val document = JSONObject(json)
         require(isSupported(document)) { "Unsupported Booth backup format" }
-        val subscriptions = document.optJSONArray("subscriptions") ?: JSONArray()
-        val hasEpisodeIndex = document.has("episodes")
-        val importedIds = mutableMapOf<String, Long>()
+        val importedIds = restoreSubscriptions(document)
         // Read each podcast's episodes once for the whole restore rather than once per backup
         // entry, which is what made this quadratic. See SavedEpisodeIndex.
         val savedEpisodes = SavedEpisodeIndex()
         val loadEpisodes: suspend (Long) -> List<EpisodeEntity> = { id -> repository.episodes(id).first() }
+        // Restore episode identities before playback so the next refresh only treats genuinely
+        // new feed items as new (and does not auto-download an entire historical feed).
+        restoreEpisodes(document, importedIds, savedEpisodes, loadEpisodes)
+        val downloadCandidates = collectDownloadCandidates(document, importedIds, savedEpisodes, loadEpisodes)
+        restorePlayback(document, importedIds, savedEpisodes, loadEpisodes)
+        restoreQueue(document, importedIds, savedEpisodes, loadEpisodes)
+        restoreSettings(document)
+        restoreDownloads(downloadCandidates)
+        return importedIds.size
+    }
+
+    private suspend fun restoreSubscriptions(document: JSONObject): MutableMap<String, Long> {
+        val subscriptions = document.optJSONArray("subscriptions") ?: JSONArray()
+        val hasEpisodeIndex = document.has("episodes")
+        val importedIds = mutableMapOf<String, Long>()
         for (index in 0 until subscriptions.length()) {
             val item = subscriptions.optJSONObject(index) ?: continue
             val feedUrl = item.optString("feedUrl").trim().takeIf { it.isNotBlank() } ?: continue
@@ -260,9 +273,15 @@ class PodcastBackupManager(
             )
             importedIds[feedUrl] = id
         }
+        return importedIds
+    }
 
-        // Restore episode identities before playback so the next refresh only treats genuinely
-        // new feed items as new (and does not auto-download an entire historical feed).
+    private suspend fun restoreEpisodes(
+        document: JSONObject,
+        importedIds: MutableMap<String, Long>,
+        savedEpisodes: SavedEpisodeIndex,
+        loadEpisodes: suspend (Long) -> List<EpisodeEntity>,
+    ) {
         val importedEpisodes = document.optJSONArray("episodes") ?: JSONArray()
         for (index in 0 until importedEpisodes.length()) {
             val item = importedEpisodes.optJSONObject(index) ?: continue
@@ -311,10 +330,18 @@ class PodcastBackupManager(
             }
             restored?.let { repository.restoreBackupInboxState(it.id, item.optBoolean("inInbox", false)) }
         }
+    }
 
+    private suspend fun collectDownloadCandidates(
+        document: JSONObject,
+        importedIds: MutableMap<String, Long>,
+        savedEpisodes: SavedEpisodeIndex,
+        loadEpisodes: suspend (Long) -> List<EpisodeEntity>,
+    ): MutableList<EpisodeEntity> {
         // Downloaded media files cannot be copied between app sandboxes. Collect the intent now;
         // requests are constrained and capped after the backed-up settings are restored below.
         val downloadCandidates = mutableListOf<EpisodeEntity>()
+        val importedEpisodes = document.optJSONArray("episodes") ?: JSONArray()
         for (index in 0 until importedEpisodes.length()) {
             val item = importedEpisodes.optJSONObject(index) ?: continue
             if (!item.optBoolean("downloaded", false)) continue
@@ -324,7 +351,15 @@ class PodcastBackupManager(
             val episode = savedEpisodes.find(podcastId, guid, audioUrl, loadEpisodes) ?: continue
             downloadCandidates += episode
         }
+        return downloadCandidates
+    }
 
+    private suspend fun restorePlayback(
+        document: JSONObject,
+        importedIds: MutableMap<String, Long>,
+        savedEpisodes: SavedEpisodeIndex,
+        loadEpisodes: suspend (Long) -> List<EpisodeEntity>,
+    ) {
         val playback = document.optJSONArray("playback") ?: JSONArray()
         for (index in 0 until playback.length()) {
             val item = playback.optJSONObject(index) ?: continue
@@ -363,7 +398,14 @@ class PodcastBackupManager(
                 favorite = item.optBoolean("favorite", false),
             )
         }
+    }
 
+    private suspend fun restoreQueue(
+        document: JSONObject,
+        importedIds: MutableMap<String, Long>,
+        savedEpisodes: SavedEpisodeIndex,
+        loadEpisodes: suspend (Long) -> List<EpisodeEntity>,
+    ) {
         val restoredQueue = mutableListOf<Long>()
         val queue = document.optJSONArray("queue") ?: JSONArray()
         for (index in 0 until queue.length()) {
@@ -374,7 +416,9 @@ class PodcastBackupManager(
             savedEpisodes.find(podcastId, guid, audioUrl, loadEpisodes)?.let { restoredQueue += it.id }
         }
         if (restoredQueue.isNotEmpty()) repository.reorderQueue(restoredQueue)
+    }
 
+    private suspend fun restoreSettings(document: JSONObject) {
         document.optJSONObject("playbackSettings")?.let { playbackSettings ->
             playbackSettings.optDoubleOrNull("playbackSpeed")?.toFloat()?.let { settings.setPodcastPlaybackSpeed(it) }
             playbackSettings.optBooleanOrNull("skipSilence")?.let { settings.setPodcastSkipSilence(it) }
@@ -396,6 +440,9 @@ class PodcastBackupManager(
             global.optionalBoolean("downloadVideos")?.let { settings.setPodcastDownloadVideos(it) }
             global.optionalString("searchProvider")?.let { settings.setPodcastSearchProvider(it) }
         }
+    }
+
+    private suspend fun restoreDownloads(downloadCandidates: MutableList<EpisodeEntity>) {
         val downloadsToRestore = context?.let {
             downloadManager?.episodesToDownload(
                 candidates = downloadCandidates,
@@ -410,7 +457,6 @@ class PodcastBackupManager(
                 // A failed media request must not prevent the remaining backup from restoring.
             }
         }
-        return importedIds.size
     }
 
     companion object {
@@ -425,16 +471,6 @@ class PodcastBackupManager(
     }
 }
 
-private fun JSONObject.optionalString(key: String): String? = if (isNull(key)) {
-    null
-} else {
-    optString(key).takeIf {
-        it.isNotBlank()
-    }
-}
-private fun JSONObject.optionalDouble(key: String): Double? = if (isNull(key) || !has(key)) null else optDouble(key)
-private fun JSONObject.optionalBoolean(key: String): Boolean? = if (isNull(key) || !has(key)) null else optBoolean(key)
-private fun JSONObject.optLongOrNull(key: String): Long? = if (isNull(key) || !has(key)) null else optLong(key)
-private fun JSONObject.optDoubleOrNull(key: String): Double? = if (isNull(key) || !has(key)) null else optDouble(key)
-private fun JSONObject.optBooleanOrNull(key: String): Boolean? = if (isNull(key) || !has(key)) null else optBoolean(key)
-private inline fun <reified T : Enum<T>> String.toEnum(): T? = runCatching { enumValueOf<T>(this) }.getOrNull()
+// The JSON helpers this file used to declare privately now live in JsonObjectExtensions.kt, so the
+// restore logic above reads without a block of null-checking plumbing trailing it. They are used
+// only from here today; they were split out because this file was carrying both.

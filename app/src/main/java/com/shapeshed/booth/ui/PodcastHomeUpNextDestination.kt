@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.shapeshed.booth.data.DownloadAssetEntity
 import com.shapeshed.booth.data.DownloadProgress
 import com.shapeshed.booth.data.EpisodeEntity
 import com.shapeshed.booth.data.PodcastEntity
@@ -27,6 +28,7 @@ internal fun PodcastHomeUpNextDestination(
     playback: PlaybackUiState,
     playbackProgress: PlaybackProgress,
     downloadProgress: Map<Long, DownloadProgress>,
+    downloadAssets: Map<Long, DownloadAssetEntity> = emptyMap(),
     reorderMode: Boolean,
     filter: QueueFilter,
     onFilterChange: (QueueFilter) -> Unit,
@@ -38,6 +40,8 @@ internal fun PodcastHomeUpNextDestination(
     onRemoveFromQueue: suspend (episodeId: Long) -> Result<Unit>,
     onRestoreToQueue: suspend (episodeId: Long, position: Int) -> Result<Unit>,
     onDownload: (EpisodeEntity) -> Unit,
+    onRetryDownload: (episodeId: Long) -> Unit = {},
+    onRemoveDownload: suspend (episodeId: Long) -> Result<Unit> = { Result.success(Unit) },
     undoActions: PodcastHomeUndoActions,
     removedFromUpNextMessage: String,
     modifier: Modifier = Modifier,
@@ -61,6 +65,9 @@ internal fun PodcastHomeUpNextDestination(
         onPlay = onPlay,
         onDownload = onDownload,
         downloadProgress = downloadProgress,
+        downloadAssets = downloadAssets,
+        onRetryDownload = onRetryDownload,
+        onRemoveDownload = onRemoveDownload,
         undoActions = undoActions,
         removedFromUpNextMessage = removedFromUpNextMessage,
         modifier = modifier,
@@ -82,6 +89,7 @@ internal fun ScopedPodcastHomeUpNextDestination(
     playback: PlaybackUiState,
     playbackProgressFlow: StateFlow<PlaybackProgress>,
     downloadProgress: Map<Long, DownloadProgress>,
+    downloadAssets: Map<Long, DownloadAssetEntity> = emptyMap(),
     reorderMode: Boolean,
     filter: QueueFilter,
     onFilterChange: (QueueFilter) -> Unit,
@@ -93,6 +101,8 @@ internal fun ScopedPodcastHomeUpNextDestination(
     onRemoveFromQueue: suspend (episodeId: Long) -> Result<Unit>,
     onRestoreToQueue: suspend (episodeId: Long, position: Int) -> Result<Unit>,
     onDownload: (EpisodeEntity) -> Unit,
+    onRetryDownload: (episodeId: Long) -> Unit = {},
+    onRemoveDownload: suspend (episodeId: Long) -> Result<Unit> = { Result.success(Unit) },
     undoActions: PodcastHomeUndoActions,
     removedFromUpNextMessage: String,
     modifier: Modifier = Modifier,
@@ -104,6 +114,7 @@ internal fun ScopedPodcastHomeUpNextDestination(
         playback = playback,
         playbackProgress = progress,
         downloadProgress = downloadProgress,
+        downloadAssets = downloadAssets,
         reorderMode = reorderMode,
         filter = filter,
         onFilterChange = onFilterChange,
@@ -115,6 +126,8 @@ internal fun ScopedPodcastHomeUpNextDestination(
         onRemoveFromQueue = onRemoveFromQueue,
         onRestoreToQueue = onRestoreToQueue,
         onDownload = onDownload,
+        onRetryDownload = onRetryDownload,
+        onRemoveDownload = onRemoveDownload,
         undoActions = undoActions,
         removedFromUpNextMessage = removedFromUpNextMessage,
         modifier = modifier,

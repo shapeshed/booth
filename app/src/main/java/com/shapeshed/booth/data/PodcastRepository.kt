@@ -129,6 +129,9 @@ class PodcastRepository(
         config = PagingConfig(pageSize = 40, prefetchDistance = 10, enablePlaceholders = false),
     ) { dao.observeInbox() }.flow
 
+    /** Newest arrival currently in the Inbox, or null when it is empty. Drives the tab badge. */
+    fun newestInboxFirstSeenAt(): Flow<Long?> = dao.observeNewestInboxFirstSeenAt()
+
     fun allEpisodesPager(podcastIds: List<Long>? = null): Flow<PagingData<EpisodeEntity>> = Pager(
         config = PagingConfig(pageSize = 40, prefetchDistance = 10, enablePlaceholders = false),
     ) {
@@ -526,6 +529,34 @@ class PodcastRepository(
             status = DownloadAssetStatus.RETRYING,
             errorMessage = errorMessage,
             updatedAtMillis = System.currentTimeMillis(),
+        )
+
+    suspend fun resetDownloadRetryCount(episodeId: Long, assetType: DownloadAssetType) = downloadDao.resetRetryCount(
+        episodeId = episodeId,
+        assetType = assetType,
+        updatedAtMillis = System.currentTimeMillis(),
+    )
+
+    /**
+     * Records a download that will never start as FAILED, so it stops looking like it is still going.
+     *
+     * `EpisodeDownloadWorker` used to only clear the progress store on this path and never touched the
+     * row, which left it sitting at QUEUED with nothing driving it: no spinner to wait on, no failure to
+     * explain, and nothing for the badge or the retry dialog to show.
+     *
+     * Deliberately does not reset the retry counter. `resetRetryCount` clears `errorMessage` as well as
+     * the count, so calling it here would wipe the very reason just written, and the dialog would fall
+     * back to "the reason was not recorded". An explicit user retry resets the budget itself, in
+     * `PodcastViewModel.retryDownload`, which is the only place that needs to.
+     */
+    suspend fun markDownloadFailedPermanently(episodeId: Long, assetType: DownloadAssetType, reason: String?) =
+        updateDownloadAsset(
+            episodeId = episodeId,
+            assetType = assetType,
+            status = DownloadAssetStatus.FAILED,
+            bytesDownloaded = 0L,
+            totalBytes = null,
+            errorMessage = reason?.takeIf { it.isNotBlank() } ?: DOWNLOAD_FAILED_TO_START_MESSAGE,
         )
 
     suspend fun resolveMediaSizes(episode: EpisodeEntity): Pair<Long?, Long?> = withContext(Dispatchers.IO) {

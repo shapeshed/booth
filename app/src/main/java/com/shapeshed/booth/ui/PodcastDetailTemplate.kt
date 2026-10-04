@@ -11,6 +11,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.shapeshed.booth.ui.theme.Spacing
 
 /** Shared scrolling and refresh shell for local and discovery podcast detail pages. */
 @Composable
@@ -26,12 +27,12 @@ internal fun PodcastDetailTemplate(
             modifier = Modifier.fillMaxSize(),
             state = state ?: androidx.compose.foundation.lazy.rememberLazyListState(),
             contentPadding = PaddingValues(
-                start = 16.dp,
-                end = 16.dp,
-                top = 12.dp,
-                bottom = 16.dp + LocalPodcastMiniPlayerInset.current,
+                start = Spacing.screenInset,
+                end = Spacing.screenInset,
+                top = Spacing.listTop,
+                bottom = Spacing.miniPlayer + LocalPodcastMiniPlayerInset.current,
             ),
-            verticalArrangement = Arrangement.spacedBy(PODCAST_LIST_ITEM_SPACING),
+            verticalArrangement = Arrangement.spacedBy(Spacing.listItem),
             content = content,
         )
     }

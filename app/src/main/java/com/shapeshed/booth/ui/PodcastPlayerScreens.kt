@@ -116,6 +116,8 @@ import coil3.compose.AsyncImage
 import com.shapeshed.booth.R
 import com.shapeshed.booth.data.EpisodeEntity
 import com.shapeshed.booth.data.PodcastEntity
+import com.shapeshed.booth.ui.theme.BoothTypography
+import com.shapeshed.booth.ui.theme.Spacing
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import org.jsoup.nodes.Node
@@ -162,7 +164,7 @@ internal fun PodcastMiniPlayer(
                 expanded = true,
                 colors = FloatingToolbarDefaults.vibrantFloatingToolbarColors(),
                 modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
+                contentPadding = PaddingValues(horizontal = Spacing.screenInset, vertical = 12.dp),
                 leadingContent = {
                     Box(
                         modifier = Modifier
@@ -209,7 +211,7 @@ internal fun PodcastMiniPlayer(
                     modifier = Modifier
                         .width(columnWidth)
                         .clickable(onClick = onOpen)
-                        .padding(horizontal = 14.dp),
+                        .padding(horizontal = Spacing.block),
                     verticalArrangement = Arrangement.Center,
                 ) {
                     Text(
@@ -439,7 +441,7 @@ internal fun PodcastNowPlayingOverlay(
                                 .fillMaxWidth()
                                 .padding(horizontal = if (videoMode) 24.dp else 0.dp),
                             horizontalAlignment = Alignment.Start,
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalArrangement = Arrangement.spacedBy(Spacing.titleStack),
                         ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -856,7 +858,7 @@ internal fun PodcastNowPlayingOverlay(
                             .fillMaxWidth()
                             .padding(horizontal = if (videoMode) 24.dp else 0.dp),
                         horizontalAlignment = Alignment.Start,
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.titleStack),
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -1014,7 +1016,7 @@ internal fun PodcastNowPlayingOverlay(
                     .padding(start = 24.dp, end = 24.dp, bottom = 32.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                Text(stringResource(R.string.description), style = MaterialTheme.typography.headlineSmall)
+                Text(stringResource(R.string.description), style = BoothTypography.sectionHeader)
                 descriptionBlocks.forEach { block ->
                     DescriptionBlockContent(block)
                 }

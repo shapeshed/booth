@@ -24,6 +24,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.shapeshed.booth.R
 import com.shapeshed.booth.data.PodcastEntity
+import com.shapeshed.booth.ui.theme.BoothTypography
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,7 +87,7 @@ internal fun PodcastHomeSecondaryOverlays(
                     .padding(start = 24.dp, end = 24.dp, bottom = 32.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                Text(stringResource(R.string.about_this_podcast), style = MaterialTheme.typography.headlineSmall)
+                Text(stringResource(R.string.about_this_podcast), style = BoothTypography.sectionHeader)
                 discoveryDescriptionBlocks.forEach { block -> DescriptionBlockContent(block) }
             }
         }

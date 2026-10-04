@@ -73,6 +73,7 @@ internal fun playbackStartPositionMs(episode: EpisodeEntity): Long =
 class PodcastPlaybackViewModel @Inject constructor(
     private val settings: SettingsStore,
     private val repository: PodcastRepository,
+    private val sleepTimerStore: SleepTimerStore,
 ) : ViewModel() {
     private var controllerFuture: ListenableFuture<MediaController>? = null
     private var controller: MediaController? = null
@@ -102,7 +103,7 @@ class PodcastPlaybackViewModel @Inject constructor(
     val player: Player?
         get() = controller
 
-    val sleepTimer: StateFlow<SleepTimerState?> = SleepTimerStore.state
+    val sleepTimer: StateFlow<SleepTimerState?> = sleepTimerStore.state
 
     fun connect(context: Context) {
         if (controllerFuture != null) return

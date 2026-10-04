@@ -3,6 +3,7 @@ package com.shapeshed.booth.di
 import android.app.Application
 import com.shapeshed.booth.data.PodcastRepository
 import com.shapeshed.booth.data.SettingsStore
+import com.shapeshed.booth.data.SleepTimerStore
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -13,6 +14,7 @@ import dagger.hilt.components.SingletonComponent
 interface BoothPlaybackEntryPoint {
     val podcastRepository: PodcastRepository
     val settings: SettingsStore
+    val sleepTimerStore: SleepTimerStore
 }
 
 fun boothPlaybackEntryPoint(application: Application): BoothPlaybackEntryPoint =
