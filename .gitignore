@@ -91,3 +91,9 @@ COMPOSE-AUDIT-REPORT*.md
 # JVM crash dumps from the Gradle daemon
 hs_err_pid*.log
 replay_pid*.log
+
+# Throwaway build trees produced outside Gradle's own `build/` directories.
+# `.production-build` is a full copy of the source tree used for a production-like build and is
+# hundreds of megabytes; it must never be committed.
+/.production-build/
+/.codex-tmp-build/
