@@ -17,11 +17,15 @@ import org.junit.Test
  * The dot is a decorative `Badge` with no text and no semantics, so it carries a test tag that is
  * added only when it is drawn. Its presence or absence is therefore the assertion.
  *
- * Asserted with `assertExists`, not `assertIsDisplayed`. `BadgedBox` positions the dot as an overlay
- * offset out of the icon, and that geometry does not report as displayed in a bare test root even
- * with room made for it, while the same dot is clearly visible on a device inside a Scaffold. The
- * wiring is the thing under test, so existence is the honest assertion. Its on-screen appearance was
- * checked on a device.
+ * Found in the unmerged tree on purpose. The badge is a decorative `Badge` inside a `BadgedBox`
+ * inside a navigation item, and the navigation item merges the semantics of its children, so the
+ * merged tree has no node carrying this tag — CI reported exactly that ("the unmerged tree contains
+ * '1' node that matches"). Looking in the unmerged tree is what finds the dot itself rather than the
+ * merged "Inbox" item.
+ *
+ * `assertExists` rather than `assertIsDisplayed`, because what is under test is the wiring: that the
+ * flag reaches the chrome and the dot is composed at all. Its appearance is pinned by the screenshot
+ * tests instead, which is the right tool for it.
  */
 class PodcastHomeNavigationChromeTest {
     @get:Rule
@@ -31,14 +35,14 @@ class PodcastHomeNavigationChromeTest {
     fun theDotIsShownWhenTheInboxHasUnseenEpisodes() {
         setContent(hasUnseenInboxEpisodes = true)
 
-        composeRule.onNodeWithTag(INBOX_BADGE_TEST_TAG).assertExists()
+        composeRule.onNodeWithTag(INBOX_BADGE_TEST_TAG, useUnmergedTree = true).assertExists()
     }
 
     @Test
     fun theDotIsAbsentWhenNothingIsUnseen() {
         setContent(hasUnseenInboxEpisodes = false)
 
-        composeRule.onNodeWithTag(INBOX_BADGE_TEST_TAG).assertDoesNotExist()
+        composeRule.onNodeWithTag(INBOX_BADGE_TEST_TAG, useUnmergedTree = true).assertDoesNotExist()
     }
 
     /**
@@ -58,7 +62,7 @@ class PodcastHomeNavigationChromeTest {
             }
         }
 
-        composeRule.onNodeWithTag(INBOX_BADGE_TEST_TAG).assertExists()
+        composeRule.onNodeWithTag(INBOX_BADGE_TEST_TAG, useUnmergedTree = true).assertExists()
     }
 
     private fun setContent(hasUnseenInboxEpisodes: Boolean) {
