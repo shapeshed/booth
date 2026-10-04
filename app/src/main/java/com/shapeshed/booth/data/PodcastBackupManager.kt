@@ -396,13 +396,9 @@ class PodcastBackupManager(
             global.optionalBoolean("downloadVideos")?.let { settings.setPodcastDownloadVideos(it) }
             global.optionalString("searchProvider")?.let { settings.setPodcastSearchProvider(it) }
         }
-        val allEpisodes = repository.podcasts.first()
-            .flatMap { podcast -> repository.episodes(podcast.id).first() }
         val downloadsToRestore = context?.let {
             downloadManager?.episodesToDownload(
                 candidates = downloadCandidates,
-                downloadedEpisodes = allEpisodes,
-                downloadAssets = repository.downloadAssets.first(),
             )
         } ?: downloadCandidates
         downloadsToRestore.forEach { episode ->

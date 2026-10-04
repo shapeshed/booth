@@ -37,6 +37,9 @@ interface DownloadAssetDao {
     @androidx.room.Query("SELECT * FROM download_assets ORDER BY updatedAtMillis DESC")
     fun observeAll(): Flow<List<DownloadAssetEntity>>
 
+    @androidx.room.Query("SELECT * FROM download_assets WHERE episodeId IN (:episodeIds)")
+    suspend fun findForEpisodes(episodeIds: List<Long>): List<DownloadAssetEntity>
+
     @androidx.room.Query(
         "SELECT * FROM download_assets WHERE episodeId = :episodeId AND assetType = :assetType LIMIT 1",
     )

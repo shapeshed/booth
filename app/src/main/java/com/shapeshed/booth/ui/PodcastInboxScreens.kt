@@ -24,6 +24,7 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.WifiOff
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
@@ -59,6 +60,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.dp
+import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import com.shapeshed.booth.R
 import com.shapeshed.booth.data.DownloadAssetEntity
@@ -157,7 +159,16 @@ internal fun PodcastInbox(
             ),
             verticalArrangement = Arrangement.spacedBy(PODCAST_LIST_ITEM_SPACING),
         ) {
-            if (visibleEpisodes.itemCount == 0) {
+            if (visibleEpisodes.itemCount == 0 && visibleEpisodes.loadState.refresh is LoadState.Loading) {
+                item(key = "inbox-loading") {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 80.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+            } else if (visibleEpisodes.itemCount == 0 && visibleEpisodes.loadState.refresh is LoadState.NotLoading) {
                 item(key = "empty-inbox") {
                     Column(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 80.dp, horizontal = 24.dp),

@@ -5,6 +5,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.shapeshed.booth.data.DownloadProgressStore
 import com.shapeshed.booth.data.PodcastBackupManager
 import com.shapeshed.booth.data.PodcastDownloadManager
+import com.shapeshed.booth.data.PodcastRefreshCoordinator
 import com.shapeshed.booth.data.PodcastRepository
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -30,6 +31,9 @@ class BoothWorkerEntryPointDeviceTest {
 
     @Inject
     lateinit var downloadManager: PodcastDownloadManager
+
+    @Inject
+    lateinit var refreshCoordinator: PodcastRefreshCoordinator
 
     @Inject
     lateinit var backupManager: PodcastBackupManager
@@ -88,6 +92,13 @@ class BoothWorkerEntryPointDeviceTest {
         val application = ApplicationProvider.getApplicationContext<android.app.Application>()
 
         assertSame(downloadManager, boothWorkerEntryPoint(application).downloadManager)
+    }
+
+    @Test
+    fun refreshWorkersShareOneProcessCoordinator() {
+        val application = ApplicationProvider.getApplicationContext<android.app.Application>()
+
+        assertSame(refreshCoordinator, boothWorkerEntryPoint(application).podcastRefreshCoordinator)
     }
 
     @Test
