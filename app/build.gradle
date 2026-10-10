@@ -263,7 +263,7 @@ dependencies {
     // Jetpack Compose lint rules for ktlint (modifier ordering, state hoisting,
     // parameter ordering, ...). These enforce the Compose conventions described
     // in AGENTS.md.
-    ktlintRuleset 'io.nlopez.compose.rules:ktlint:0.6.7'
+    ktlintRuleset 'io.nlopez.compose.rules:ktlint:0.6.8'
 }
 
 tasks.register("jacocoDeviceTestUnitTestReport", JacocoReport) {
