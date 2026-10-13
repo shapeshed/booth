@@ -59,9 +59,11 @@ internal fun PodcastHomeEffects(
         }
     }
     LaunchedEffect(savedPodcastTab) {
-        savedPodcastTab
-            ?.let { value -> runCatching { PodcastTab.valueOf(value) }.getOrNull() }
-            ?.let(currentOnSelectSavedTab)
+        // A notification deep link owns the first destination. The saved tab used to be restored
+        // from its own effect, so whichever of the two reads finished last won; when the settings
+        // read landed after the episode had opened it cleared the episode's route and left the tap
+        // on a list. The deep link is the explicit request, so the saved tab yields to it.
+        savedTabToRestore(initialEpisodeId, savedPodcastTab)?.let(currentOnSelectSavedTab)
     }
     LaunchedEffect(showNowPlaying, playbackEpisodeId) {
         if (showNowPlaying) playbackViewModel.restoreForegroundVideoPreference()
@@ -78,6 +80,18 @@ internal fun PodcastHomeEffects(
     LaunchedEffect(selectedEpisode?.id) {
         selectedEpisode?.let(viewModel::resolveMediaSizes)
     }
+}
+
+/**
+ * The tab the saved-tab restore should open, or null to leave the current destination alone.
+ *
+ * A notification deep link takes precedence: the app was opened to a specific episode, so restoring
+ * the last-used tab on top of it is what sent the tap to a list instead. Resolving this as one
+ * decision, rather than letting two effects race, is what makes the outcome deterministic.
+ */
+internal fun savedTabToRestore(initialEpisodeId: Long?, savedPodcastTab: String?): PodcastTab? {
+    if (initialEpisodeId != null) return null
+    return savedPodcastTab?.let { value -> runCatching { PodcastTab.valueOf(value) }.getOrNull() }
 }
 
 /**
