@@ -212,7 +212,7 @@ dependencies {
     def navigation3Version = '1.2.0'
     implementation "androidx.navigation3:navigation3-runtime:$navigation3Version"
     implementation "androidx.navigation3:navigation3-ui:$navigation3Version"
-    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-core:1.11.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-core:1.12.0'
 
     implementation 'com.squareup.okhttp3:okhttp:5.5.0'
     implementation 'androidx.datastore:datastore-preferences:1.2.1'
