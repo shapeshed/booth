@@ -234,7 +234,7 @@ dependencies {
     ksp "androidx.room:room-compiler:$roomVersion"
 
     testImplementation 'junit:junit:4.13.2'
-    testImplementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0'
+    testImplementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.12.0'
     // For runTest and its virtual clock. The undo snackbar queue only serialises correctly if its
     // offers are observed in order, and that is asserted with a presenter that suspends on demand,
     // which needs a test scheduler rather than real time.
